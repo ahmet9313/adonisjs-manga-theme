@@ -1,0 +1,55 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="flex items-center justify-between mb-6">
+    <h3 class="text-lg font-semibold text-gray-200">Tüm Yazarlar</h3>
+    <a href="/admin/yazarlar/ekle" class="bg-gradient-to-r from-cyan-500 to-purple-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:from-cyan-600 hover:to-purple-700 transition-all">
+      + Yeni Yazar Ekle
+    </a>
+  </div>
+
+  @include('partials/admin/pagination')
+
+  <div class="bg-[#161b22] border border-gray-700 rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-400 border-b border-gray-700">
+            <th class="px-5 py-3 font-medium">ID</th>
+            <th class="px-5 py-3 font-medium">İsim</th>
+            <th class="px-5 py-3 font-medium">Slug</th>
+            <th class="px-5 py-3 font-medium text-right">İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          @each(author in authors)
+            <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
+              <td class="px-5 py-3 text-gray-400">{{ author.id }}</td>
+              <td class="px-5 py-3 text-gray-200">{{ author.name }}</td>
+              <td class="px-5 py-3 text-gray-400">{{ author.slug }}</td>
+              <td class="px-5 py-3 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <a href="/admin/yazarlar/{{ author.id }}/duzenle" class="text-cyan-400 hover:text-cyan-300 text-xs px-3 py-1 rounded border border-cyan-800 hover:border-cyan-600 transition">Düzenle</a>
+                  <form action="/admin/yazarlar/{{ author.id }}/sil" method="POST" class="inline"
+                        onsubmit="return confirm('Bu yazarı silmek istediğinize emin misiniz?')">
+                    {{ csrfField() }}
+                    <button type="submit" class="text-red-400 hover:text-red-300 text-xs px-3 py-1 rounded border border-red-800 hover:border-red-600 transition">Sil</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          @end
+          @if(authors.total === 0)
+            <tr>
+              <td colspan="4" class="px-5 py-8 text-center text-gray-500">Henüz yazar eklenmemiş</td>
+            </tr>
+          @end
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  @include('partials/admin/pagination')
+@end
+
+@end

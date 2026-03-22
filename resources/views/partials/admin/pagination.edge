@@ -1,0 +1,83 @@
+{{-- Pagination partial - receives: paginator, perPage --}}
+
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+  <span class="text-sm text-gray-400">Toplam <span class="text-gray-200 font-medium">{{ paginator.total }}</span> kayıt</span>
+  <div class="flex items-center gap-2" x-data>
+    <span class="text-sm text-gray-400">Sayfa başına:</span>
+    <select
+      class="bg-[#0d1117] border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:border-cyan-500 focus:outline-none cursor-pointer"
+      @change="
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', $el.value);
+        url.searchParams.delete('page');
+        window.location.href = url.toString();
+      "
+    >
+      @each(size in [10, 20, 30, 50, 1000, 5000])
+        <option value="{{ size }}" {{ perPage === size ? 'selected' : '' }}>{{ size }}</option>
+      @end
+    </select>
+  </div>
+</div>
+
+@if(paginator.lastPage > 1)
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
+    <span class="text-sm text-gray-500">
+      Sayfa {{ paginator.currentPage }} / {{ paginator.lastPage }}
+    </span>
+    <div class="flex items-center gap-1">
+      {{-- Previous --}}
+      @if(paginator.currentPage > 1)
+        <a href="{{ paginator.getUrl(paginator.currentPage - 1) }}"
+           class="px-3 py-1.5 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition">
+          &laquo; Önceki
+        </a>
+      @else
+        <span class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 text-gray-600 cursor-not-allowed">
+          &laquo; Önceki
+        </span>
+      @end
+
+      {{-- Page numbers --}}
+      @let(startPage = Math.max(1, paginator.currentPage - 2))
+      @let(endPage = Math.min(paginator.lastPage, paginator.currentPage + 2))
+
+      @if(startPage > 1)
+        <a href="{{ paginator.getUrl(1) }}"
+           class="px-3 py-1.5 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition">1</a>
+        @if(startPage > 2)
+          <span class="px-2 text-gray-500">...</span>
+        @end
+      @end
+
+      @each(p in Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i))
+        @if(p === paginator.currentPage)
+          <span class="px-3 py-1.5 text-sm rounded-lg bg-cyan-600 text-white font-medium">{{ p }}</span>
+        @else
+          <a href="{{ paginator.getUrl(p) }}"
+             class="px-3 py-1.5 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition">{{ p }}</a>
+        @end
+      @end
+
+      @if(endPage < paginator.lastPage)
+        @if(endPage < paginator.lastPage - 1)
+          <span class="px-2 text-gray-500">...</span>
+        @end
+        <a href="{{ paginator.getUrl(paginator.lastPage) }}"
+           class="px-3 py-1.5 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition">{{ paginator.lastPage }}</a>
+      @end
+
+      {{-- Next --}}
+      @if(paginator.currentPage < paginator.lastPage)
+        <a href="{{ paginator.getUrl(paginator.currentPage + 1) }}"
+           class="px-3 py-1.5 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition">
+          Sonraki &raquo;
+        </a>
+      @else
+        <span class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 text-gray-600 cursor-not-allowed">
+          Sonraki &raquo;
+        </span>
+      @end
+    </div>
+  </div>
+@end

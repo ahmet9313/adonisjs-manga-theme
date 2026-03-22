@@ -1,0 +1,101 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  {{-- Stats Grid --}}
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl p-4">
+      <div class="text-2xl font-bold text-cyan-400">{{ stats.series }}</div>
+      <div class="text-sm text-gray-400 mt-1">Seri</div>
+    </div>
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl p-4">
+      <div class="text-2xl font-bold text-purple-400">{{ stats.chapters }}</div>
+      <div class="text-sm text-gray-400 mt-1">Bölüm</div>
+    </div>
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl p-4">
+      <div class="text-2xl font-bold text-green-400">{{ stats.genres }}</div>
+      <div class="text-sm text-gray-400 mt-1">Tür</div>
+    </div>
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl p-4">
+      <div class="text-2xl font-bold text-yellow-400">{{ stats.authors }}</div>
+      <div class="text-sm text-gray-400 mt-1">Yazar</div>
+    </div>
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl p-4">
+      <div class="text-2xl font-bold text-pink-400">{{ stats.artists }}</div>
+      <div class="text-sm text-gray-400 mt-1">Çizer</div>
+    </div>
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl p-4">
+      <div class="text-2xl font-bold text-orange-400">{{ stats.contentTypes }}</div>
+      <div class="text-sm text-gray-400 mt-1">İçerik Türü</div>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-2 gap-6">
+    {{-- Recent Series --}}
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-200">Son Eklenen Seriler</h3>
+        <a href="/admin/seriler" class="text-sm text-cyan-400 hover:text-cyan-300">Tümünü Gör</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-400 border-b border-gray-700/50">
+              <th class="px-5 py-3 font-medium">Başlık</th>
+              <th class="px-5 py-3 font-medium">Tür</th>
+              <th class="px-5 py-3 font-medium">Durum</th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(series in recentSeries)
+              <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
+                <td class="px-5 py-3">
+                  <a href="/admin/seriler/{{ series.id }}/duzenle" class="text-gray-200 hover:text-cyan-400">{{ series.title }}</a>
+                </td>
+                <td class="px-5 py-3 text-gray-400">{{ series.contentType?.name || '-' }}</td>
+                <td class="px-5 py-3">
+                  <span class="inline-block px-2 py-0.5 rounded text-xs {{ series.status === 'Devam Ediyor' ? 'bg-green-900/50 text-green-400' : series.status === 'Tamamlandı' ? 'bg-blue-900/50 text-blue-400' : 'bg-red-900/50 text-red-400' }}">
+                    {{ series.status }}
+                  </span>
+                </td>
+              </tr>
+            @endeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {{-- Recent Chapters --}}
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-200">Son Eklenen Bölümler</h3>
+        <a href="/admin/bolumler" class="text-sm text-cyan-400 hover:text-cyan-300">Tümünü Gör</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-400 border-b border-gray-700/50">
+              <th class="px-5 py-3 font-medium">Seri</th>
+              <th class="px-5 py-3 font-medium">Bölüm</th>
+              <th class="px-5 py-3 font-medium">Tarih</th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(chapter in recentChapters)
+              <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
+                <td class="px-5 py-3 text-gray-200">{{ chapter.series?.title || '-' }}</td>
+                <td class="px-5 py-3">
+                  <a href="/admin/bolumler/{{ chapter.id }}/duzenle" class="text-gray-300 hover:text-cyan-400">
+                    {{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}
+                  </a>
+                </td>
+                <td class="px-5 py-3 text-gray-400">{{ chapter.publishedAt }}</td>
+              </tr>
+            @end
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+@end
+
+@end

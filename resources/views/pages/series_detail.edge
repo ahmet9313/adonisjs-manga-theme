@@ -1,0 +1,251 @@
+@component('components/layout/main')
+
+@slot('banner')
+  {{-- Full-width Banner behind content --}}
+  <div class="relative w-full h-72 sm:h-96">
+    <img
+      src="{{ series.bannerImage || series.coverImage }}"
+      alt="{{ series.title }} Banner"
+      class="w-full h-full object-cover"
+      onerror="this.onerror=null;this.src='{{ series.coverImage }}';this.style.objectPosition='center 20%'"
+    >
+    {{-- Dark gradient from bottom so content merges smoothly --}}
+    <div class="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-[#0d1117]/70 to-[#0d1117]/20"></div>
+  </div>
+@end
+
+@slot('main')
+  {{-- Pull content UP over the banner --}}
+  <div class="lg:flex lg:gap-8 -mt-52 sm:-mt-64 relative z-10">
+    {{-- Left Column: Cover + Main Info --}}
+    <div class="lg:flex-1">
+      <div class="flex flex-col sm:flex-row gap-6">
+        {{-- Cover --}}
+        <div class="shrink-0">
+          <img
+            src="{{ series.coverImage }}"
+            alt="{{ series.title }}"
+            class="w-48 h-auto rounded-lg shadow-lg mx-auto sm:mx-0"
+            onerror="this.onerror=null;this.style.display='none'"
+          >
+        </div>
+
+        {{-- Info --}}
+        <div class="flex-1">
+          <h1 class="text-2xl font-bold text-white">{{ series.title }}</h1>
+
+          @if(series.alternativeTitles && series.alternativeTitles.length)
+          <p class="text-sm text-gray-500 mt-1">{{ series.alternativeTitles.join(', ') }}</p>
+          @end
+
+          <div class="flex items-center gap-2 mt-2 text-sm">
+            <span class="px-2 py-0.5 rounded text-white text-xs font-bold
+              @if(series.type === 'manga')
+                bg-blue-600
+              @elseif(series.type === 'manhwa')
+                bg-green-600
+              @elseif(series.type === 'manhua')
+                bg-red-600
+              @elseif(series.type === 'novel')
+                bg-purple-600
+              @else
+                bg-orange-600
+              @end
+            ">{{ series.type.charAt(0).toUpperCase() + series.type.slice(1) }}</span>
+            <span class="text-gray-400">&bull;</span>
+            <span class="{{ series.status === 'Devam Ediyor' ? 'text-green-400' : series.status === 'Bırakıldı' ? 'text-red-400' : 'text-blue-400' }}">{{ series.status }}</span>
+            @if(series.ageRating)
+            <span class="text-gray-400">&bull;</span>
+            <span class="px-2 py-0.5 rounded text-xs font-bold {{ series.ageRating === '18+' ? 'bg-red-600/80 text-white' : 'bg-yellow-600/80 text-white' }}">{{ series.ageRating }}</span>
+            @end
+          </div>
+
+          {{-- Genre Tags --}}
+          <div class="flex flex-wrap gap-2 mt-3">
+            @each(genre in series.genres)
+            <span class="text-xs bg-[#1c2333] border border-gray-700 rounded-full px-3 py-1 text-gray-300">{{ genre }}</span>
+            @end
+          </div>
+
+          {{-- Description --}}
+          <p class="text-sm text-gray-400 mt-4 leading-relaxed">{{ series.description }}</p>
+
+          {{-- Action Buttons --}}
+          <div class="flex items-center gap-3 mt-4">
+            @if(chapters.length)
+            <a href="/series/{{ series.type }}/{{ series.slug }}/{{ chapters[chapters.length - 1].number }}" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm rounded transition-colors">
+              Okumaya Başla
+            </a>
+            @end
+            <button
+              x-data="{ saved: !!localStorage.getItem('bookmark:{{ series.type }}:{{ series.slug }}') }"
+              @click="saved = !saved; saved ? localStorage.setItem('bookmark:{{ series.type }}:{{ series.slug }}', JSON.stringify({type:'{{ series.type }}',slug:'{{ series.slug }}',title:'{{ series.title }}',coverImage:'{{ series.coverImage }}'})) : localStorage.removeItem('bookmark:{{ series.type }}:{{ series.slug }}')"
+              :class="saved ? 'border-cyan-500 text-cyan-400' : 'border-gray-600 text-gray-400'"
+              class="px-4 py-2 border text-sm rounded hover:border-cyan-500 hover:text-cyan-400 transition-colors flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+              <span x-text="saved ? 'Kaydedildi' : 'Kaydet'"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {{-- Chapter List --}}
+      <section class="mt-8" x-data="chapterList()" x-init="init()">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">Bölümler <span class="text-sm font-normal text-gray-500">({{ chapters.length }})</span></h2>
+          <button
+            @click="toggleSort()"
+            class="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors border border-gray-700 rounded px-3 py-1.5"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+            </svg>
+            <span x-text="ascending ? 'Eskiden Yeniye' : 'Yeniden Eskiye'"></span>
+          </button>
+        </div>
+
+        {{-- Chapter Search --}}
+        <input
+          type="text"
+          x-model="search"
+          @input="if(search) showAll = true"
+          placeholder="Bölüm ara... (Örn: 25)"
+          class="w-full bg-[#161b22] border border-gray-700 rounded px-4 py-2 text-sm text-gray-300 placeholder-gray-500 focus:border-cyan-500 focus:outline-none mb-4"
+        >
+
+        <div class="space-y-1">
+          <template x-for="ch in filteredChapters()" :key="ch.number">
+            <a
+              :href="'/series/{{ series.type }}/{{ series.slug }}/' + ch.number"
+              class="flex items-center justify-between bg-[#161b22] hover:bg-[#1c2333] rounded px-4 py-3 transition-colors"
+            >
+              <span class="text-gray-300 text-sm font-medium" x-text="ch.title"></span>
+              <span class="text-gray-500 text-xs" x-text="ch.timeAgo"></span>
+            </a>
+          </template>
+        </div>
+
+        {{-- Show More / Less --}}
+        @if(chapters.length > 10)
+        <div class="flex justify-center mt-4">
+          <button
+            @click="showAll = !showAll"
+            x-show="!search"
+            class="px-5 py-2 bg-[#161b22] border border-gray-700 rounded-lg text-sm text-gray-300 hover:text-white hover:border-cyan-500 transition-colors flex items-center gap-2"
+          >
+            <span x-text="showAll ? 'Daha Az Göster' : 'Tümünü Göster ({{ chapters.length }})'"></span>
+            <svg class="w-4 h-4 transition-transform" :class="showAll ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+        </div>
+        @end
+
+        @if(chapters.length === 0)
+        <div class="text-center text-gray-500 py-8">Henüz bölüm eklenmemiş.</div>
+        @end
+
+        <script>
+          function chapterList() {
+            return {
+              allChapters: [],
+              ascending: false,
+              showAll: false,
+              search: '',
+              init() {
+                this.allChapters = {{{ JSON.stringify(chapters.map(c => ({ number: c.number, title: c.title ? 'Bölüm ' + c.number + ' - ' + c.title : 'Bölüm ' + c.number, timeAgo: c.timeAgo }))) }}};
+              },
+              toggleSort() {
+                this.ascending = !this.ascending;
+                this.allChapters.sort((a, b) => this.ascending ? a.number - b.number : b.number - a.number);
+              },
+              filteredChapters() {
+                let list = this.allChapters;
+                if (this.search) {
+                  const q = this.search.toLowerCase();
+                  list = list.filter(ch => String(ch.number).includes(q) || ch.title.toLowerCase().includes(q));
+                }
+                if (!this.showAll && !this.search) {
+                  list = list.slice(0, 10);
+                }
+                return list;
+              }
+            }
+          }
+        </script>
+      </section>
+    </div>
+
+    {{-- Right Sidebar --}}
+    <aside class="lg:w-72 mt-8 lg:mt-0 space-y-6">
+      {{-- Seri Bilgileri --}}
+      <div class="bg-[#161b22] rounded-lg p-4">
+        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Seri Bilgileri
+        </h3>
+        <div class="space-y-2 text-sm">
+          @if(series.ageRating)
+          <div class="flex justify-between"><span class="text-gray-500">Yaş Sınırı</span><span class="text-yellow-400">{{ series.ageRating }}</span></div>
+          @end
+          <div class="flex justify-between"><span class="text-gray-500">Yayınlanma</span><span class="text-green-400">{{ series.status }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Çeviri Durumu</span><span class="text-green-400">{{ series.translationStatus }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">İçerik Türü</span><span class="text-gray-300">{{ series.type.charAt(0).toUpperCase() + series.type.slice(1) }}</span></div>
+          @if(series.author)
+          <div class="flex justify-between"><span class="text-gray-500">Yazar</span><span class="text-gray-300">{{ series.author }}</span></div>
+          @end
+          @if(series.artist)
+          <div class="flex justify-between"><span class="text-gray-500">Sanatçı</span><span class="text-gray-300">{{ series.artist }}</span></div>
+          @end
+          <div class="flex justify-between"><span class="text-gray-500">Bölüm Sayısı</span><span class="text-gray-300">{{ chapters.length }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Tür(ler)</span><span class="text-gray-300 text-right max-w-[60%]">{{ series.genres.join(', ') }}</span></div>
+        </div>
+      </div>
+
+      {{-- Anahtar Kelimeler --}}
+      @if(series.keywords && series.keywords.length)
+      <div class="bg-[#161b22] rounded-lg p-4">
+        <h3 class="text-sm font-bold text-white mb-2">Anahtar Kelimeler</h3>
+        <p class="text-xs text-gray-500 leading-relaxed">{{ series.keywords.join(', ') }}</p>
+      </div>
+      @end
+    </aside>
+  </div>
+
+  {{-- Benzer Seriler --}}
+  @if(similar.length)
+  <section class="mt-12">
+    <h2 class="text-lg font-bold text-white mb-4">Benzer Seriler</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      @each(item in similar)
+      <a href="/series/{{ item.type }}/{{ item.slug }}" class="group">
+        <div class="relative overflow-hidden rounded-lg aspect-[3/4] bg-[#161b22]">
+          <img
+            src="{{ item.coverImage }}"
+            alt="{{ item.title }}"
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+            onerror="this.onerror=null;this.style.display='none'"
+          >
+          <span class="absolute top-2 left-2 text-xs font-bold px-2 py-0.5 rounded
+            @if(item.type === 'manga')
+              bg-blue-600
+            @elseif(item.type === 'manhwa')
+              bg-green-600
+            @elseif(item.type === 'manhua')
+              bg-red-600
+            @else
+              bg-purple-600
+            @end
+            text-white">
+            {{ item.type.charAt(0).toUpperCase() + item.type.slice(1) }}
+          </span>
+        </div>
+        <h3 class="mt-2 text-xs font-medium text-gray-300 group-hover:text-white transition-colors truncate">{{ item.title }}</h3>
+      </a>
+      @end
+    </div>
+  </section>
+  @end
+@end
+
+@end

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title ?? 'MangaHub' }}</title>
+  @if($slots.meta)
+    {{{ await $slots.meta() }}}
+  @endif
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="bg-[#0d1117] text-gray-200 min-h-screen flex flex-col font-sans">
+  @include('partials/navbar')
+  @if($slots.banner)
+    {{{ await $slots.banner() }}}
+  @endif
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 {{ $slots.banner ? 'pt-0' : 'py-6' }} pb-6">
+    {{{ await $slots.main() }}}
+  </main>
+  @include('partials/footer')
+</body>
+</html>

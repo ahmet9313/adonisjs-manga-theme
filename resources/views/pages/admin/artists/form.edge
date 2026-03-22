@@ -1,0 +1,42 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="max-w-3xl">
+    <div class="mb-4">
+      <a href="/admin/cizerler" class="text-gray-400 hover:text-gray-200 text-sm transition">← Çizerlere Dön</a>
+    </div>
+
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl p-6">
+      <h3 class="text-lg font-semibold text-gray-200 mb-6">{{ artist ? 'Çizer Düzenle' : 'Yeni Çizer Ekle' }}</h3>
+
+      <form action="{{ artist ? '/admin/cizerler/' + artist.id + '/duzenle' : '/admin/cizerler/ekle' }}" method="POST" class="space-y-5">
+        {{ csrfField() }}
+
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-300 mb-1">Çizer Adı</label>
+          <input type="text" id="name" name="name" required
+                 value="{{ flashMessages.get('name') || (artist ? artist.name : '') }}"
+                 class="w-full bg-[#0d1117] border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition">
+          @if(flashMessages.has('errors.name'))
+            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('errors.name') }}</p>
+          @end
+        </div>
+
+        @if(artist)
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Slug</label>
+            <input type="text" disabled value="{{ artist.slug }}"
+                   class="w-full bg-[#0d1117] border border-gray-700 rounded-lg px-4 py-2.5 text-gray-500 cursor-not-allowed">
+          </div>
+        @end
+
+        <button type="submit"
+                class="bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:from-cyan-600 hover:to-purple-700 transition-all">
+          {{ artist ? 'Güncelle' : 'Ekle' }}
+        </button>
+      </form>
+    </div>
+  </div>
+@end
+
+@end

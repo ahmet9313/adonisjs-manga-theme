@@ -1,0 +1,111 @@
+<nav class="bg-[#161b22] border-b border-gray-800 sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex items-center justify-between h-16">
+      {{-- Logo --}}
+      <a href="/" class="flex items-center gap-2 shrink-0">
+        <img src="/images/logo.png" alt="MangaHub" class="h-10" onerror="this.style.display='none'">
+        <span class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+          MangaHub
+        </span>
+      </a>
+
+      {{-- Desktop Nav --}}
+      <div class="hidden md:flex items-center gap-6">
+        <a href="/" class="text-gray-300 hover:text-white transition-colors">Ana Sayfa</a>
+        <a href="/seriler" class="text-gray-300 hover:text-white transition-colors">Seri Listesi</a>
+        <a href="#" class="text-gray-300 hover:text-white transition-colors">Ekip Alım</a>
+        <a href="/kaydedilenler" class="text-gray-300 hover:text-white transition-colors">Kaydedilenler</a>
+      </div>
+
+      {{-- Search --}}
+      <div class="hidden md:block relative" x-data="navSearch()">
+        <div class="relative">
+          <input
+            type="text"
+            x-model="query"
+            @input.debounce.300ms="search()"
+            @focus="if(results.length) showResults = true"
+            @click.away="showResults = false"
+            placeholder="Seri ara..."
+            class="w-64 bg-[#0d1117] border border-gray-700 rounded-lg px-4 py-1.5 text-sm text-gray-300 placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
+          >
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+
+        {{-- Results Dropdown --}}
+        <div
+          x-show="showResults"
+          x-transition
+          class="absolute top-full mt-2 right-0 w-80 bg-[#161b22] border border-gray-700 rounded-lg shadow-2xl overflow-hidden z-50"
+        >
+          <template x-if="loading">
+            <div class="px-4 py-3 text-sm text-gray-500">Aranıyor...</div>
+          </template>
+          <template x-if="!loading && results.length === 0 && query.length >= 2">
+            <div class="px-4 py-3 text-sm text-gray-500">Sonuç bulunamadı</div>
+          </template>
+          <template x-for="item in results" :key="item.type + item.slug">
+            <a
+              :href="'/series/' + item.type + '/' + item.slug"
+              class="flex items-center gap-3 px-4 py-2.5 hover:bg-[#1c2333] transition-colors"
+            >
+              <img
+                :src="'/content/' + item.type + '/' + item.slug + '/' + item.coverImage"
+                :alt="item.title"
+                class="w-10 h-14 object-cover rounded"
+                onerror="this.onerror=null;this.style.display='none'"
+              >
+              <div class="flex-1 min-w-0">
+                <div class="text-sm text-white font-medium truncate" x-text="item.title"></div>
+                <div class="text-xs text-gray-500" x-text="item.type.charAt(0).toUpperCase() + item.type.slice(1)"></div>
+              </div>
+            </a>
+          </template>
+        </div>
+      </div>
+
+      {{-- Mobile Hamburger --}}
+      <button @click="open = !open" class="md:hidden text-gray-300 hover:text-white" x-data="{ open: false }">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          <path x-show="open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    {{-- Mobile Menu --}}
+    <div x-data="{ mobileOpen: false }" x-show="mobileOpen" x-transition class="md:hidden pb-4 space-y-2">
+      <a href="/" class="block text-gray-300 hover:text-white py-2">Ana Sayfa</a>
+      <a href="/seriler" class="block text-gray-300 hover:text-white py-2">Seri Listesi</a>
+      <a href="#" class="block text-gray-300 hover:text-white py-2">Ekip Alım</a>
+      <a href="/kaydedilenler" class="block text-gray-300 hover:text-white py-2">Kaydedilenler</a>
+    </div>
+  </div>
+</nav>
+
+<script>
+  function navSearch() {
+    return {
+      query: '',
+      results: [],
+      showResults: false,
+      loading: false,
+      async search() {
+        if (this.query.length < 2) {
+          this.results = [];
+          this.showResults = false;
+          return;
+        }
+        this.loading = true;
+        this.showResults = true;
+        try {
+          const res = await fetch('/ara?q=' + encodeURIComponent(this.query));
+          this.results = await res.json();
+        } catch {
+          this.results = [];
+        }
+        this.loading = false;
+      }
+    }
+  }
+</script>

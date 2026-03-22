@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Giriş - MangaHub</title>
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="bg-[#0d1117] min-h-screen flex items-center justify-center">
+  <div class="w-full max-w-md px-4">
+    <div class="bg-[#161b22] border border-gray-700 rounded-2xl p-8 shadow-xl">
+      {{-- Logo --}}
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+          MangaHub
+        </h1>
+        <p class="text-gray-400 mt-2 text-sm">Yönetim Paneli</p>
+      </div>
+
+      {{-- Flash Messages --}}
+      @include('partials/admin/flash_messages')
+
+      {{-- Login Form --}}
+      <form action="/admin/giris" method="POST" class="space-y-5">
+        {{ csrfField() }}
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-300 mb-1">E-posta</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            value="{{ flashMessages.get('email') || '' }}"
+            class="w-full bg-[#0d1117] border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 placeholder-gray-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition"
+            placeholder="admin@admin.com"
+          >
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Şifre</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            class="w-full bg-[#0d1117] border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 placeholder-gray-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition"
+            placeholder="••••••••"
+          >
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold py-2.5 rounded-lg hover:from-cyan-600 hover:to-purple-700 transition-all duration-200"
+        >
+          Giriş Yap
+        </button>
+      </form>
+
+      <div class="mt-6 text-center">
+        <a href="/" class="text-gray-500 hover:text-gray-300 text-sm transition">← Siteye Dön</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

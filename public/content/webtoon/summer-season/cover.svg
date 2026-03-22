@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400">
+  <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#020202"/><stop offset="100%" style="stop-color:#1a1a2e"/></linearGradient></defs>
+  <rect width="300" height="400" fill="url(#bg)"/>
+  <rect x="0" y="280" width="300" height="120" fill="rgba(0,0,0,0.6)"/>
+  <text x="150" y="160" text-anchor="middle" font-family="Arial,sans-serif" font-size="72" font-weight="bold" fill="#a12568" opacity="0.3">S</text>
+  <text x="150" y="200" text-anchor="middle" font-family="Arial,sans-serif" font-size="64" font-weight="bold" fill="#a12568">S</text>
+  <text x="150" y="320" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" font-weight="bold" fill="#eee">Summer Season</text>
+  <text x="150" y="345" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" fill="#f97316">Webtoon</text>
+  
+</svg>

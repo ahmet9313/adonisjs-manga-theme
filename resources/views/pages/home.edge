@@ -1,0 +1,217 @@
+@component('components/layout/main')
+
+@slot('main')
+  {{-- Hero Banner Slider --}}
+  @if(featured.length)
+  <section x-data="{ current: 0, total: {{ featured.length }} }" x-init="setInterval(() => current = (current + 1) % total, 6000)" class="relative rounded-xl overflow-hidden mb-8 -mx-4 md:mx-0">
+    @each((item, index) in featured)
+    <div
+      x-show="current === {{ index }}"
+      x-transition:enter="transition ease-out duration-500"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      class="relative min-h-[280px] md:min-h-[350px]"
+    >
+      {{-- Background Banner Image --}}
+      <div class="absolute inset-0">
+        <img
+          src="{{ item.bannerImage || item.coverImage }}"
+          alt=""
+          class="w-full h-full object-cover"
+          onerror="this.onerror=null;this.style.display='none'"
+        >
+        <div class="absolute inset-0 bg-gradient-to-r from-[#0d1117] via-[#0d1117]/80 to-transparent"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-transparent"></div>
+      </div>
+
+      {{-- Content --}}
+      <div class="relative flex items-center gap-6 p-6 md:p-10 h-full">
+        {{-- Cover --}}
+        <a href="/series/{{ item.type }}/{{ item.slug }}" class="shrink-0 hidden sm:block">
+          <img
+            src="{{ item.coverImage }}"
+            alt="{{ item.title }}"
+            class="w-36 md:w-44 h-auto rounded-lg shadow-2xl border border-gray-800"
+            onerror="this.onerror=null;this.style.display='none'"
+          >
+        </a>
+
+        {{-- Info --}}
+        <div class="flex-1 max-w-xl">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xs font-bold px-2 py-0.5 rounded text-white
+              @if(item.type === 'manga')
+                bg-blue-600
+              @elseif(item.type === 'manhwa')
+                bg-green-600
+              @elseif(item.type === 'manhua')
+                bg-red-600
+              @elseif(item.type === 'novel')
+                bg-purple-600
+              @else
+                bg-orange-600
+              @end
+            ">{{ item.type.charAt(0).toUpperCase() + item.type.slice(1) }}</span>
+            <span class="text-xs {{ item.status === 'Devam Ediyor' ? 'text-green-400' : 'text-blue-400' }}">{{ item.status }}</span>
+            @if(item.ageRating && (item.ageRating.includes('18') || item.ageRating.includes('16')))
+            <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-red-600 text-white">{{ item.ageRating }}</span>
+            @end
+          </div>
+
+          <a href="/series/{{ item.type }}/{{ item.slug }}">
+            <h2 class="text-2xl md:text-4xl font-bold text-white mb-3 hover:text-cyan-400 transition-colors">{{ item.title }}</h2>
+          </a>
+          <p class="text-gray-400 text-sm md:text-base line-clamp-2 mb-4">{{ item.featuredDescription || item.description }}</p>
+
+          <div class="flex flex-wrap gap-2 mb-4">
+            @each(genre in item.genres.slice(0, 4))
+            <span class="text-xs bg-white/10 rounded-full px-3 py-1 text-gray-300">{{ genre }}</span>
+            @end
+          </div>
+
+          <a href="/series/{{ item.type }}/{{ item.slug }}" class="inline-flex items-center gap-2 px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors">
+            Seriye Git
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    @end
+
+    {{-- Navigation --}}
+    <div class="absolute bottom-4 right-6 flex items-center gap-3 z-10">
+      <div class="flex gap-1.5">
+        @each((item, index) in featured)
+        <button @click="current = {{ index }}" :class="current === {{ index }} ? 'bg-cyan-500 w-6' : 'bg-gray-600 w-2'" class="h-2 rounded-full transition-all duration-300"></button>
+        @end
+      </div>
+      <button @click="current = (current - 1 + total) % total" class="text-gray-400 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <button @click="current = (current + 1) % total" class="text-gray-400 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </section>
+  @end
+
+  {{-- Son Güncellenenler --}}
+  <section>
+    <h2 class="text-lg font-bold text-white mb-4 uppercase tracking-wide">Son Güncellenenler</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      @each((item, index) in recentlyUpdated)
+      <div class="bg-[#161b22] rounded-lg p-4 flex gap-4 hover:bg-[#1c2333] transition-colors group">
+        {{-- Cover --}}
+        <a href="/series/{{ item.type }}/{{ item.slug }}" class="shrink-0 relative">
+          <img
+            src="{{ item.coverImage }}"
+            alt="{{ item.title }}"
+            class="w-24 h-32 object-cover rounded-lg shadow"
+            loading="lazy"
+            onerror="this.onerror=null;this.style.display='none'"
+          >
+          <span class="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded text-white
+            @if(item.type === 'manga')
+              bg-blue-600
+            @elseif(item.type === 'manhwa')
+              bg-green-600
+            @elseif(item.type === 'manhua')
+              bg-red-600
+            @elseif(item.type === 'novel')
+              bg-purple-600
+            @else
+              bg-orange-600
+            @end
+          ">{{ item.type.charAt(0).toUpperCase() + item.type.slice(1) }}</span>
+        </a>
+
+        {{-- Info --}}
+        <div class="flex-1 min-w-0">
+          <a href="/series/{{ item.type }}/{{ item.slug }}" class="font-semibold text-white hover:text-cyan-400 transition-colors text-sm block truncate">
+            {{ item.title }}
+          </a>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs {{ item.status === 'Devam Ediyor' ? 'text-green-400' : item.status === 'Bırakıldı' ? 'text-red-400' : 'text-blue-400' }}">{{ item.status }}</span>
+            @if(item.ageRating && (item.ageRating.includes('18') || item.ageRating.includes('16')))
+            <span class="text-[10px] text-red-400 border border-red-600 rounded px-1">{{ item.ageRating }}</span>
+            @end
+          </div>
+
+          {{-- Latest chapters with titles --}}
+          <div class="mt-2.5 space-y-1.5">
+            @each(chapter in item.latestChapters)
+            <a href="/series/{{ item.type }}/{{ item.slug }}/{{ chapter.number }}" class="flex items-center justify-between text-xs group/ch">
+              <span class="text-gray-300 group-hover/ch:text-cyan-400 transition-colors truncate mr-2">{{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</span>
+              <span class="text-gray-600 shrink-0">{{ chapter.timeAgo }}</span>
+            </a>
+            @end
+          </div>
+        </div>
+      </div>
+      @end
+    </div>
+
+    @if(recentlyUpdated.length === 0)
+    <div class="text-center text-gray-500 py-12">Henüz seri eklenmemiş.</div>
+    @end
+
+    {{-- Modern Pagination --}}
+    @if(totalPages > 1)
+    <nav class="flex justify-center mt-8" aria-label="Sayfalama">
+      <ul class="flex items-center gap-1">
+        {{-- First Page --}}
+        @if(currentPage > 2)
+        <li>
+          <a href="/?page=1" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#1c2333] transition-all duration-200" title="İlk Sayfa">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+          </a>
+        </li>
+        @end
+
+        {{-- Previous --}}
+        @if(currentPage > 1)
+        <li>
+          <a href="/?page={{ currentPage - 1 }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#1c2333] transition-all duration-200" title="Önceki">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </a>
+        </li>
+        @end
+
+        {{-- Page Numbers --}}
+        @each(pg in paginationPages)
+        <li>
+          @if(pg === '...')
+          <span class="flex items-center justify-center w-9 h-9 text-gray-600 text-sm">...</span>
+          @elseif(pg === currentPage)
+          <span class="flex items-center justify-center w-9 h-9 rounded-lg text-sm font-bold bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20">{{ pg }}</span>
+          @else
+          <a href="/?page={{ pg }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-[#1c2333] transition-all duration-200">{{ pg }}</a>
+          @end
+        </li>
+        @end
+
+        {{-- Next --}}
+        @if(hasNextPage)
+        <li>
+          <a href="/?page={{ currentPage + 1 }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#1c2333] transition-all duration-200" title="Sonraki">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+        </li>
+        @end
+
+        {{-- Last Page --}}
+        @if(currentPage < totalPages - 1)
+        <li>
+          <a href="/?page={{ totalPages }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#1c2333] transition-all duration-200" title="Son Sayfa">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+          </a>
+        </li>
+        @end
+      </ul>
+    </nav>
+    @end
+  </section>
+@end
+
+@end

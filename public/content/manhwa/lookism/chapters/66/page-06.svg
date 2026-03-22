@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1024" viewBox="0 0 720 1024">
+  <defs><linearGradient id="pbg6" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#03071e"/><stop offset="100%" style="stop-color:#370617"/></linearGradient></defs>
+  <rect width="720" height="1024" fill="url(#pbg6)"/>
+  
+      <rect x="20" y="20" width="680" height="680" rx="8" fill="#370617" stroke="#e85d04" stroke-width="1"/>
+      <circle cx="360" cy="320" r="120" fill="#e85d04" opacity="0.08"/>
+      <circle cx="360" cy="320" r="60" fill="#e85d04" opacity="0.12"/>
+      <text x="360" y="310" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="#ddd">Yeni bir teknik öğreniliyor.</text>
+      <text x="360" y="340" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#666">[Tam sayfa sahne]</text>
+  <rect x="0" y="980" width="720" height="44" fill="rgba(0,0,0,0.7)"/>
+  <text x="20" y="1008" font-family="Arial,sans-serif" font-size="11" fill="#555">Lookism - Bölüm 66</text>
+  <text x="700" y="1008" text-anchor="end" font-family="Arial,sans-serif" font-size="11" fill="#555">6/12</text>
+</svg>

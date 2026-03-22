@@ -1,0 +1,43 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="max-w-3xl">
+    <div class="mb-4">
+      <a href="/admin/icerik-turleri" class="text-gray-400 hover:text-gray-200 text-sm transition">← İçerik Türlerine Dön</a>
+    </div>
+
+    <div class="bg-[#161b22] border border-gray-700 rounded-xl p-6">
+      <h3 class="text-lg font-semibold text-gray-200 mb-6">{{ contentType ? 'İçerik Türü Düzenle' : 'Yeni İçerik Türü Ekle' }}</h3>
+
+      <form action="{{ contentType ? '/admin/icerik-turleri/' + contentType.id + '/duzenle' : '/admin/icerik-turleri/ekle' }}" method="POST" class="space-y-5">
+        {{ csrfField() }}
+
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-300 mb-1">İçerik Türü Adı</label>
+          <input type="text" id="name" name="name" required
+                 value="{{ flashMessages.get('name') || (contentType ? contentType.name : '') }}"
+                 class="w-full bg-[#0d1117] border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition"
+                 placeholder="manga">
+          @if(flashMessages.has('errors.name'))
+            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('errors.name') }}</p>
+          @end
+        </div>
+
+        @if(contentType)
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Slug</label>
+            <input type="text" disabled value="{{ contentType.slug }}"
+                   class="w-full bg-[#0d1117] border border-gray-700 rounded-lg px-4 py-2.5 text-gray-500 cursor-not-allowed">
+          </div>
+        @end
+
+        <button type="submit"
+                class="bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:from-cyan-600 hover:to-purple-700 transition-all">
+          {{ contentType ? 'Güncelle' : 'Ekle' }}
+        </button>
+      </form>
+    </div>
+  </div>
+@end
+
+@end

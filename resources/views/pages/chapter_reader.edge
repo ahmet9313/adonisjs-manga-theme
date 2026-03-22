@@ -1,0 +1,96 @@
+@component('components/layout/main')
+
+@slot('main')
+  {{-- Header --}}
+  <div class="text-center mb-6">
+    <h1 class="text-xl font-bold text-white">{{ series.title }} {{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</h1>
+    <p class="text-sm text-gray-500 mt-1">
+      Okuduğunuz Seri: <a href="/series/{{ series.type }}/{{ series.slug }}" class="text-cyan-400 hover:text-cyan-300">{{ series.title }}</a>
+    </p>
+  </div>
+
+  {{-- Navigation --}}
+  <div class="flex items-center justify-between mb-6" x-data>
+    {{-- Chapter Selector --}}
+    <select
+      class="bg-[#161b22] border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 appearance-none cursor-pointer"
+      @change="window.location = '/series/{{ series.type }}/{{ series.slug }}/' + $el.value"
+    >
+      @each(ch in allChapters)
+      <option value="{{ ch.number }}" {{ ch.number === chapter.number ? 'selected' : '' }}>Bölüm {{ ch.number }}</option>
+      @end
+    </select>
+
+    <div class="flex gap-2">
+      @if(prevChapter)
+      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ prevChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+        &lsaquo; Önceki
+      </a>
+      @end
+      @if(nextChapter)
+      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ nextChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+        Sonraki &rsaquo;
+      </a>
+      @end
+    </div>
+  </div>
+
+  {{-- Pages (Image) --}}
+  @if(chapter.pages && chapter.pages.length)
+  <div class="flex flex-col items-center gap-0">
+    @each(page in chapter.pages)
+    <img
+      src="{{ page }}"
+      alt="Sayfa"
+      class="w-full max-w-3xl"
+      loading="lazy"
+    >
+    @end
+  </div>
+  @end
+
+  {{-- Novel Text Content --}}
+  @if(chapter.textContent)
+  <article class="max-w-3xl mx-auto bg-[#161b22] rounded-lg p-6 md:p-10">
+    <div class="prose prose-invert prose-sm md:prose-base max-w-none text-gray-300 leading-relaxed whitespace-pre-line">{{ chapter.textContent }}</div>
+  </article>
+  @end
+
+  @if(!chapter.pages.length && !chapter.textContent)
+  <div class="text-center text-gray-500 py-12">Bu bölümde içerik bulunamadı.</div>
+  @end
+
+  {{-- End Message --}}
+  <div class="text-center py-8 text-sm text-gray-500">
+    <p>Harika bir bölümü daha geride bıraktınız! <strong class="text-gray-300">{{ series.title }} Bölüm {{ chapter.number }}</strong>'{{ chapter.number > 1 ? 'i' : 'i' }} <strong class="text-cyan-400">MangaHub</strong> kalitesiyle ve Türkçe çevirisiyle okuduğunuz için teşekkür ederiz.</p>
+    <p class="mt-2 font-semibold text-gray-400">Yorumlarınızla Tartışmaya Katılın!</p>
+    <p class="mt-1 text-cyan-400">Bir sonraki bölümde görüşmek üzere keyifli okumalar dileriz.</p>
+  </div>
+
+  {{-- Bottom Navigation --}}
+  <div class="flex items-center justify-between mb-6" x-data>
+    <select
+      class="bg-[#161b22] border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 appearance-none cursor-pointer"
+      @change="window.location = '/series/{{ series.type }}/{{ series.slug }}/' + $el.value"
+    >
+      @each(ch in allChapters)
+      <option value="{{ ch.number }}" {{ ch.number === chapter.number ? 'selected' : '' }}>Bölüm {{ ch.number }}</option>
+      @end
+    </select>
+
+    <div class="flex gap-2">
+      @if(prevChapter)
+      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ prevChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+        &lsaquo; Önceki
+      </a>
+      @end
+      @if(nextChapter)
+      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ nextChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+        Sonraki &rsaquo;
+      </a>
+      @end
+    </div>
+  </div>
+@end
+
+@end
