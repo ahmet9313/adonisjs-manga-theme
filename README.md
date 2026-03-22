@@ -73,49 +73,140 @@
 
 #### Prerequisites
 
-- **Node.js** >= 20.x
-- **MySQL** >= 8.0
-- **npm** or **yarn**
+Before you begin, make sure the following software is installed on your system:
 
-#### Installation
+| Software | Minimum Version | Download |
+|----------|----------------|----------|
+| **Node.js** | v20.0 or higher | [nodejs.org](https://nodejs.org) |
+| **MySQL** | v8.0 or higher | [mysql.com](https://dev.mysql.com/downloads/) |
+| **npm** | v9.0 or higher | Comes with Node.js |
+| **Git** | Any recent version | [git-scm.com](https://git-scm.com) |
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/ahmet9313/adonisjs-manga-theme.git
-   cd adonisjs-manga-theme
-   ```
+> You can verify your installed versions with: `node -v`, `npm -v`, `mysql --version`, `git --version`
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+#### Step 1: Clone the Repository
 
-3. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and set your database credentials, then generate an app key:
-   ```bash
-   node ace generate:key
-   ```
+```bash
+git clone https://github.com/ahmet9313/adonisjs-manga-theme.git
+cd adonisjs-manga-theme
+```
 
-4. **Create the database**
-   ```sql
-   CREATE DATABASE manga_theme CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
+#### Step 2: Install Dependencies
 
-5. **Run migrations and seed**
-   ```bash
-   npm run migrate
-   npm run seed
-   ```
+```bash
+npm install
+```
 
-6. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+This will install all required packages listed in `package.json` (AdonisJS, TailwindCSS, Alpine.js, MySQL driver, etc.)
 
-7. Open your browser and navigate to `http://localhost:3333`
+#### Step 3: Configure Environment Variables
+
+Copy the example environment file:
+
+```bash
+# Linux / macOS
+cp .env.example .env
+
+# Windows (Command Prompt)
+copy .env.example .env
+
+# Windows (PowerShell)
+Copy-Item .env.example .env
+```
+
+Now open `.env` in your text editor and update the database settings:
+
+```env
+DB_HOST=127.0.0.1       # Your MySQL host (127.0.0.1 for local)
+DB_PORT=3306             # MySQL port (default: 3306)
+DB_USER=root             # Your MySQL username
+DB_PASSWORD=yourpassword # Your MySQL password
+DB_DATABASE=manga_theme  # Database name (will be created in Step 4)
+```
+
+#### Step 4: Generate Application Key
+
+AdonisJS requires a unique application key for encryption. Generate one with:
+
+```bash
+node ace generate:key
+```
+
+This will automatically update the `APP_KEY` value in your `.env` file.
+
+#### Step 5: Create the Database
+
+Open your MySQL client (MySQL Workbench, phpMyAdmin, or terminal) and run:
+
+```sql
+CREATE DATABASE manga_theme CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Or via terminal:
+
+```bash
+mysql -u root -p -e "CREATE DATABASE manga_theme CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+#### Step 6: Run Database Migrations
+
+This creates all required tables (series, chapters, genres, authors, artists, content_types, users, etc.):
+
+```bash
+npm run migrate
+```
+
+#### Step 7: Seed the Database (Optional)
+
+Load sample data including an admin user and example series:
+
+```bash
+npm run seed
+```
+
+> Default admin credentials after seeding: check `database/seeders/admin_seeder.ts`
+
+#### Step 8: Start the Development Server
+
+```bash
+npm run dev
+```
+
+The server will start with Hot Module Replacement (HMR) enabled.
+
+#### Step 9: Open in Browser
+
+- **Homepage:** [http://localhost:3333](http://localhost:3333)
+- **Admin Panel:** [http://localhost:3333/admin/giris](http://localhost:3333/admin/giris)
+
+#### Production Build
+
+To build and run for production:
+
+```bash
+# Build the project
+npm run build
+
+# Start the production server
+npm start
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with HMR |
+| `npm run build` | Build for production |
+| `npm start` | Start production server |
+| `npm run migrate` | Run database migrations |
+| `npm run migrate:rollback` | Rollback last migration batch |
+| `npm run migrate:fresh` | Drop all tables and re-run migrations |
+| `npm run seed` | Seed database with sample data |
+| `npm run db:reset` | Fresh migration + seed (full reset) |
+| `npm run lint` | Run ESLint code checks |
+| `npm run format` | Format code with Prettier |
+| `npm run typecheck` | Run TypeScript type checking |
+| `npm test` | Run test suite |
 
 ### Project Structure
 
@@ -188,45 +279,127 @@ adonisjs-manga-theme/
 - CSRF korumali oturum tabanli kimlik dogrulama
 - VineJS ile form dogrulama
 
-### Kurulum
+### Kurulum Adimlari
 
-1. **Repoyu klonlayin**
-   ```bash
-   git clone https://github.com/ahmet9313/adonisjs-manga-theme.git
-   cd adonisjs-manga-theme
-   ```
+#### Gereksinimler
 
-2. **Bagimliliklari yukleyin**
-   ```bash
-   npm install
-   ```
+Baslamadan once asagidaki yazilimlarin sisteminizde kurulu oldugundan emin olun:
 
-3. **Ortam degiskenlerini yapilandirin**
-   ```bash
-   cp .env.example .env
-   ```
-   `.env` dosyasini duzenleyip veritabani bilgilerinizi girin, ardindan uygulama anahtari olusturun:
-   ```bash
-   node ace generate:key
-   ```
+| Yazilim | Minimum Surum | Indirme Linki |
+|---------|---------------|---------------|
+| **Node.js** | v20.0 veya uzeri | [nodejs.org](https://nodejs.org) |
+| **MySQL** | v8.0 veya uzeri | [mysql.com](https://dev.mysql.com/downloads/) |
+| **npm** | v9.0 veya uzeri | Node.js ile birlikte gelir |
+| **Git** | Guncel herhangi bir surum | [git-scm.com](https://git-scm.com) |
 
-4. **Veritabanini olusturun**
-   ```sql
-   CREATE DATABASE manga_theme CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
+> Kurulu surumleri kontrol etmek icin: `node -v`, `npm -v`, `mysql --version`, `git --version`
 
-5. **Migration ve seed calistirin**
-   ```bash
-   npm run migrate
-   npm run seed
-   ```
+#### Adim 1: Repoyu Klonlayin
 
-6. **Gelistirme sunucusunu baslatin**
-   ```bash
-   npm run dev
-   ```
+```bash
+git clone https://github.com/ahmet9313/adonisjs-manga-theme.git
+cd adonisjs-manga-theme
+```
 
-7. Tarayicinizda `http://localhost:3333` adresine gidin
+#### Adim 2: Bagimliliklari Yukleyin
+
+```bash
+npm install
+```
+
+Bu komut `package.json` dosyasindaki tum gerekli paketleri yukler (AdonisJS, TailwindCSS, Alpine.js, MySQL surucusu vb.)
+
+#### Adim 3: Ortam Degiskenlerini Yapilandirin
+
+Ornek ortam dosyasini kopyalayin:
+
+```bash
+# Linux / macOS
+cp .env.example .env
+
+# Windows (Command Prompt)
+copy .env.example .env
+
+# Windows (PowerShell)
+Copy-Item .env.example .env
+```
+
+Simdi `.env` dosyasini metin editoru ile acin ve veritabani ayarlarini guncelleyin:
+
+```env
+DB_HOST=127.0.0.1       # MySQL sunucu adresi (yerel icin 127.0.0.1)
+DB_PORT=3306             # MySQL portu (varsayilan: 3306)
+DB_USER=root             # MySQL kullanici adiniz
+DB_PASSWORD=sifreniz     # MySQL sifreniz
+DB_DATABASE=manga_theme  # Veritabani adi (Adim 5'te olusturulacak)
+```
+
+#### Adim 4: Uygulama Anahtari Olusturun
+
+AdonisJS sifreleme icin benzersiz bir uygulama anahtari gerektirir:
+
+```bash
+node ace generate:key
+```
+
+Bu komut `.env` dosyanızdaki `APP_KEY` degerini otomatik olarak gunceller.
+
+#### Adim 5: Veritabanini Olusturun
+
+MySQL istemcinizi acin (MySQL Workbench, phpMyAdmin veya terminal) ve calistirin:
+
+```sql
+CREATE DATABASE manga_theme CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Veya terminal uzerinden:
+
+```bash
+mysql -u root -p -e "CREATE DATABASE manga_theme CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+#### Adim 6: Veritabani Migration'larini Calistirin
+
+Bu komut gerekli tum tablolari olusturur (series, chapters, genres, authors, artists, content_types, users vb.):
+
+```bash
+npm run migrate
+```
+
+#### Adim 7: Ornek Verileri Yukleyin (Istege Bagli)
+
+Admin kullanicisi ve ornek seriler dahil ornek verileri yukleyin:
+
+```bash
+npm run seed
+```
+
+> Varsayilan admin bilgileri icin: `database/seeders/admin_seeder.ts` dosyasina bakin
+
+#### Adim 8: Gelistirme Sunucusunu Baslatin
+
+```bash
+npm run dev
+```
+
+Sunucu Hot Module Replacement (HMR) etkin olarak baslar.
+
+#### Adim 9: Tarayicida Acin
+
+- **Ana Sayfa:** [http://localhost:3333](http://localhost:3333)
+- **Admin Paneli:** [http://localhost:3333/admin/giris](http://localhost:3333/admin/giris)
+
+#### Uretim Icin Derleme
+
+Uretim ortaminda derlemek ve calistirmak icin:
+
+```bash
+# Projeyi derle
+npm run build
+
+# Uretim sunucusunu baslat
+npm start
+```
 
 ### Kullanilabilir Komutlar
 
@@ -236,11 +409,14 @@ adonisjs-manga-theme/
 | `npm run build` | Uretim icin derler |
 | `npm start` | Uretim sunucusunu baslatir |
 | `npm run migrate` | Veritabani migration'larini calistirir |
-| `npm run seed` | Ornek verileri yukler |
-| `npm run db:reset` | Veritabanini sifirlar ve yeniden seed'ler |
+| `npm run migrate:rollback` | Son migration grubunu geri alir |
+| `npm run migrate:fresh` | Tum tablolari silip migration'lari yeniden calistirir |
+| `npm run seed` | Veritabanina ornek verileri yukler |
+| `npm run db:reset` | Tum tablolari sifirla + ornek veri yukle |
 | `npm run lint` | ESLint ile kod kontrolu |
 | `npm run format` | Prettier ile kod formatlama |
 | `npm run typecheck` | TypeScript tip kontrolu |
+| `npm test` | Test paketini calistir |
 
 ---
 
