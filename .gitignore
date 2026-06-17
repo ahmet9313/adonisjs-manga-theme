@@ -13,6 +13,9 @@ tmp
 # Frontend assets compiled code
 public/assets
 
+# Seeded / uploaded manga content (generated, not source)
+public/content
+
 # Build tools specific
 npm-debug.log
 yarn-error.log
