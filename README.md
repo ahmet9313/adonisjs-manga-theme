@@ -1,17 +1,17 @@
 <p align="center">
   <h1 align="center">AdonisJS Manga Theme</h1>
   <p align="center">
-    <strong>v0.8.0 Beta</strong>
+    <strong>v0.8.1 Beta</strong>
     <br />
-    A modern, full-featured manga reading platform theme built with AdonisJS 6
+    A modern, full-featured manga reading platform theme built with AdonisJS 7
     <br />
     <em>Manga, Manhwa, Manhua & Novel okuma platformu temasi</em>
   </p>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.8.0--beta-orange?style=for-the-badge" alt="Version" />
-  <img src="https://img.shields.io/badge/AdonisJS-6-5A45FF?style=for-the-badge&logo=adonisjs&logoColor=white" alt="AdonisJS" />
+  <img src="https://img.shields.io/badge/version-0.8.1--beta-orange?style=for-the-badge" alt="Version" />
+  <img src="https://img.shields.io/badge/AdonisJS-7-5A45FF?style=for-the-badge&logo=adonisjs&logoColor=white" alt="AdonisJS" />
   <img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/TailwindCSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="TailwindCSS" />
   <img src="https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
@@ -62,7 +62,7 @@
 
 | Layer | Technology |
 |-------|-----------|
-| **Backend** | AdonisJS 6, TypeScript, Node.js |
+| **Backend** | AdonisJS 7, TypeScript, Node.js |
 | **Database** | MySQL with Lucid ORM |
 | **Frontend** | Edge.js (SSR), TailwindCSS 4, Alpine.js 3 |
 | **Build Tool** | Vite 6 |
