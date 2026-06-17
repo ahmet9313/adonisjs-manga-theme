@@ -18,7 +18,7 @@
                  value="{{ flashMessages.get('name') || (author ? author.name : '') }}"
                  class="w-full bg-[#0d1117] border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition">
           @if(flashMessages.has('errors.name'))
-            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('errors.name') }}</p>
+            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('inputErrorsBag.name') }}</p>
           @end
         </div>
 

@@ -14,7 +14,7 @@
                  value="{{ flashMessages.get('full_name') || user.fullName }}"
                  class="w-full bg-[#0d1117] border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition">
           @if(flashMessages.has('errors.full_name'))
-            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('errors.full_name') }}</p>
+            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('inputErrorsBag.full_name') }}</p>
           @end
         </div>
 
@@ -24,7 +24,7 @@
                  value="{{ flashMessages.get('email') || user.email }}"
                  class="w-full bg-[#0d1117] border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition">
           @if(flashMessages.has('errors.email'))
-            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('errors.email') }}</p>
+            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('inputErrorsBag.email') }}</p>
           @end
         </div>
 
@@ -34,7 +34,7 @@
                  class="w-full bg-[#0d1117] border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition"
                  placeholder="Boş bırakırsanız değişmez">
           @if(flashMessages.has('errors.password'))
-            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('errors.password') }}</p>
+            <p class="text-red-400 text-sm mt-1">{{ flashMessages.get('inputErrorsBag.password') }}</p>
           @end
         </div>
 
