@@ -1,4 +1,4 @@
-@component('components/layout/main')
+@component('components/layout/main', { title })
 
 @slot('main')
   {{-- Header --}}
@@ -10,38 +10,15 @@
   </div>
 
   {{-- Navigation --}}
-  <div class="flex items-center justify-between mb-6" x-data>
-    {{-- Chapter Selector --}}
-    <select
-      class="bg-[#161b22] border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 appearance-none cursor-pointer"
-      @change="window.location = '/series/{{ series.type }}/{{ series.slug }}/' + $el.value"
-    >
-      @each(ch in allChapters)
-      <option value="{{ ch.number }}" {{ ch.number === chapter.number ? 'selected' : '' }}>Bölüm {{ ch.number }}</option>
-      @end
-    </select>
-
-    <div class="flex gap-2">
-      @if(prevChapter)
-      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ prevChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
-        &lsaquo; Önceki
-      </a>
-      @end
-      @if(nextChapter)
-      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ nextChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
-        Sonraki &rsaquo;
-      </a>
-      @end
-    </div>
-  </div>
+  @include('partials/chapter_navigation')
 
   {{-- Pages (Image) --}}
   @if(chapter.pages && chapter.pages.length)
   <div class="flex flex-col items-center gap-0">
-    @each(page in chapter.pages)
+    @each((page, index) in chapter.pages)
     <img
       src="{{ page }}"
-      alt="Sayfa"
+      alt="{{ series.title }} bölüm {{ chapter.number }} sayfa {{ index + 1 }}" decoding="async"
       class="w-full max-w-3xl"
       loading="lazy"
     >
@@ -52,7 +29,7 @@
   {{-- Novel Text Content --}}
   @if(chapter.textContent)
   <article class="max-w-3xl mx-auto bg-[#161b22] rounded-lg p-6 md:p-10">
-    <div class="prose prose-invert prose-sm md:prose-base max-w-none text-gray-300 leading-relaxed whitespace-pre-line">{{ chapter.textContent }}</div>
+    <div class="prose prose-invert prose-sm md:prose-base max-w-none text-gray-300 leading-relaxed whitespace-pre-line break-words">{{ chapter.textContent }}</div>
   </article>
   @end
 
@@ -62,35 +39,12 @@
 
   {{-- End Message --}}
   <div class="text-center py-8 text-sm text-gray-500">
-    <p>Harika bir bölümü daha geride bıraktınız! <strong class="text-gray-300">{{ series.title }} Bölüm {{ chapter.number }}</strong>'{{ chapter.number > 1 ? 'i' : 'i' }} <strong class="text-cyan-400">MangaHub</strong> kalitesiyle ve Türkçe çevirisiyle okuduğunuz için teşekkür ederiz.</p>
-    <p class="mt-2 font-semibold text-gray-400">Yorumlarınızla Tartışmaya Katılın!</p>
+    <p><strong class="text-gray-300">{{ series.title }} — Bölüm {{ chapter.number }}</strong> sonuna geldiniz.</p>
     <p class="mt-1 text-cyan-400">Bir sonraki bölümde görüşmek üzere keyifli okumalar dileriz.</p>
   </div>
 
   {{-- Bottom Navigation --}}
-  <div class="flex items-center justify-between mb-6" x-data>
-    <select
-      class="bg-[#161b22] border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 appearance-none cursor-pointer"
-      @change="window.location = '/series/{{ series.type }}/{{ series.slug }}/' + $el.value"
-    >
-      @each(ch in allChapters)
-      <option value="{{ ch.number }}" {{ ch.number === chapter.number ? 'selected' : '' }}>Bölüm {{ ch.number }}</option>
-      @end
-    </select>
-
-    <div class="flex gap-2">
-      @if(prevChapter)
-      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ prevChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
-        &lsaquo; Önceki
-      </a>
-      @end
-      @if(nextChapter)
-      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ nextChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
-        Sonraki &rsaquo;
-      </a>
-      @end
-    </div>
-  </div>
+  @include('partials/chapter_navigation')
 @end
 
 @end

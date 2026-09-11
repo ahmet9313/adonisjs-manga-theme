@@ -1,35 +1,17 @@
+import { now, pageNumber, pageSize } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
 import Chapter from '#models/chapter'
 import SeriesModel from '#models/series'
-import vine from '@vinejs/vine'
-import app from '@adonisjs/core/services/app'
-import { mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function now(): string {
-  return new Date().toISOString().slice(0, 19).replace('T', ' ')
-}
-
-const chapterValidator = vine.compile(
-  vine.object({
-    series_id: vine.number(),
-    number: vine.number(),
-    title: vine.string().maxLength(255).optional(),
-    text_content: vine.string().optional(),
-  })
-)
+import { chapterValidator } from '#validators/admin'
+import { chapterContent, invalidField } from '#services/upload_service'
+import db from '@adonisjs/lucid/services/db'
 
 export default class ChapterAdminController {
   async index({ view, request }: HttpContext) {
-    const seriesId = request.input('series_id')
+    const seriesId = request.input('series_id') ? pageNumber(request.input('series_id')) : null
 
-    const page = request.input('page', 1)
-    const allowedSizes = [10, 20, 30, 50, 1000, 5000]
-    const perPage = allowedSizes.includes(Number(request.input('per_page'))) ? Number(request.input('per_page')) : 20
+    const page = pageNumber(request.input('page'))
+    const perPage = pageSize(request.input('per_page'))
 
     let query = Chapter.query().preload('series').orderBy('createdAt', 'desc')
 
@@ -56,9 +38,7 @@ export default class ChapterAdminController {
   async create({ view, request }: HttpContext) {
     const preSelectedSeriesId = request.input('series_id')
 
-    const seriesList = await SeriesModel.query()
-      .preload('contentType')
-      .orderBy('title', 'asc')
+    const seriesList = await SeriesModel.query().preload('contentType').orderBy('title', 'asc')
 
     const seriesContentTypeMap: Record<number, string> = {}
     for (const s of seriesList) {
@@ -79,87 +59,49 @@ export default class ChapterAdminController {
     })
   }
 
-  async store({ request, session, response }: HttpContext) {
+  private async save(request: HttpContext['request'], chapter = new Chapter()) {
     const data = await request.validateUsing(chapterValidator)
-
-    const existing = await Chapter.query()
+    const duplicate = await Chapter.query()
       .where('seriesId', data.series_id)
       .where('number', data.number)
+      .if(chapter.$isPersisted, (query) => query.whereNot('id', chapter.id))
       .first()
-
-    if (existing) {
-      session.flash('error', `Bu seride ${data.number}. bölüm zaten mevcut`)
-      return response.redirect('/admin/bolumler/ekle')
-    }
-
+    if (duplicate) invalidField('number', 'Bu seride aynı bölüm numarası zaten var.')
     const series = await SeriesModel.query()
       .where('id', data.series_id)
       .preload('contentType')
-      .firstOrFail()
-
-    const isNovel = series.contentType?.slug === 'novel'
-
-    let content: any
-
-    if (isNovel) {
-      content = { type: 'text', text: data.text_content || '' }
-    } else {
-      const pageOrder: string[] = JSON.parse(request.input('page_order', '[]'))
-      const newFiles = request.files('pages', { size: '10mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] })
-
-      const dir = join(
-        app.publicPath(),
-        'content',
-        series.contentType?.slug || 'manga',
-        series.slug,
-        'chapters',
-        String(data.number)
-      )
-
-      const finalPages: string[] = []
-      let newFileIndex = 0
-
-      if (pageOrder.length > 0) {
-        await mkdir(dir, { recursive: true })
-        for (let i = 0; i < pageOrder.length; i++) {
-          const entry = pageOrder[i]
-          if (entry === '__new__' && newFileIndex < newFiles.length) {
-            const file = newFiles[newFileIndex++]
-            const fileName = `${i + 1}.${file.extname}`
-            await file.move(dir, { name: fileName, overwrite: true })
-            finalPages.push(`/content/${series.contentType?.slug || 'manga'}/${series.slug}/chapters/${data.number}/${fileName}`)
-          }
-        }
-      } else if (newFiles.length > 0) {
-        // Fallback: no page_order, just use files in order
-        await mkdir(dir, { recursive: true })
-        for (let i = 0; i < newFiles.length; i++) {
-          const file = newFiles[i]
-          const fileName = `${i + 1}.${file.extname}`
-          await file.move(dir, { name: fileName, overwrite: true })
-          finalPages.push(`/content/${series.contentType?.slug || 'manga'}/${series.slug}/chapters/${data.number}/${fileName}`)
-        }
-      }
-
-      content = { type: 'images', pages: finalPages }
-    }
-
+      .first()
+    if (!series) invalidField('series_id', 'Seri bulunamadı.')
+    const content = await chapterContent(
+      request,
+      series.contentType.slug === 'novel',
+      data.text_content,
+      data.page_order,
+      [series.contentType.slug, series.slug, 'chapters', String(data.number)],
+      chapter.content
+    )
     const timestamp = now()
-
-    await Chapter.create({
-      seriesId: data.series_id,
-      number: data.number,
-      title: data.title || null,
-      content,
-      publishedAt: today(),
-      createdAt: timestamp,
-      updatedAt: timestamp,
+    const oldSeriesId = chapter.seriesId
+    await db.transaction(async (trx) => {
+      chapter.useTransaction(trx)
+      chapter.merge({
+        seriesId: series.id,
+        number: data.number,
+        title: data.title || null,
+        content,
+        publishedAt: chapter.publishedAt || timestamp.slice(0, 10),
+        createdAt: chapter.createdAt || timestamp,
+        updatedAt: timestamp,
+      })
+      await chapter.save()
+      await SeriesModel.query({ client: trx })
+        .whereIn('id', [...new Set([series.id, oldSeriesId].filter(Boolean))])
+        .update({ updatedAt: timestamp })
     })
+  }
 
-    // Update series updatedAt
-    series.updatedAt = timestamp
-    await series.save()
-
+  async store({ request, session, response }: HttpContext) {
+    await this.save(request)
     session.flash('success', 'Bölüm eklendi')
     return response.redirect('/admin/bolumler')
   }
@@ -170,9 +112,7 @@ export default class ChapterAdminController {
       .preload('series', (q) => q.preload('contentType'))
       .firstOrFail()
 
-    const seriesList = await SeriesModel.query()
-      .preload('contentType')
-      .orderBy('title', 'asc')
+    const seriesList = await SeriesModel.query().preload('contentType').orderBy('title', 'asc')
 
     const seriesContentTypeMap: Record<number, string> = {}
     for (const s of seriesList) {
@@ -191,89 +131,7 @@ export default class ChapterAdminController {
   }
 
   async update({ request, params, session, response }: HttpContext) {
-    const chapter = await Chapter.findOrFail(params.id)
-    const data = await request.validateUsing(chapterValidator)
-
-    const existing = await Chapter.query()
-      .where('seriesId', data.series_id)
-      .where('number', data.number)
-      .whereNot('id', chapter.id)
-      .first()
-
-    if (existing) {
-      session.flash('error', `Bu seride ${data.number}. bölüm zaten mevcut`)
-      return response.redirect(`/admin/bolumler/${chapter.id}/duzenle`)
-    }
-
-    const series = await SeriesModel.query()
-      .where('id', data.series_id)
-      .preload('contentType')
-      .firstOrFail()
-
-    const isNovel = series.contentType?.slug === 'novel'
-
-    if (isNovel) {
-      chapter.content = { type: 'text', text: data.text_content || '' }
-    } else {
-      const pageOrder: string[] = JSON.parse(request.input('page_order', '[]'))
-      const newFiles = request.files('pages', { size: '10mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] })
-      const hasChanges = pageOrder.length > 0 || newFiles.length > 0
-
-      if (hasChanges) {
-        const dir = join(
-          app.publicPath(),
-          'content',
-          series.contentType?.slug || 'manga',
-          series.slug,
-          'chapters',
-          String(data.number)
-        )
-        await mkdir(dir, { recursive: true })
-
-        const finalPages: string[] = []
-        let newFileIndex = 0
-
-        if (pageOrder.length > 0) {
-          for (let i = 0; i < pageOrder.length; i++) {
-            const entry = pageOrder[i]
-            if (entry === '__new__' && newFileIndex < newFiles.length) {
-              const file = newFiles[newFileIndex++]
-              const fileName = `${i + 1}.${file.extname}`
-              await file.move(dir, { name: fileName, overwrite: true })
-              finalPages.push(`/content/${series.contentType?.slug || 'manga'}/${series.slug}/chapters/${data.number}/${fileName}`)
-            } else if (entry !== '__new__') {
-              // Existing page URL — keep it
-              finalPages.push(entry)
-            }
-          }
-        } else if (newFiles.length > 0) {
-          // Fallback: no page_order, just append new files
-          const existingPages = (chapter.content as any)?.pages || []
-          finalPages.push(...existingPages)
-          for (let i = 0; i < newFiles.length; i++) {
-            const file = newFiles[i]
-            const fileName = `${existingPages.length + i + 1}.${file.extname}`
-            await file.move(dir, { name: fileName, overwrite: true })
-            finalPages.push(`/content/${series.contentType?.slug || 'manga'}/${series.slug}/chapters/${data.number}/${fileName}`)
-          }
-        }
-
-        chapter.content = { type: 'images', pages: finalPages }
-      }
-    }
-
-    const timestamp = now()
-    chapter.seriesId = data.series_id
-    chapter.number = data.number
-    chapter.title = data.title || null
-    chapter.updatedAt = timestamp
-
-    await chapter.save()
-
-    // Update series updatedAt
-    series.updatedAt = timestamp
-    await series.save()
-
+    await this.save(request, await Chapter.findOrFail(params.id))
     session.flash('success', 'Bölüm güncellendi')
     return response.redirect('/admin/bolumler')
   }

@@ -32,7 +32,7 @@
                 @if(series.coverImage && series.coverImage.startsWith('/'))
                   <img src="{{ series.coverImage }}" alt="{{ series.title }}" class="w-10 h-14 object-cover rounded">
                 @elseif(series.coverImage && series.contentType)
-                  <img src="/content/{{ series.contentType.slug }}/{{ series.slug }}/{{ series.coverImage }}" alt="{{ series.title }}" class="w-10 h-14 object-cover rounded">
+                  <img src="{{ series.coverImage || '/images/no-cover.svg' }}" alt="{{ series.title }}" class="w-10 h-14 object-cover rounded">
                 @else
                   <div class="w-10 h-14 bg-gray-700 rounded flex items-center justify-center text-gray-500 text-xs">N/A</div>
                 @end

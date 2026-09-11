@@ -4,6 +4,8 @@ import seriesService from '#services/series_service'
 export default class ChapterController {
   async show({ view, params, response }: HttpContext) {
     const { type, slug, chapter: chapterNum } = params
+    if (!Number.isSafeInteger(Number(chapterNum)) || Number(chapterNum) < 0)
+      return response.notFound('Bölüm bulunamadı')
     const series = await seriesService.getSeriesBySlug(type, slug)
 
     if (!series) {
@@ -21,6 +23,7 @@ export default class ChapterController {
     const nextChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null
 
     return view.render('pages/chapter_reader', {
+      title: series.title + ' - Bölüm ' + chapter.number,
       series,
       chapter,
       allChapters,

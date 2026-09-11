@@ -1,0 +1,24 @@
+  <div class="flex flex-wrap gap-3 items-center justify-between mb-6" x-data>
+    {{-- Chapter Selector --}}
+    <select aria-label="Bölüm seç"
+      class="bg-[#161b22] border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 appearance-none cursor-pointer"
+      @change="window.location = '/series/{{ series.type }}/{{ series.slug }}/' + $el.value"
+    >
+      @each(ch in allChapters)
+      <option value="{{ ch.number }}" {{ ch.number === chapter.number ? 'selected' : '' }}>Bölüm {{ ch.number }}</option>
+      @end
+    </select>
+
+    <div class="flex gap-2">
+      @if(prevChapter)
+      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ prevChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+        &lsaquo; Önceki
+      </a>
+      @end
+      @if(nextChapter)
+      <a href="/series/{{ series.type }}/{{ series.slug }}/{{ nextChapter.number }}" class="px-3 py-2 border border-gray-700 rounded text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+        Sonraki &rsaquo;
+      </a>
+      @end
+    </div>
+  </div>

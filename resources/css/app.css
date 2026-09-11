@@ -1,1 +1,46 @@
 @import 'tailwindcss';
+
+[x-cloak] {
+  display: none !important;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 3px;
+}
+
+.catalog-filters > .relative > button {
+  min-height: 44px;
+}
+
+@media (width < 640px) {
+  .catalog-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-filters > .relative > button {
+    width: 100%;
+    justify-content: space-between;
+    padding-inline: 12px;
+    font-size: 12px;
+  }
+
+  .catalog-filters > .relative > .absolute {
+    width: min(18rem, calc(100vw - 2rem));
+    left: 0;
+  }
+
+  .catalog-filters > .relative:nth-child(even) > .absolute {
+    left: auto;
+    right: 0;
+  }
+
+  .catalog-filters > :not(.relative) {
+    grid-column: 1 / -1;
+  }
+}

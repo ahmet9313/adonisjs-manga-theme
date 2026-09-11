@@ -11,6 +11,12 @@
 */
 
 process.env.NODE_ENV = 'test'
+// Never run automated tests against the reader's local or production database.
+process.env.DB_CONNECTION = 'sqlite'
+process.env.SQLITE_DB_PATH = ':memory:'
+process.env.HOST = '127.0.0.1'
+process.env.PORT = '3334'
+process.env.SESSION_DRIVER = 'memory'
 
 import 'reflect-metadata'
 import { Ignitor, prettyPrintError } from '@adonisjs/core'

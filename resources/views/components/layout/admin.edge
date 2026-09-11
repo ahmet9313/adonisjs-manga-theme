@@ -3,22 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ title || 'Admin' }} - MangaHub</title>
+  <title>{{ title || 'Admin' }} - {{ site.name }}</title>
   @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-[#0d1117] min-h-screen text-gray-200" x-data="{ sidebarOpen: false }">
+<body class="bg-[#0d1117] min-h-screen text-gray-200" x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
 
   {{-- Mobile overlay --}}
-  <div x-show="sidebarOpen" @click="sidebarOpen = false"
+  <div x-cloak x-show="sidebarOpen" @click="sidebarOpen = false"
        class="fixed inset-0 bg-black/50 z-40 lg:hidden" x-transition.opacity></div>
 
   {{-- Sidebar --}}
-  <aside class="fixed top-0 left-0 z-50 h-full w-64 bg-[#161b22] border-r border-gray-700 flex flex-col transition-transform duration-200"
+  <aside id="admin-navigation" class="fixed top-0 left-0 z-50 h-full w-64 bg-[#161b22] border-r border-gray-700 flex flex-col transition-transform duration-200"
          :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
     {{-- Logo --}}
     <div class="p-5 border-b border-gray-700">
       <a href="/admin" class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-        MangaHub Admin
+        {{ site.name }} Admin
       </a>
     </div>
 
@@ -82,13 +82,13 @@
     {{-- Top bar --}}
     <header class="sticky top-0 z-30 bg-[#161b22]/80 backdrop-blur border-b border-gray-700">
       <div class="flex items-center justify-between px-4 lg:px-6 h-14">
-        <div class="flex items-center gap-3">
-          <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-gray-400 hover:text-white">
+        <div class="flex min-w-0 items-center gap-3">
+          <button @click="sidebarOpen = !sidebarOpen" aria-label="Yönetim menüsü" aria-controls="admin-navigation" :aria-expanded="sidebarOpen" class="lg:hidden text-gray-400 hover:text-white">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
-          <h2 class="text-lg font-semibold text-gray-200">{{ title || 'Panel' }}</h2>
+          <h2 class="text-lg font-semibold text-gray-200 truncate">{{ title || 'Panel' }}</h2>
         </div>
-        <div class="text-sm text-gray-400">
+        <div class="hidden sm:block max-w-[40%] truncate text-sm text-gray-400" title="{{ auth.user.email }}">
           {{ auth.user.email }}
         </div>
       </div>

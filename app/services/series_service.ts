@@ -1,111 +1,10 @@
-import db from '@adonisjs/lucid/services/db'
 import SeriesModel from '#models/series'
 import ContentType from '#models/content_type'
 import Genre from '#models/genre'
 import Chapter from '#models/chapter'
 
-interface SeriesInfo {
-  title: string
-  alternativeTitles: string[]
-  slug: string
-  description: string
-  type: string
-  status: string
-  translationStatus: string
-  author: string
-  artist: string
-  publicationYear: number
-  ageRating: string | null
-  genres: string[]
-  keywords: string[]
-  coverImage: string
-  bannerImage: string | null
-  featured: boolean
-  featuredDescription: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-interface ChapterInfo {
-  number: number
-  title: string | null
-  publishedAt: string
-  timeAgo?: string
-}
-
-interface ChapterWithPages extends ChapterInfo {
-  pages: string[]
-  textContent?: string
-}
-
-interface SeriesWithChapters extends SeriesInfo {
-  latestChapters: ChapterInfo[]
-}
-
-function serializeSeries(s: SeriesModel): SeriesInfo {
-  const contentType = s.$getRelated('contentType') as ContentType | undefined
-  const authors = (s.$getRelated('authors') as any[]) || []
-  const artists = (s.$getRelated('artists') as any[]) || []
-  const genres = (s.$getRelated('genres') as any[]) || []
-  const typeName = contentType?.name || ''
-
-  return {
-    title: s.title,
-    slug: s.slug,
-    type: typeName,
-    description: s.description,
-    author: authors.map((a: any) => a.name).join(', '),
-    artist: artists.map((a: any) => a.name).join(', '),
-    genres: genres.map((g: any) => g.name),
-    alternativeTitles: s.alternativeTitles || [],
-    status: s.status,
-    translationStatus: s.translationStatus,
-    publicationYear: s.publicationYear,
-    ageRating: s.ageRating,
-    coverImage: s.coverImage,
-    bannerImage: s.bannerImage,
-    featured: s.featured,
-    featuredDescription: s.featuredDescription,
-    keywords: (s.keywords && s.keywords.length > 0)
-      ? s.keywords
-      : [
-          `${s.slug.replace(/-/g, ' ')} turkce oku`,
-          `${s.slug.replace(/-/g, ' ')} ${typeName}`,
-        ],
-    createdAt: s.createdAt || '',
-    updatedAt: s.updatedAt || '',
-  }
-}
-
-function serializeChapter(c: Chapter): ChapterInfo {
-  return {
-    number: c.number,
-    title: c.title,
-    publishedAt: c.publishedAt,
-    timeAgo: calculateTimeAgo(c.publishedAt),
-  }
-}
-
-function calculateTimeAgo(dateStr: string): string {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return 'Bugün'
-  if (diffDays === 1) return '1 gün önce'
-  if (diffDays < 7) return `${diffDays} gün önce`
-  if (diffDays < 30) {
-    const weeks = Math.floor(diffDays / 7)
-    return `${weeks} hafta önce`
-  }
-  if (diffDays < 365) {
-    const months = Math.floor(diffDays / 30)
-    return `${months} ay önce`
-  }
-  const years = Math.floor(diffDays / 365)
-  return `${years} yıl önce`
-}
+import { serializeSeries, serializeChapter, calculateTimeAgo } from '#services/series_presenter'
+import type { SeriesInfo, ChapterInfo, ChapterWithPages } from '#services/series_presenter'
 
 function baseSeriesQuery() {
   return SeriesModel.query()
@@ -117,23 +16,15 @@ function baseSeriesQuery() {
 
 class SeriesService {
   private async getContentTypeId(type: string): Promise<number | null> {
-    const ct = await ContentType.findBy('name', type)
+    const ct = await ContentType.findBy('slug', type)
     return ct?.id ?? null
-  }
-
-  async getAllSeries(): Promise<SeriesInfo[]> {
-    const all = await baseSeriesQuery().orderBy('updatedAt', 'desc')
-    return all.map(serializeSeries)
   }
 
   async getSeriesBySlug(type: string, slug: string): Promise<SeriesInfo | null> {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return null
 
-    const series = await baseSeriesQuery()
-      .where('contentTypeId', ctId)
-      .where('slug', slug)
-      .first()
+    const series = await baseSeriesQuery().where('contentTypeId', ctId).where('slug', slug).first()
 
     if (!series) return null
     return serializeSeries(series)
@@ -151,6 +42,7 @@ class SeriesService {
     if (!series) return []
 
     const chapters = await Chapter.query()
+      .select('id', 'seriesId', 'number', 'title', 'publishedAt')
       .where('seriesId', series.id)
       .orderBy('number', 'desc')
 
@@ -198,61 +90,56 @@ class SeriesService {
   }
 
   async getFeaturedSeries(): Promise<SeriesInfo[]> {
-    const featured = await baseSeriesQuery().where('featured', true).orderBy('updatedAt', 'desc')
+    const featured = await baseSeriesQuery()
+      .where('featured', true)
+      .orderBy('updatedAt', 'desc')
+      .orderBy('id', 'desc')
+      .limit(10)
     return featured.map(serializeSeries)
   }
 
-  async getRecentlyUpdated(
-    page: number = 1,
-    perPage: number = 12
-  ): Promise<{
-    items: SeriesWithChapters[]
-    hasNextPage: boolean
-  }> {
-    const all = await this.getAllSeries()
-    const start = (page - 1) * perPage
-    const end = start + perPage
-    const paginated = all.slice(start, end)
-
-    const items: SeriesWithChapters[] = []
-    for (const series of paginated) {
-      const chapters = await this.getChapters(series.type, series.slug)
-      items.push({
-        ...series,
-        latestChapters: chapters.slice(0, 3),
-      })
+  async getRecentlyUpdated(page = 1, perPage = 15) {
+    const results = await baseSeriesQuery()
+      .preload('chapters', (query) =>
+        query
+          .select('id', 'seriesId', 'number', 'title', 'publishedAt')
+          .groupOrderBy('number', 'desc')
+          .groupLimit(3)
+      )
+      .orderBy('updatedAt', 'desc')
+      .orderBy('id', 'desc')
+      .paginate(page, perPage)
+    return {
+      items: results.all().map((series) => ({
+        ...serializeSeries(series),
+        latestChapters: series.chapters.map(serializeChapter),
+      })),
+      hasNextPage: results.hasMorePages,
+      totalPages: results.lastPage,
     }
-
-    return { items, hasNextPage: end < all.length }
   }
 
-  async filterSeries(filters: {
-    genres?: string[]
-    statuses?: string[]
-    types?: string[]
-    search?: string
-    orderBy?: string
-  }): Promise<SeriesInfo[]> {
-    let query = baseSeriesQuery()
+  async filterSeries(
+    filters: {
+      genres?: string[]
+      statuses?: string[]
+      types?: string[]
+      search?: string
+      orderBy?: string
+    },
+    page = 1,
+    perPage = 24
+  ) {
+    const query = baseSeriesQuery()
 
     if (filters.genres && filters.genres.length > 0) {
-      const genreIds = await Genre.query().whereIn('name', filters.genres).select('id')
-      const ids = genreIds.map((g) => g.id)
-      const seriesIds = await db
-        .from('series_genres')
-        .whereIn('genre_id', ids)
-        .select('series_id')
-        .distinct()
-      query.whereIn(
-        'id',
-        seriesIds.map((r: any) => r.series_id)
-      )
+      query.whereHas('genres', (genres) => genres.whereIn('name', filters.genres!))
     }
     if (filters.statuses && filters.statuses.length > 0) {
       query.whereIn('status', filters.statuses)
     }
     if (filters.types && filters.types.length > 0) {
-      const ctIds = await ContentType.query().whereIn('name', filters.types).select('id')
+      const ctIds = await ContentType.query().whereIn('slug', filters.types).select('id')
       query.whereIn(
         'contentTypeId',
         ctIds.map((ct) => ct.id)
@@ -261,11 +148,7 @@ class SeriesService {
     if (filters.search) {
       const q = `%${filters.search}%`
       query.where((builder) => {
-        builder
-          .whereILike('title', q)
-          .orWhereRaw("JSON_SEARCH(alternative_titles, 'one', ?) IS NOT NULL", [
-            `%${filters.search}%`,
-          ])
+        builder.whereILike('title', q).orWhereILike('alternativeTitles', q)
       })
     }
 
@@ -280,7 +163,20 @@ class SeriesService {
     }
 
     const results = await query
-    return results.map(serializeSeries)
+      .orderBy('id', 'desc')
+      .withCount('chapters')
+      .withAggregate('chapters', (chapters) => chapters.max('number').as('lastChapter'))
+      .paginate(page, perPage)
+    return {
+      items: results.all().map((series) => ({
+        ...serializeSeries(series),
+        chapterCount: Number(series.$extras.chapters_count || 0),
+        lastChapter: Number(series.$extras.lastChapter || 0),
+      })),
+      totalResults: results.total,
+      totalPages: results.lastPage,
+      hasNextPage: results.hasMorePages,
+    }
   }
 
   async searchSeries(query: string): Promise<SeriesInfo[]> {
@@ -288,12 +184,7 @@ class SeriesService {
     const q = `%${query}%`
     const results = await baseSeriesQuery()
       .where((builder) => {
-        builder
-          .whereILike('title', q)
-          .orWhereILike('slug', q)
-          .orWhereRaw("JSON_SEARCH(alternative_titles, 'one', ?) IS NOT NULL", [
-            `%${query}%`,
-          ])
+        builder.whereILike('title', q).orWhereILike('slug', q).orWhereILike('alternativeTitles', q)
       })
       .limit(10)
 
@@ -304,28 +195,20 @@ class SeriesService {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return []
 
-    const series = await baseSeriesQuery()
-      .where('contentTypeId', ctId)
-      .where('slug', slug)
-      .first()
+    const series = await baseSeriesQuery().where('contentTypeId', ctId).where('slug', slug).first()
 
     if (!series) return []
 
-    const genres = (series.$getRelated('genres') as any[]) || []
-    const genreIds = genres.map((g: any) => g.id)
+    const genres = series.genres || []
+    const genreIds = genres.map((g) => g.id)
 
     let similarQuery = baseSeriesQuery().where('id', '!=', series.id)
 
     if (genreIds.length > 0) {
-      const matchingSeriesIds = await db
-        .from('series_genres')
-        .whereIn('genre_id', genreIds)
-        .select('series_id')
-        .distinct()
-      const sIds = matchingSeriesIds.map((r: any) => r.series_id)
-
       similarQuery.where((builder) => {
-        builder.where('contentTypeId', ctId).orWhereIn('id', sIds)
+        builder
+          .where('contentTypeId', ctId)
+          .orWhereHas('genres', (genresQuery) => genresQuery.whereIn('genres.id', genreIds))
       })
     } else {
       similarQuery.where('contentTypeId', ctId)

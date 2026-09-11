@@ -10,7 +10,7 @@ export default class AuthMiddleware {
     next: NextFn,
     options: { guards?: (keyof Authenticators)[] } = {}
   ) {
-    await ctx.auth.authenticateUsing(options.guards || ['web'])
+    await ctx.auth.authenticateUsing(options.guards || ['web'], { loginRoute: this.redirectTo })
     return next()
   }
 }

@@ -3,6 +3,11 @@ import adonisjs from '@adonisjs/vite/client'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  cacheDir: process.env.NODE_ENV === 'test' ? 'tmp/vite-test' : 'node_modules/.vite',
+  optimizeDeps: { entries: ['resources/js/app.js'] },
+  server: {
+    watch: { ignored: ['**/.tools/**', '**/tmp/**', '**/build/**', '**/public/content/**'] },
+  },
   plugins: [
     tailwindcss(),
     adonisjs({

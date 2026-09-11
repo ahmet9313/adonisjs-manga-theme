@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Giriş - MangaHub</title>
+  <title>Admin Giriş - {{ site.name }}</title>
   @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-[#0d1117] min-h-screen flex items-center justify-center">
@@ -12,7 +12,7 @@
       {{-- Logo --}}
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-          MangaHub
+          {{ site.name }}
         </h1>
         <p class="text-gray-400 mt-2 text-sm">Yönetim Paneli</p>
       </div>

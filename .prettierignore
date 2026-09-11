@@ -1,0 +1,8 @@
+node_modules/
+.tools/
+.adonisjs/
+build/
+tmp/
+public/content/
+public/assets/
+package-lock.json

@@ -4,7 +4,7 @@
   <span class="text-sm text-gray-400">Toplam <span class="text-gray-200 font-medium">{{ paginator.total }}</span> kayıt</span>
   <div class="flex items-center gap-2" x-data>
     <span class="text-sm text-gray-400">Sayfa başına:</span>
-    <select
+    <select aria-label="Sayfa başına kayıt sayısı"
       class="bg-[#0d1117] border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:border-cyan-500 focus:outline-none cursor-pointer"
       @change="
         const url = new URL(window.location.href);
@@ -13,7 +13,7 @@
         window.location.href = url.toString();
       "
     >
-      @each(size in [10, 20, 30, 50, 1000, 5000])
+      @each(size in site.adminPageSizes)
         <option value="{{ size }}" {{ perPage === size ? 'selected' : '' }}>{{ size }}</option>
       @end
     </select>
@@ -25,7 +25,7 @@
     <span class="text-sm text-gray-500">
       Sayfa {{ paginator.currentPage }} / {{ paginator.lastPage }}
     </span>
-    <div class="flex items-center gap-1">
+    <div class="flex flex-wrap items-center gap-1">
       {{-- Previous --}}
       @if(paginator.currentPage > 1)
         <a href="{{ paginator.getUrl(paginator.currentPage - 1) }}"
@@ -52,7 +52,7 @@
 
       @each(p in Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i))
         @if(p === paginator.currentPage)
-          <span class="px-3 py-1.5 text-sm rounded-lg bg-cyan-600 text-white font-medium">{{ p }}</span>
+          <span aria-current="page" class="px-3 py-1.5 text-sm rounded-lg bg-cyan-600 text-white font-medium">{{ p }}</span>
         @else
           <a href="{{ paginator.getUrl(p) }}"
              class="px-3 py-1.5 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition">{{ p }}</a>

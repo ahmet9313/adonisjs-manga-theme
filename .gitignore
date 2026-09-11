@@ -3,6 +3,7 @@ node_modules
 build
 tmp
 .adonisjs
+.tools
 
 # Secrets
 .env
@@ -31,3 +32,10 @@ yarn-error.log
 # Platform specific
 .DS_Store
 Thumbs.db
+
+.env.*
+!.env.example
+*.sqlite3
+*.sqlite3-*
+*.sqlite
+*.sqlite-*

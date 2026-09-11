@@ -1,4 +1,4 @@
-@component('components/layout/main')
+@component('components/layout/main', { title, description })
 
 @slot('banner')
   {{-- Full-width Banner behind content --}}
@@ -18,7 +18,7 @@
   {{-- Pull content UP over the banner --}}
   <div class="lg:flex lg:gap-8 -mt-52 sm:-mt-64 relative z-10">
     {{-- Left Column: Cover + Main Info --}}
-    <div class="lg:flex-1">
+    <div class="lg:flex-1 min-w-0">
       <div class="flex flex-col sm:flex-row gap-6">
         {{-- Cover --}}
         <div class="shrink-0">
@@ -31,14 +31,14 @@
         </div>
 
         {{-- Info --}}
-        <div class="flex-1">
+        <div class="flex-1 min-w-0 break-words">
           <h1 class="text-2xl font-bold text-white">{{ series.title }}</h1>
 
           @if(series.alternativeTitles && series.alternativeTitles.length)
           <p class="text-sm text-gray-500 mt-1">{{ series.alternativeTitles.join(', ') }}</p>
           @end
 
-          <div class="flex items-center gap-2 mt-2 text-sm">
+          <div class="flex flex-wrap items-center gap-2 mt-2 text-sm">
             <span class="px-2 py-0.5 rounded text-white text-xs font-bold
               @if(series.type === 'manga')
                 bg-blue-600
@@ -71,15 +71,15 @@
           <p class="text-sm text-gray-400 mt-4 leading-relaxed">{{ series.description }}</p>
 
           {{-- Action Buttons --}}
-          <div class="flex items-center gap-3 mt-4">
+          <div class="flex flex-wrap items-center gap-3 mt-4">
             @if(chapters.length)
             <a href="/series/{{ series.type }}/{{ series.slug }}/{{ chapters[chapters.length - 1].number }}" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm rounded transition-colors">
               Okumaya Başla
             </a>
             @end
             <button
-              x-data="{ saved: !!localStorage.getItem('bookmark:{{ series.type }}:{{ series.slug }}') }"
-              @click="saved = !saved; saved ? localStorage.setItem('bookmark:{{ series.type }}:{{ series.slug }}', JSON.stringify({type:'{{ series.type }}',slug:'{{ series.slug }}',title:'{{ series.title }}',coverImage:'{{ series.coverImage }}'})) : localStorage.removeItem('bookmark:{{ series.type }}:{{ series.slug }}')"
+              x-data="bookmarkButton" data-bookmark="{{ JSON.stringify({ type: series.type, slug: series.slug, title: series.title, coverImage: series.coverImage }) }}"
+              @click="toggle()" :aria-pressed="saved"
               :class="saved ? 'border-cyan-500 text-cyan-400' : 'border-gray-600 text-gray-400'"
               class="px-4 py-2 border text-sm rounded hover:border-cyan-500 hover:text-cyan-400 transition-colors flex items-center gap-2"
             >
@@ -91,8 +91,8 @@
       </div>
 
       {{-- Chapter List --}}
-      <section class="mt-8" x-data="chapterList()" x-init="init()">
-        <div class="flex items-center justify-between mb-4">
+      <section class="mt-8" x-data="chapterList" data-chapters="{{ JSON.stringify(chapters.map(c => ({ number: c.number, title: c.title ? 'Bölüm ' + c.number + ' - ' + c.title : 'Bölüm ' + c.number, timeAgo: c.timeAgo }))) }}">
+        <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
           <h2 class="text-lg font-bold text-white">Bölümler <span class="text-sm font-normal text-gray-500">({{ chapters.length }})</span></h2>
           <button
             @click="toggleSort()"
@@ -110,7 +110,7 @@
           type="text"
           x-model="search"
           @input="if(search) showAll = true"
-          placeholder="Bölüm ara... (Örn: 25)"
+          aria-label="Bölüm ara" placeholder="Bölüm ara... (Örn: 25)"
           class="w-full bg-[#161b22] border border-gray-700 rounded px-4 py-2 text-sm text-gray-300 placeholder-gray-500 focus:border-cyan-500 focus:outline-none mb-4"
         >
 
@@ -118,13 +118,15 @@
           <template x-for="ch in filteredChapters()" :key="ch.number">
             <a
               :href="'/series/{{ series.type }}/{{ series.slug }}/' + ch.number"
-              class="flex items-center justify-between bg-[#161b22] hover:bg-[#1c2333] rounded px-4 py-3 transition-colors"
+              class="flex gap-3 items-center justify-between bg-[#161b22] hover:bg-[#1c2333] rounded px-4 py-3 transition-colors"
             >
-              <span class="text-gray-300 text-sm font-medium" x-text="ch.title"></span>
-              <span class="text-gray-500 text-xs" x-text="ch.timeAgo"></span>
+              <span class="text-gray-300 text-sm font-medium min-w-0 break-words" x-text="ch.title"></span>
+              <span class="text-gray-400 text-xs shrink-0" x-text="ch.timeAgo"></span>
             </a>
           </template>
         </div>
+
+        <p x-cloak x-show="search && filteredChapters().length === 0" role="status" class="text-center text-gray-400 py-6">Aramanıza uygun bölüm bulunamadı.</p>
 
         {{-- Show More / Less --}}
         @if(chapters.length > 10)
@@ -144,34 +146,7 @@
         <div class="text-center text-gray-500 py-8">Henüz bölüm eklenmemiş.</div>
         @end
 
-        <script>
-          function chapterList() {
-            return {
-              allChapters: [],
-              ascending: false,
-              showAll: false,
-              search: '',
-              init() {
-                this.allChapters = {{{ JSON.stringify(chapters.map(c => ({ number: c.number, title: c.title ? 'Bölüm ' + c.number + ' - ' + c.title : 'Bölüm ' + c.number, timeAgo: c.timeAgo }))) }}};
-              },
-              toggleSort() {
-                this.ascending = !this.ascending;
-                this.allChapters.sort((a, b) => this.ascending ? a.number - b.number : b.number - a.number);
-              },
-              filteredChapters() {
-                let list = this.allChapters;
-                if (this.search) {
-                  const q = this.search.toLowerCase();
-                  list = list.filter(ch => String(ch.number).includes(q) || ch.title.toLowerCase().includes(q));
-                }
-                if (!this.showAll && !this.search) {
-                  list = list.slice(0, 10);
-                }
-                return list;
-              }
-            }
-          }
-        </script>
+
       </section>
     </div>
 

@@ -10,8 +10,10 @@ import { middleware } from '#start/kernel'
 const HomeController = () => import('#controllers/home_controller')
 const SeriesController = () => import('#controllers/series_controller')
 const ChapterController = () => import('#controllers/chapter_controller')
+const MediaController = () => import('#controllers/media_controller')
 
 // Public routes
+router.get('/content/*', [MediaController, 'show']).as('content.show')
 router.get('/', [HomeController, 'index']).as('home')
 router.get('/seriler', [SeriesController, 'index']).as('series.index')
 router.get('/ara', [SeriesController, 'search']).as('series.search')
@@ -57,8 +59,12 @@ router
     router.get('/bolumler/ekle', [AdminChapterController, 'create']).as('admin.chapters.create')
     router.post('/bolumler/ekle', [AdminChapterController, 'store']).as('admin.chapters.store')
     router.get('/bolumler/:id/duzenle', [AdminChapterController, 'edit']).as('admin.chapters.edit')
-    router.post('/bolumler/:id/duzenle', [AdminChapterController, 'update']).as('admin.chapters.update')
-    router.post('/bolumler/:id/sil', [AdminChapterController, 'destroy']).as('admin.chapters.destroy')
+    router
+      .post('/bolumler/:id/duzenle', [AdminChapterController, 'update'])
+      .as('admin.chapters.update')
+    router
+      .post('/bolumler/:id/sil', [AdminChapterController, 'destroy'])
+      .as('admin.chapters.destroy')
 
     // Genres CRUD
     router.get('/turler', [AdminGenreController, 'index']).as('admin.genres.index')
@@ -73,7 +79,9 @@ router
     router.get('/yazarlar/ekle', [AdminAuthorController, 'create']).as('admin.authors.create')
     router.post('/yazarlar/ekle', [AdminAuthorController, 'store']).as('admin.authors.store')
     router.get('/yazarlar/:id/duzenle', [AdminAuthorController, 'edit']).as('admin.authors.edit')
-    router.post('/yazarlar/:id/duzenle', [AdminAuthorController, 'update']).as('admin.authors.update')
+    router
+      .post('/yazarlar/:id/duzenle', [AdminAuthorController, 'update'])
+      .as('admin.authors.update')
     router.post('/yazarlar/:id/sil', [AdminAuthorController, 'destroy']).as('admin.authors.destroy')
 
     // Artists CRUD
@@ -81,16 +89,30 @@ router
     router.get('/cizerler/ekle', [AdminArtistController, 'create']).as('admin.artists.create')
     router.post('/cizerler/ekle', [AdminArtistController, 'store']).as('admin.artists.store')
     router.get('/cizerler/:id/duzenle', [AdminArtistController, 'edit']).as('admin.artists.edit')
-    router.post('/cizerler/:id/duzenle', [AdminArtistController, 'update']).as('admin.artists.update')
+    router
+      .post('/cizerler/:id/duzenle', [AdminArtistController, 'update'])
+      .as('admin.artists.update')
     router.post('/cizerler/:id/sil', [AdminArtistController, 'destroy']).as('admin.artists.destroy')
 
     // Content Types CRUD
-    router.get('/icerik-turleri', [AdminContentTypeController, 'index']).as('admin.content_types.index')
-    router.get('/icerik-turleri/ekle', [AdminContentTypeController, 'create']).as('admin.content_types.create')
-    router.post('/icerik-turleri/ekle', [AdminContentTypeController, 'store']).as('admin.content_types.store')
-    router.get('/icerik-turleri/:id/duzenle', [AdminContentTypeController, 'edit']).as('admin.content_types.edit')
-    router.post('/icerik-turleri/:id/duzenle', [AdminContentTypeController, 'update']).as('admin.content_types.update')
-    router.post('/icerik-turleri/:id/sil', [AdminContentTypeController, 'destroy']).as('admin.content_types.destroy')
+    router
+      .get('/icerik-turleri', [AdminContentTypeController, 'index'])
+      .as('admin.content_types.index')
+    router
+      .get('/icerik-turleri/ekle', [AdminContentTypeController, 'create'])
+      .as('admin.content_types.create')
+    router
+      .post('/icerik-turleri/ekle', [AdminContentTypeController, 'store'])
+      .as('admin.content_types.store')
+    router
+      .get('/icerik-turleri/:id/duzenle', [AdminContentTypeController, 'edit'])
+      .as('admin.content_types.edit')
+    router
+      .post('/icerik-turleri/:id/duzenle', [AdminContentTypeController, 'update'])
+      .as('admin.content_types.update')
+    router
+      .post('/icerik-turleri/:id/sil', [AdminContentTypeController, 'destroy'])
+      .as('admin.content_types.destroy')
   })
   .prefix('/admin')
   .use(middleware.auth())
