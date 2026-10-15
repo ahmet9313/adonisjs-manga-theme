@@ -1,0 +1,41 @@
+{{--
+  Error pages (403/404/500). Unlike `main`, this layout must not depend on the session, CSRF or
+  auth: unmatched URLs skip the router middleware, so those helpers are undefined there.
+--}}
+<!DOCTYPE html>
+<html lang="{{ site.language }}"{{{ themeAttrs() }}}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>{{ title ? title + ' — ' + site.name : site.name }}</title>
+  @vite(['resources/css/app.css'])
+  @if(themeCss())
+  <style>{{{ themeCss() }}}</style>
+  @end
+</head>
+<body class="site-bg flex min-h-screen flex-col font-sans text-white/70">
+  <header class="glass-strong border-b border-white/10">
+    <div class="mx-auto flex min-h-16 max-w-(--t-container) items-center px-4">
+      <a href="/" class="flex items-center gap-2" aria-label="{{ site.name }} ana sayfa">
+        @if(site.logo)
+          <img src="{{ site.logo }}" alt="" class="h-10">
+        @end
+        <span class="text-xl font-bold text-(--t-heading)">{{ site.name }}</span>
+      </a>
+    </div>
+  </header>
+  <main class="mx-auto flex w-full max-w-(--t-container) flex-1 items-center justify-center px-4 py-16">
+    <section class="glass w-full max-w-md rounded-[22px] border border-white/10 p-8 text-center" aria-labelledby="error-title">
+      <p class="text-6xl font-extrabold tracking-tight text-white/55" aria-hidden="true">{{ code }}</p>
+      <h1 id="error-title" class="mt-3 text-2xl font-bold text-(--t-heading)">{{ title }}</h1>
+      <p class="mt-2 text-sm text-white/70">{{ message }}</p>
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <a href="/" class="inline-flex items-center rounded-full bg-[#0b8533] px-5 py-2.5 text-sm font-semibold text-(--t-heading) transition hover:bg-[#0fa942]">Ana Sayfaya Dön</a>
+        <a href="/seriler" class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-(--t-heading) transition hover:border-white/25 hover:bg-white/10">Serilere Göz At</a>
+      </div>
+    </section>
+  </main>
+  @include('partials/footer')
+</body>
+</html>

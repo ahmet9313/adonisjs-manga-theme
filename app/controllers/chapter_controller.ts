@@ -1,8 +1,10 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import seriesService from '#services/series_service'
+import library from '#services/library_service'
+import progress from '#services/progress_service'
 
 export default class ChapterController {
-  async show({ view, params, response }: HttpContext) {
+  async show({ view, params, response, auth }: HttpContext) {
     const { type, slug, chapter: chapterNum } = params
     if (!Number.isSafeInteger(Number(chapterNum)) || Number(chapterNum) < 0)
       return response.notFound('Bölüm bulunamadı')
@@ -17,6 +19,14 @@ export default class ChapterController {
       return response.notFound('Bölüm bulunamadı')
     }
 
+    let reward = null
+    if (auth.user) {
+      const isNew = await library.recordRead(auth.user.id, series.id, chapter.id)
+      reward = await progress.chapterRead(auth.user, series.id, isNew)
+      // Level-ups and card drops add inbox messages after the menu summary was prepared.
+      if (reward) view.share({ account: await progress.summary(auth.user) })
+    }
+
     const allChapters = await seriesService.getChapters(type, slug)
     const currentIndex = allChapters.findIndex((c) => c.number === Number(chapterNum))
     const prevChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null
@@ -29,6 +39,15 @@ export default class ChapterController {
       allChapters,
       prevChapter,
       nextChapter,
+      commentThread: { seriesId: series.id, chapterId: chapter.id },
+      reward: reward
+        ? {
+            exp: reward.exp,
+            card: reward.card
+              ? { name: reward.card.name, rarity: reward.card.rarity, image: reward.card.image }
+              : null,
+          }
+        : null,
     })
   }
 }

@@ -1,0 +1,36 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="max-w-2xl rounded-xl border border-gray-700 bg-(--t-surface) p-6">
+    <h3 class="mb-1 text-lg font-semibold text-gray-200">Duyuru Çubuğu</h3>
+    <p class="mb-6 text-sm text-gray-500">Sitenin her sayfasında menünün üstünde tek satırlık bir duyuru gösterir.</p>
+
+    <form action="/admin/tema/duyuru" method="POST" class="space-y-5">
+      {{ csrfField() }}
+      <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-700 bg-(--t-field) p-4">
+        <input type="checkbox" name="announcement_enabled" value="on" {{ values.announcement_enabled ? 'checked' : '' }} class="mt-1 h-4 w-4 accent-emerald-500">
+        <span>
+          <span class="block text-sm font-medium text-gray-200">Duyuru çubuğunu göster</span>
+          <span class="block text-xs text-gray-500">Kapalıyken metin saklanır ama sitede görünmez.</span>
+        </span>
+      </label>
+      <div>
+        <label for="announcement_text" class="mb-1 block text-sm font-medium text-gray-300">Metin</label>
+        <input id="announcement_text" name="announcement_text" type="text" maxlength="160"
+               value="{{ flashMessages.get('announcement_text') || values.announcement_text }}"
+               class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+        @!component('components/field_error', { field: 'announcement_text' })
+      </div>
+      <div>
+        <label for="announcement_url" class="mb-1 block text-sm font-medium text-gray-300">Bağlantı <span class="font-normal text-gray-500">(isteğe bağlı)</span></label>
+        <input id="announcement_url" name="announcement_url" type="text" maxlength="300" placeholder="/seriler veya https://…"
+               value="{{ flashMessages.get('announcement_url') || values.announcement_url }}"
+               class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+        @!component('components/field_error', { field: 'announcement_url' })
+      </div>
+      <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+    </form>
+  </div>
+@end
+
+@end

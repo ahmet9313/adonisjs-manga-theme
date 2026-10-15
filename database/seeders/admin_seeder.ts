@@ -9,6 +9,8 @@ export default class AdminSeeder extends BaseSeeder {
     await User.firstOrCreate(
       { email: 'admin@admin.com' },
       {
+        username: 'admin',
+        role: 'admin',
         fullName: 'Admin',
         email: 'admin@admin.com',
         password: 'admin',

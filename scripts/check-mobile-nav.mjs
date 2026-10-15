@@ -344,7 +344,8 @@ async function main() {
         '/series/manga/naruto/1',
         '/series/novel/sword-art-online/1',
         '/kaydedilenler',
-        '/admin/giris',
+        '/giris',
+        '/kayit',
       ]) {
         await visit(path)
         const check = await send('Runtime.evaluate', {

@@ -1,0 +1,6 @@
+{{-- Five stars filled to a 0–10 score. Props: value, size (text size classes). --}}
+@let(score = Number($props.get('value')) || 0)
+<span class="relative inline-block whitespace-nowrap leading-none {{ $props.get('size') || 'text-base' }}" role="img" aria-label="{{ score.toFixed(1) }} / 10 puan">
+  <span class="text-white/20" aria-hidden="true">★★★★★</span>
+  <span class="absolute inset-y-0 left-0 overflow-hidden text-amber-400" style="width: {{ Math.max(0, Math.min(100, Math.round(score * 10))) }}%" aria-hidden="true">★★★★★</span>
+</span>

@@ -1,0 +1,13 @@
+{{-- Client-side toasts. Dispatch $dispatch('toast', { text, tone?: 'success'|'error'|'reward', image? }). --}}
+<div x-data="toasts" @toast.window="push($event.detail)" class="pointer-events-none fixed inset-x-0 bottom-4 z-[95] flex flex-col items-center gap-2 px-4" aria-live="polite">
+  <template x-for="toast in items" :key="toast.id">
+    <div x-transition class="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border px-4 py-3 text-sm shadow-2xl backdrop-blur"
+         :class="{ 'border-emerald-500/50 bg-emerald-950/85 text-emerald-100': toast.tone === 'success', 'border-red-500/50 bg-red-950/85 text-red-100': toast.tone === 'error', 'border-amber-400/50 bg-gradient-to-r from-amber-950/90 to-fuchsia-950/90 text-amber-50': toast.tone === 'reward' }">
+      <template x-if="toast.image"><img :src="toast.image" alt="" class="h-14 w-10 shrink-0 rounded object-cover"></template>
+      <span class="flex-1" x-text="toast.text"></span>
+      <button type="button" @click="dismiss(toast.id)" class="text-current/70 hover:text-current" aria-label="Kapat">
+        @!component('components/icon', { name: 'x', class: 'h-4 w-4' })
+      </button>
+    </div>
+  </template>
+</div>

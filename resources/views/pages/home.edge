@@ -2,7 +2,7 @@
 
 @slot('main')
   {{-- Hero Banner Slider --}}
-  @if(featured.length)
+  @if(ui('home_hero') && featured.length)
   <section
     x-data="heroSlider({{ featured.length }})"
     @mouseenter="pause('hover')"
@@ -13,7 +13,7 @@
     @touchend.passive="handleTouchEnd($event)"
     @keydown.left.prevent="previous()"
     @keydown.right.prevent="next()"
-    class="relative -mx-4 mb-8 overflow-hidden bg-[#101722] shadow-2xl shadow-black/20 sm:mx-0 sm:rounded-2xl"
+    class="relative -mx-4 mb-8 overflow-hidden bg-(--t-surface-2) shadow-2xl shadow-black/20 sm:mx-0 sm:rounded-2xl"
     role="region"
     aria-roledescription="carousel"
     aria-label="Öne çıkan seriler"
@@ -38,7 +38,7 @@
         data-hero-slide
       >
         {{-- Background artwork --}}
-        <div class="absolute inset-0 bg-[#101722]" aria-hidden="true">
+        <div class="absolute inset-0 bg-(--t-surface-2)" aria-hidden="true">
           <img
             src="{{ item.bannerImage || item.coverImage }}"
             alt=""
@@ -48,15 +48,15 @@
             @end
             onerror="this.onerror=null;this.style.display='none'"
           >
-          <div class="absolute inset-0 bg-gradient-to-r from-[#0b1119] via-[#0b1119]/90 to-[#0b1119]/25"></div>
-          <div class="absolute inset-0 bg-gradient-to-t from-[#0b1119] via-transparent to-black/15"></div>
+          <div class="absolute inset-0 bg-gradient-to-r from-(--t-bg) via-(--t-bg)/90 to-(--t-bg)/25"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-(--t-bg) via-transparent to-black/15"></div>
         </div>
 
         {{-- Slide content --}}
         <div class="relative z-10 mx-auto flex h-full max-w-6xl items-center gap-7 px-5 pb-16 pt-7 sm:px-8 sm:pb-14 lg:gap-10 lg:px-12">
           <a
             href="/series/{{ item.type }}/{{ item.slug }}"
-            class="hidden shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#111827] shadow-2xl shadow-black/50 sm:block"
+            class="hidden shrink-0 overflow-hidden rounded-xl border border-white/10 bg-(--t-surface-2) shadow-2xl shadow-black/50 sm:block"
             aria-label="{{ item.title }} seri sayfasına git"
           >
             <img
@@ -72,7 +72,7 @@
 
           <div class="min-w-0 max-w-2xl flex-1">
             <div class="mb-3 flex flex-wrap items-center gap-2">
-              <span class="rounded-md px-2.5 py-1 text-xs font-bold text-white
+              <span class="rounded-md px-2.5 py-1 text-xs font-bold text-(--t-on-accent)
                 @if(item.type === 'manga')
                   bg-blue-600
                 @elseif(item.type === 'manhwa')
@@ -87,12 +87,12 @@
               ">{{ item.type.charAt(0).toUpperCase() + item.type.slice(1) }}</span>
               <span class="text-sm font-medium {{ item.status === 'Devam Ediyor' ? 'text-emerald-400' : 'text-sky-400' }}">{{ item.status }}</span>
               @if(item.ageRating && (item.ageRating.includes('18') || item.ageRating.includes('16')))
-              <span class="rounded-md bg-red-600 px-2 py-1 text-xs font-bold text-white">{{ item.ageRating }}</span>
+              <span class="rounded-md bg-red-600 px-2 py-1 text-xs font-bold text-(--t-on-accent)">{{ item.ageRating }}</span>
               @end
             </div>
 
             <a href="/series/{{ item.type }}/{{ item.slug }}" class="group inline-block">
-              <h2 class="mb-3 line-clamp-2 text-3xl font-extrabold tracking-tight text-white transition-colors group-hover:text-cyan-400 sm:text-4xl lg:text-5xl" data-hero-title>{{ item.title }}</h2>
+              <h2 class="mb-3 line-clamp-2 text-3xl font-extrabold tracking-tight text-(--t-heading) transition-colors group-hover:text-emerald-400 sm:text-4xl lg:text-5xl" data-hero-title>{{ item.title }}</h2>
             </a>
             <p class="mb-5 line-clamp-3 max-w-xl text-sm leading-6 text-gray-300 sm:text-base sm:leading-7">{{ item.featuredDescription || item.description }}</p>
 
@@ -102,7 +102,7 @@
               @end
             </div>
 
-            <a href="/series/{{ item.type }}/{{ item.slug }}" class="inline-flex min-h-11 items-center gap-2 rounded-lg bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-950/30 transition-colors hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400">
+            <a href="/series/{{ item.type }}/{{ item.slug }}" class="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-(--t-on-accent) shadow-lg shadow-emerald-950/30 transition-colors hover:bg-emerald-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400">
               Seriye Git
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </a>
@@ -114,11 +114,11 @@
 
     {{-- Carousel controls --}}
     @if(featured.length > 1)
-    <div x-cloak class="absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-3 bg-gradient-to-t from-[#0b1119] via-[#0b1119]/80 to-transparent px-4 pb-4 pt-8 sm:justify-end sm:px-7">
+    <div x-cloak class="absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-3 bg-gradient-to-t from-(--t-bg) via-(--t-bg)/80 to-transparent px-4 pb-4 pt-8 sm:justify-end sm:px-7">
       <button
         type="button"
         @click="previous()"
-        class="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-black/30 text-gray-200 backdrop-blur-sm transition hover:border-white/30 hover:bg-white/15 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+        class="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-black/30 text-gray-200 backdrop-blur-sm transition hover:border-white/30 hover:bg-white/15 hover:text-(--t-heading) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
         aria-label="Önceki banner"
       >
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -129,9 +129,9 @@
         <button
           type="button"
           @click="goTo({{ index }})"
-          :class="current === {{ index }} ? 'w-7 bg-cyan-400' : 'w-2 bg-gray-500 hover:bg-gray-300'"
+          :class="current === {{ index }} ? 'w-7 bg-emerald-400' : 'w-2 bg-gray-500 hover:bg-gray-300'"
           :aria-current="current === {{ index }} ? 'true' : 'false'"
-          class="h-2 rounded-full transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-400"
+          class="h-2 rounded-full transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400"
           aria-label="{{ index + 1 }}. banner: {{ item.title }}"
         ></button>
         @end
@@ -140,7 +140,7 @@
       <button
         type="button"
         @click="next()"
-        class="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-black/30 text-gray-200 backdrop-blur-sm transition hover:border-white/30 hover:bg-white/15 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+        class="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-black/30 text-gray-200 backdrop-blur-sm transition hover:border-white/30 hover:bg-white/15 hover:text-(--t-heading) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
         aria-label="Sonraki banner"
         data-hero-next
       >
@@ -152,12 +152,13 @@
   @end
 
   {{-- Son Güncellenenler --}}
+  @if(ui('home_updates'))
   <section>
-    <h2 class="text-lg font-bold text-white mb-4 uppercase tracking-wide">Son Güncellenenler</h2>
+    <h2 class="text-lg font-bold text-(--t-heading) mb-4 uppercase tracking-wide">Son Güncellenenler</h2>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       @each((item, index) in recentlyUpdated)
-      <div class="bg-[#161b22] rounded-lg p-4 flex gap-4 hover:bg-[#1c2333] transition-colors group">
+      <div class="glass rounded-lg p-4 flex gap-4 hover:bg-white/5 transition-colors group">
         {{-- Cover --}}
         <a href="/series/{{ item.type }}/{{ item.slug }}" class="shrink-0 relative">
           <img
@@ -167,7 +168,7 @@
             loading="lazy"
             onerror="this.onerror=null;this.style.display='none'"
           >
-          <span class="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded text-white
+          <span class="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded text-(--t-on-accent)
             @if(item.type === 'manga')
               bg-blue-600
             @elseif(item.type === 'manhwa')
@@ -184,11 +185,14 @@
 
         {{-- Info --}}
         <div class="flex-1 min-w-0">
-          <a href="/series/{{ item.type }}/{{ item.slug }}" class="font-semibold text-white hover:text-cyan-400 transition-colors text-sm block truncate">
+          <a href="/series/{{ item.type }}/{{ item.slug }}" class="font-semibold text-(--t-heading) hover:text-emerald-400 transition-colors text-sm block truncate">
             {{ item.title }}
           </a>
           <div class="flex items-center gap-2 mt-1">
             <span class="text-xs {{ item.status === 'Devam Ediyor' ? 'text-green-400' : item.status === 'Bırakıldı' ? 'text-red-400' : 'text-blue-400' }}">{{ item.status }}</span>
+            @if(item.ratingCount)
+            <span class="text-xs text-amber-300" title="{{ item.ratingCount }} puan">★ {{ item.ratingAverage.toFixed(1) }}</span>
+            @end
             @if(item.ageRating && (item.ageRating.includes('18') || item.ageRating.includes('16')))
             <span class="text-[10px] text-red-400 border border-red-600 rounded px-1">{{ item.ageRating }}</span>
             @end
@@ -198,7 +202,7 @@
           <div class="mt-2.5 space-y-1.5">
             @each(chapter in item.latestChapters)
             <a href="/series/{{ item.type }}/{{ item.slug }}/{{ chapter.number }}" class="flex items-center justify-between text-xs group/ch">
-              <span class="text-gray-300 group-hover/ch:text-cyan-400 transition-colors truncate mr-2">{{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</span>
+              <span class="text-gray-300 group-hover/ch:text-emerald-400 transition-colors truncate mr-2">{{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</span>
               <span class="text-gray-600 shrink-0">{{ chapter.timeAgo }}</span>
             </a>
             @end
@@ -219,7 +223,7 @@
         {{-- First Page --}}
         @if(currentPage > 2)
         <li>
-          <a href="/?page=1" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#1c2333] transition-all duration-200" title="İlk Sayfa">
+          <a href="/?page=1" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200" title="İlk Sayfa">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
           </a>
         </li>
@@ -228,7 +232,7 @@
         {{-- Previous --}}
         @if(currentPage > 1)
         <li>
-          <a href="/?page={{ currentPage - 1 }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#1c2333] transition-all duration-200" title="Önceki">
+          <a href="/?page={{ currentPage - 1 }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200" title="Önceki">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
           </a>
         </li>
@@ -240,9 +244,9 @@
           @if(pg === '...')
           <span class="flex items-center justify-center w-9 h-9 text-gray-600 text-sm">...</span>
           @elseif(pg === currentPage)
-          <span class="flex items-center justify-center w-9 h-9 rounded-lg text-sm font-bold bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20">{{ pg }}</span>
+          <span class="flex items-center justify-center w-9 h-9 rounded-lg text-sm font-bold bg-gradient-to-br from-emerald-500 to-blue-600 text-(--t-on-accent) shadow-lg shadow-emerald-500/20">{{ pg }}</span>
           @else
-          <a href="/?page={{ pg }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-[#1c2333] transition-all duration-200">{{ pg }}</a>
+          <a href="/?page={{ pg }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-300 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200">{{ pg }}</a>
           @end
         </li>
         @end
@@ -250,7 +254,7 @@
         {{-- Next --}}
         @if(hasNextPage)
         <li>
-          <a href="/?page={{ currentPage + 1 }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#1c2333] transition-all duration-200" title="Sonraki">
+          <a href="/?page={{ currentPage + 1 }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200" title="Sonraki">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
           </a>
         </li>
@@ -259,7 +263,7 @@
         {{-- Last Page --}}
         @if(currentPage < totalPages - 1)
         <li>
-          <a href="/?page={{ totalPages }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#1c2333] transition-all duration-200" title="Son Sayfa">
+          <a href="/?page={{ totalPages }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200" title="Son Sayfa">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
           </a>
         </li>
@@ -268,6 +272,11 @@
     </nav>
     @end
   </section>
+  @end
+
+  @if(ui('home_community') && currentPage === 1)
+    @include('partials/home/community')
+  @end
 @end
 
 @end

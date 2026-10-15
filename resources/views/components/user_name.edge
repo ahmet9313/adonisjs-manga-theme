@@ -1,0 +1,3 @@
+{{-- Display name with the equipped name effect. Props: user, look (lookOf(user)), class. --}}
+@let(effect = $props.get('look') ? $props.get('look').effect : null)
+<span class="{{ effect && effect.cls ? effect.cls : '' }} {{ $props.get('class') || '' }}" style="{{ visualStyle(effect) }}">{{ user.fullName }}</span>

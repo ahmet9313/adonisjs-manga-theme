@@ -51,7 +51,13 @@ test.group('Catalog and administration', (group) => {
         })
       series = item
     }
-    await User.create({ email: 'test@example.com', fullName: 'Test Admin', password })
+    await User.create({
+      email: 'test@example.com',
+      username: 'testadmin',
+      role: 'admin',
+      fullName: 'Test Admin',
+      password,
+    })
   })
 
   test('pagination and aggregates return only the requested page with the correct chapters', async ({
@@ -98,7 +104,7 @@ test.group('Catalog and administration', (group) => {
     assert.equal(await statusOf(timedFetch(base + `/series/manga/${series.slug}/NaN`)), 404)
     const protectedPage = await timedFetch(base + '/admin', { redirect: 'manual' })
     assert.equal(protectedPage.status, 302)
-    assert.equal(protectedPage.headers.get('location'), '/admin/giris')
+    assert.equal(protectedPage.headers.get('location'), '/giris?next=%2Fadmin')
     assert.equal(
       await statusOf(
         timedFetch(base + '/admin/seriler/ekle', {
@@ -135,11 +141,16 @@ test.group('Catalog and administration', (group) => {
       const html = await response.text()
       return html.match(/name=['"]_csrf['"] value=['"]([^'"]+)['"]/)?.[1] || ''
     }
-    const csrf = await token('/admin/giris')
+    const csrf = await token('/giris')
     assert.isNotEmpty(csrf)
-    const login = await request('/admin/giris', {
+    const login = await request('/giris', {
       method: 'POST',
-      body: new URLSearchParams({ _csrf: csrf, email: 'test@example.com', password }),
+      body: new URLSearchParams({
+        _csrf: csrf,
+        login: 'test@example.com',
+        password,
+        next: '/admin',
+      }),
     })
     assert.equal(login.headers.get('location'), '/admin')
     for (const path of [
@@ -152,7 +163,6 @@ test.group('Catalog and administration', (group) => {
       '/admin/yazarlar',
       '/admin/cizerler',
       '/admin/icerik-turleri',
-      '/admin/profil',
     ]) {
       assert.equal(await statusOf(request(path)), 200, path)
     }

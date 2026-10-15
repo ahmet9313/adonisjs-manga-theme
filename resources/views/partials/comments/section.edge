@@ -1,0 +1,197 @@
+{{-- Threaded comments. Needs `commentThread` = { seriesId, chapterId } in the view state. --}}
+@let(viewer = auth && auth.user ? auth.user : null)
+<section
+  id="yorumlar"
+  class="mt-10"
+  x-data="commentSection"
+  data-config="{{ JSON.stringify({ seriesId: commentThread.seriesId, chapterId: commentThread.chapterId, me: viewer ? { username: viewer.username } : null }) }}"
+>
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <h2 class="flex items-center gap-2 text-lg font-bold text-(--t-heading)">
+      @!component('components/icon', { name: 'chat', class: 'h-5 w-5 text-emerald-400' })
+      Yorumlar <span class="text-sm font-normal text-gray-400" x-text="'(' + total + ')'"></span>
+      <span x-show="total" x-cloak class="hidden text-xs font-normal text-gray-500 sm:inline" x-text="counts.roots + ' yorum · ' + counts.replies + ' yanıt'"></span>
+    </h2>
+    <div class="flex gap-1.5" role="tablist" aria-label="Yorum sıralaması">
+      <button type="button" role="tab" @click="changeSort('new')" :aria-selected="(sort === 'new').toString()" class="pill" :class="sort === 'new' && 'pill-active'">En yeni</button>
+      <button type="button" role="tab" @click="changeSort('top')" :aria-selected="(sort === 'top').toString()" class="pill" :class="sort === 'top' && 'pill-active'">En beğenilen</button>
+    </div>
+  </div>
+
+  {{-- New comment --}}
+  @if(viewer)
+    <div class="mb-6 flex gap-3">
+      @!component('components/avatar', { user: viewer, size: 'h-10 w-10 sm:h-12 sm:w-12', text: 'text-sm', frame: lookOf(viewer).frame })
+      <div class="min-w-0 flex-1" x-data="{ ckey: 'root' }">
+        @include('partials/comments/composer')
+      </div>
+    </div>
+  @else
+    <div class="glass mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3">
+      <p class="text-sm text-gray-300">Yorum yapmak, yanıtlamak ve oy vermek için giriş yap. Yorum yaptıkça EXP kazanırsın.</p>
+      <button type="button" @click="$dispatch('open-auth', 'login')" class="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-bold text-(--t-on-accent) hover:bg-emerald-500">Giriş Yap</button>
+    </div>
+  @end
+
+  <p x-show="loadError" x-cloak x-text="loadError" role="alert" class="mb-3 text-sm text-red-400"></p>
+
+  {{-- Thread --}}
+  <div class="space-y-3">
+    <template x-for="row in rows()" :key="row.key">
+      <div>
+        <template x-if="row.kind === 'comment'">
+          <div class="comment-row" :class="row.depth > 0 && 'is-reply'" :style="indent(row.depth)" x-data="{ get node() { return nodes[row.id] }, get author() { return nodes[row.id] && nodes[row.id].author } }">
+            <article class="c-card" x-show="node" :id="'yorum-' + row.id">
+              <template x-if="author && author.look.wallpaper">
+                <div class="c-wall wall" :class="author.look.wallpaper.cls" :style="wallStyle(author.look.wallpaper)"></div>
+              </template>
+              <div class="c-veil"></div>
+
+              <div class="p-3.5 sm:p-4">
+                {{-- Header --}}
+                <div class="flex items-start gap-3">
+                  <template x-if="author">
+                    <a :href="'/uye/' + author.username" class="shrink-0 rounded-full transition hover:brightness-110" :aria-label="author.fullName + ' profili'">
+                      @include('partials/comments/avatar')
+                    </a>
+                  </template>
+                  <template x-if="!author">
+                    <span class="h-10 w-10 shrink-0 rounded-full border border-dashed border-gray-600 sm:h-12 sm:w-12"></span>
+                  </template>
+
+                  <div class="min-w-0 flex-1">
+                    <template x-if="author">
+                      <div class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                        <span class="presence" :data-online="author.online ? '1' : '0'" :title="author.online ? 'Çevrimiçi' : 'Çevrimdışı'"></span>
+                        <a :href="'/uye/' + author.username" class="max-w-[13rem] truncate text-[15px] font-bold text-(--t-heading) hover:underline sm:text-base"
+                           :class="author.look.effect && author.look.effect.cls" :style="author.look.effect && author.look.effect.css" x-text="author.fullName"></a>
+                        <span class="lv-badge" :data-tier="tierOf(author.level)" x-text="'Lv.' + author.level"></span>
+                        <span x-show="author.role !== 'member'" class="rounded border px-1 text-[10px] font-semibold leading-4"
+                              :style="author.roleStyle"
+                              x-text="author.roleLabel"></span>
+                      </div>
+                    </template>
+                    <template x-if="!author">
+                      <span class="text-sm font-semibold text-gray-500">Silinmiş yorum</span>
+                    </template>
+                    <time class="block text-xs text-gray-400" :datetime="node.createdAt" :title="time(node.createdAt) + ' önce'" x-text="stamp(node.createdAt)"></time>
+                  </div>
+
+                  <div x-show="node.canDelete" class="relative" x-data="{ menu: false }" @click.outside="menu = false; if (confirmingDelete === node.id) confirmingDelete = null">
+                    <button type="button" @click="menu = !menu" class="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-white/10 hover:text-(--t-heading)" aria-label="Yorum seçenekleri" :aria-expanded="menu.toString()">
+                      @!component('components/icon', { name: 'dots', class: 'h-5 w-5' })
+                    </button>
+                    <div x-cloak x-show="menu" x-transition class="absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-xl border border-white/10 bg-(--t-surface-2) py-1 shadow-2xl">
+                      <button type="button" @click="remove(node.id)" class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-300 hover:bg-red-500/10">
+                        @!component('components/icon', { name: 'trash', class: 'h-4 w-4' })
+                        <span x-text="confirmingDelete === node.id ? 'Silmek için tekrar bas' : 'Yorumu sil'"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {{-- What this reply answers --}}
+                <template x-if="node.parent && !node.deleted">
+                  <button type="button" @click="jumpTo(node.parent.id)" class="reply-ref"
+                          :title="node.parent.deleted ? 'Silinmiş yoruma yanıt' : 'Yanıtlanan yoruma git'">
+                    @!component('components/icon', { name: 'reply', class: 'h-3.5 w-3.5 shrink-0 text-emerald-300' })
+                    <template x-if="!node.parent.deleted">
+                      <span class="min-w-0 truncate"><strong class="font-semibold text-emerald-300" x-text="'@' + node.parent.username"></strong><span class="text-gray-400"> kişisine yanıt: </span><span class="italic text-gray-300" x-text="'“' + node.parent.excerpt + '”'"></span></span>
+                    </template>
+                    <template x-if="node.parent.deleted">
+                      <span class="italic text-gray-400">Silinmiş bir yoruma yanıt</span>
+                    </template>
+                  </button>
+                </template>
+
+                {{-- Body --}}
+                <template x-if="node.deleted">
+                  <p class="mt-2 text-sm italic text-gray-500">Bu yorum silindi.</p>
+                </template>
+                <template x-if="!node.deleted">
+                  <div class="relative mt-2.5">
+                    <div :class="node.spoiler && !revealed[node.id] ? 'pointer-events-none select-none blur-md' : ''">
+                      <p x-show="node.body" class="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-gray-100" x-text="node.body"></p>
+                      <template x-if="node.sticker">
+                        <img :src="node.sticker.image" :alt="node.sticker.name + ' çıkartması'" :title="node.sticker.name" loading="lazy" class="mt-2 h-28 w-28 object-contain sm:h-32 sm:w-32">
+                      </template>
+                      <template x-if="node.image">
+                        <button type="button" @click="lightbox = node.image" class="mt-2 block overflow-hidden rounded-2xl border border-white/10" aria-label="Görseli büyüt">
+                          <img :src="node.image" alt="Yorum görseli" loading="lazy" class="max-h-96 w-auto max-w-full object-contain">
+                        </button>
+                      </template>
+                    </div>
+                    <button type="button" x-show="node.spoiler && !revealed[node.id]" @click="revealed[node.id] = true"
+                            class="absolute inset-0 flex items-center justify-center">
+                      <span class="rounded-full border border-amber-500/50 bg-black/80 px-3 py-1.5 text-xs font-semibold text-amber-300">Spoiler içeriyor · göster</span>
+                    </button>
+                  </div>
+                </template>
+
+                {{-- Actions --}}
+                <div x-show="!node.deleted || node.replyCount" class="mt-3 flex items-center gap-1 text-gray-300">
+                  <button type="button" x-show="node.replyCount" @click="toggleReplies(node.id)" :aria-expanded="Boolean(node.expanded).toString()"
+                          :title="node.expanded ? 'Yanıtları gizle' : 'Yanıtları görüntüle'"
+                          class="flex h-8 items-center gap-1.5 rounded-full px-2 text-sm transition hover:bg-white/10 hover:text-(--t-heading)"
+                          :class="node.expanded && 'text-emerald-300'">
+                    @!component('components/icon', { name: 'chat', class: 'h-[18px] w-[18px]' })
+                    <span x-text="node.replyCount"></span>
+                  </button>
+                  <button type="button" x-show="!node.deleted" @click="openReply(node.id)"
+                          class="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-gray-300 transition hover:bg-white/10 hover:text-(--t-heading)">
+                    @!component('components/icon', { name: 'reply', class: 'h-4 w-4' })
+                    Yanıtla
+                  </button>
+                  <div x-show="!node.deleted" class="ml-auto flex items-center gap-0.5">
+                    <button type="button" @click="vote(node.id, 1)" :aria-pressed="(node.vote === 1).toString()" :aria-label="'Artı oy (' + node.likeCount + ')'"
+                            class="flex h-8 items-center gap-1 rounded-full px-2 text-sm transition active:scale-90"
+                            :class="node.vote === 1 ? 'bg-emerald-500/15 text-emerald-300' : 'hover:bg-white/10 hover:text-(--t-heading)'">
+                      @!component('components/icon', { name: 'up', class: 'h-4 w-4', stroke: 2.2 })
+                      <span x-text="node.likeCount"></span>
+                    </button>
+                    <button type="button" @click="vote(node.id, -1)" :aria-pressed="(node.vote === -1).toString()" :aria-label="'Eksi oy (' + node.dislikeCount + ')'"
+                            class="flex h-8 items-center gap-1 rounded-full px-2 text-sm transition active:scale-90"
+                            :class="node.vote === -1 ? 'bg-red-500/15 text-red-300' : 'hover:bg-white/10 hover:text-(--t-heading)'">
+                      @!component('components/icon', { name: 'down', class: 'h-4 w-4', stroke: 2.2 })
+                      <span x-text="node.dislikeCount"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            {{-- Inline reply composer --}}
+            <template x-if="replyingTo === node.id">
+              <div class="mt-2" x-data="{ ckey: node.id }">
+                @include('partials/comments/composer')
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="row.kind === 'more'">
+          <div class="comment-row is-reply" :style="indent(row.depth)">
+            <button type="button" @click="loadReplies(row.id)" :disabled="nodes[row.id].loadingReplies"
+                    class="ml-2 rounded-full px-3 py-1.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/10 disabled:opacity-50"
+                    x-text="nodes[row.id].loadingReplies ? 'Yükleniyor…' : row.remaining + ' yanıtı daha göster'"></button>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <p x-show="!loading && !roots.length && !loadError" x-cloak class="glass rounded-2xl border border-white/10 py-10 text-center text-gray-400">Henüz yorum yok. İlk yorumu sen yap!</p>
+  <p x-show="loading" class="py-6 text-center text-sm text-gray-400" role="status">Yorumlar yükleniyor…</p>
+  <div class="mt-4 flex justify-center" x-show="hasMore && !loading" x-cloak>
+    <button type="button" @click="load()" class="btn-soft">Daha fazla yorum</button>
+  </div>
+
+  {{-- Lightbox --}}
+  <div x-show="lightbox" x-cloak x-transition.opacity @click="lightbox = ''" @keydown.escape.window="lightbox = ''"
+       class="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" aria-label="Görsel">
+    <img :src="lightbox" alt="" class="max-h-full max-w-full rounded-lg object-contain">
+    <button type="button" class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-(--t-heading) hover:bg-white/20" aria-label="Kapat">
+      @!component('components/icon', { name: 'x', class: 'h-5 w-5' })
+    </button>
+  </div>
+</section>

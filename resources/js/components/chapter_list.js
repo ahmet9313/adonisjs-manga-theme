@@ -1,11 +1,25 @@
+import { isAccount, readLocal } from './library.js'
+
 export default function chapterList() {
   return {
     allChapters: [],
     ascending: false,
     showAll: false,
     search: '',
+    read: new Set(),
+    last: null,
     init() {
       this.allChapters = JSON.parse(this.$el.dataset.chapters)
+      const { type, slug, read } = JSON.parse(this.$el.dataset.progress)
+      const progress = isAccount() ? { chapters: read || [] } : readLocal(type, slug)
+      this.read = new Set(progress.chapters)
+      this.last = isAccount() ? (read?.[0] ?? null) : (progress.chapters.at(-1) ?? null)
+    },
+    isRead(chapter) {
+      return this.read.has(chapter.number)
+    },
+    isLast(chapter) {
+      return this.last === chapter.number
     },
     toggleSort() {
       this.ascending = !this.ascending

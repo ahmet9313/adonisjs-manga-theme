@@ -1,0 +1,41 @@
+@component('components/layout/main', { title })
+
+@slot('main')
+  @!component('components/breadcrumb', { items: [{ label: 'Rozetler' }] })
+  <div class="glass rounded-3xl border border-white/10 p-5 sm:p-7">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="section-title">Rozetler ve Başarımlar</h1>
+        <p class="mt-2 text-sm text-gray-300">Okudukça, yorum yaptıkça ve her gün uğradıkça rozet kazanırsın. Rozetler EXP verir ve bazı kozmetiklerin kilidini açar.</p>
+      </div>
+      <p class="text-sm text-gray-300"><strong class="text-2xl text-(--t-heading)">{{ earned }}</strong> / {{ board.length }} kazanıldı</p>
+    </div>
+
+    <ul class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      @each(badge in board)
+        <li class="flex gap-4 rounded-2xl border p-4 {{ badge.earnedAt ? 'border-white/15 bg-white/[0.05]' : 'border-white/5 bg-white/[0.02]' }}">
+          <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-2xl shadow-lg {{ badge.tone }} {{ badge.earnedAt ? '' : 'opacity-40 grayscale' }}" aria-hidden="true">{{ badge.icon }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h2 class="font-bold {{ badge.earnedAt ? 'text-(--t-heading)' : 'text-gray-300' }}">{{ badge.name }}</h2>
+              @if(badge.exp)
+                <span class="rounded bg-emerald-500/15 px-1.5 text-[11px] font-bold text-emerald-300">+{{ badge.exp }} EXP</span>
+              @end
+            </div>
+            <p class="text-sm text-gray-400">{{ badge.description }}</p>
+            @if(badge.earnedAt)
+              <p class="mt-2 text-xs font-semibold text-emerald-300">✓ {{ new Date(badge.earnedAt.replace(' ', 'T') + 'Z').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: site.timezone }) }}</p>
+            @else
+              <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div class="h-full rounded-full bg-gradient-to-r {{ badge.tone }}" style="width: {{ Math.floor(badge.value / badge.goal * 100) }}%"></div>
+              </div>
+              <p class="mt-1 text-xs text-gray-500">{{ badge.value }} / {{ badge.goal }}</p>
+            @end
+          </div>
+        </li>
+      @end
+    </ul>
+  </div>
+@end
+
+@end

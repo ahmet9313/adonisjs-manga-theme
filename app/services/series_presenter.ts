@@ -2,7 +2,13 @@ import type SeriesModel from '#models/series'
 import type ContentType from '#models/content_type'
 import type Chapter from '#models/chapter'
 
+export interface Person {
+  name: string
+  slug: string
+}
+
 export interface SeriesInfo {
+  id: number
   title: string
   alternativeTitles: string[]
   slug: string
@@ -12,6 +18,8 @@ export interface SeriesInfo {
   translationStatus: string
   author: string
   artist: string
+  authors: Person[]
+  artists: Person[]
   publicationYear: number
   ageRating: string | null
   genres: string[]
@@ -20,6 +28,10 @@ export interface SeriesInfo {
   bannerImage: string | null
   featured: boolean
   featuredDescription: string | null
+  /** Average of 1–10 ratings (0 when nobody rated yet). */
+  ratingAverage: number
+  ratingCount: number
+  reviewCount: number
   createdAt: string
   updatedAt: string
 }
@@ -32,6 +44,7 @@ export interface ChapterInfo {
 }
 
 export interface ChapterWithPages extends ChapterInfo {
+  id: number
   pages: string[]
   textContent?: string
 }
@@ -47,14 +60,21 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
   const genres = s.genres || []
   const typeName = contentType?.name || ''
 
+  const people = (list: { name: string; slug: string }[]) => [
+    ...new Map(list.map((item) => [item.slug, { name: item.name, slug: item.slug }])).values(),
+  ]
+
   return {
+    id: s.id,
     title: s.title,
     slug: s.slug,
     type: contentType?.slug || typeName,
     description: s.description,
     author: authors.map((a) => a.name).join(', '),
     artist: artists.map((a) => a.name).join(', '),
-    genres: genres.map((g) => g.name),
+    authors: people(authors),
+    artists: people(artists),
+    genres: [...new Set(genres.map((g) => g.name))],
     alternativeTitles: s.alternativeTitles || [],
     status: s.status,
     translationStatus: s.translationStatus,
@@ -64,6 +84,9 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
     bannerImage: s.bannerImage,
     featured: s.featured,
     featuredDescription: s.featuredDescription,
+    ratingAverage: Number(s.ratingAvg) || 0,
+    ratingCount: s.ratingCount || 0,
+    reviewCount: s.reviewCount || 0,
     keywords:
       s.keywords && s.keywords.length > 0
         ? s.keywords

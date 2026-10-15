@@ -1,5 +1,6 @@
 import { now, pageNumber, pageSize } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
+import notifications from '#services/notification_service'
 import Chapter from '#models/chapter'
 import SeriesModel from '#models/series'
 import { chapterValidator } from '#validators/admin'
@@ -98,10 +99,30 @@ export default class ChapterAdminController {
         .whereIn('id', [...new Set([series.id, oldSeriesId].filter(Boolean))])
         .update({ updatedAt: timestamp })
     })
+    return chapter
+  }
+
+  /** Tells every reader who saved the series that a new chapter is out. */
+  private async announce(chapter: Chapter) {
+    const series = await SeriesModel.query()
+      .where('id', chapter.seriesId)
+      .preload('contentType')
+      .firstOrFail()
+    const readers = await db.from('bookmarks').where('series_id', series.id).select('user_id')
+    await notifications.notifyMany(
+      readers.map((row) => Number(row.user_id)),
+      'chapter',
+      {
+        title: `Yeni bölüm: ${series.title}`,
+        body: `Bölüm ${chapter.number}${chapter.title ? ` — ${chapter.title}` : ''} yayında.`,
+        link: `/series/${series.contentType.slug}/${series.slug}/${chapter.number}`,
+      }
+    )
   }
 
   async store({ request, session, response }: HttpContext) {
-    await this.save(request)
+    const chapter = await this.save(request)
+    await this.announce(chapter)
     session.flash('success', 'Bölüm eklendi')
     return response.redirect('/admin/bolumler')
   }

@@ -1,0 +1,101 @@
+{{-- Latest comments and the most helpful reviews (home page, first page only). --}}
+@if(latestComments.length || topReviews.length)
+<section class="mt-12 grid gap-8 lg:grid-cols-2" aria-label="Topluluk">
+  <div>
+    <h2 class="mb-4 text-lg font-bold uppercase tracking-wide text-(--t-heading)">Son Yorumlar</h2>
+    <ul class="space-y-3">
+      @each(item in latestComments)
+        @let(look = lookOf(item.user))
+        @let(link = '/series/' + item.series.contentType.slug + '/' + item.series.slug + (item.chapter ? '/' + item.chapter.number : '') + '#yorumlar')
+        <li>
+          <a href="{{ link }}" class="c-card group block p-3.5 transition hover:border-white/20">
+            @if(look.wallpaper)
+              <div class="c-wall wall {{ look.wallpaper.cls || '' }}" style="{{ visualStyle(look.wallpaper) }}"></div>
+            @end
+            <div class="c-veil"></div>
+            <div class="flex items-start gap-3">
+              @!component('components/avatar', { user: item.user, size: 'h-10 w-10', text: 'text-sm', frame: look.frame })
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-x-1.5 text-sm">
+                  <strong class="max-w-[12rem] truncate text-(--t-heading)">
+                    @!component('components/user_name', { user: item.user, look })
+                  </strong>
+                  @!component('components/level_badge', { level: levelOf(item.user).level })
+                  <span class="text-xs text-gray-400">· {{ agoOf(item.createdAt) }}</span>
+                </div>
+                <p class="mt-0.5 text-xs text-gray-400">
+                  <span class="font-semibold text-emerald-300 group-hover:underline">{{ item.series.title }}</span>
+                  @if(item.chapter)
+                    · Bölüm {{ item.chapter.number }}
+                  @end
+                </p>
+                @if(item.parent && !item.parent.deletedAt)
+                  <div class="reply-ref">
+                    @!component('components/icon', { name: 'reply', class: 'h-3.5 w-3.5 shrink-0 text-emerald-300' })
+                    <span class="min-w-0 truncate"><strong class="font-semibold text-emerald-300">&#64;{{ item.parent.user.username }}</strong><span class="text-gray-400"> kişisine yanıt: </span><span class="italic text-gray-300">“{{ excerptOf(item.parent) }}”</span></span>
+                  </div>
+                @end
+                @if(item.body)
+                  <p class="mt-1.5 line-clamp-3 whitespace-pre-wrap break-words text-sm text-gray-100">{{ item.body }}</p>
+                @end
+                @if(stickerOf(item.stickerId))
+                  <img src="{{ stickerOf(item.stickerId).image }}" alt="{{ stickerOf(item.stickerId).name }} çıkartması" loading="lazy" class="mt-1.5 h-16 w-16 object-contain">
+                @end
+                @if(item.image)
+                  <img src="{{ item.image }}" alt="" loading="lazy" class="mt-1.5 max-h-28 rounded-lg border border-white/10 object-contain">
+                @end
+                <p class="mt-1.5 flex gap-3 text-xs text-gray-400">
+                  <span>▲ {{ item.likeCount }}</span>
+                  @if(item.replyCount)
+                    <span>💬 {{ item.replyCount }} yanıt</span>
+                  @end
+                </p>
+              </div>
+            </div>
+          </a>
+        </li>
+      @end
+    </ul>
+  </div>
+
+  <div>
+    <h2 class="mb-4 text-lg font-bold uppercase tracking-wide text-(--t-heading)">Öne Çıkan İncelemeler</h2>
+    <ul class="space-y-3">
+      @each(item in topReviews)
+        @let(look = lookOf(item.user))
+        <li>
+          <a href="/series/{{ item.series.contentType.slug }}/{{ item.series.slug }}#incelemeler" class="c-card group block p-3.5 transition hover:border-white/20">
+            @if(look.wallpaper)
+              <div class="c-wall wall {{ look.wallpaper.cls || '' }}" style="{{ visualStyle(look.wallpaper) }}"></div>
+            @end
+            <div class="c-veil"></div>
+            <div class="flex gap-3">
+              <img src="{{ item.series.coverImage }}" alt="" loading="lazy" class="h-24 w-16 shrink-0 rounded-lg object-cover" onerror="this.onerror=null;this.src='/images/no-cover.svg'">
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-semibold text-(--t-heading) group-hover:underline">{{ item.series.title }}</span>
+                  <span class="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-xs font-bold text-amber-300">★ {{ item.rating }}<span class="font-normal text-amber-200/70">/10</span></span>
+                </div>
+                @if(item.title)
+                  <p class="mt-1 text-sm font-semibold text-gray-100">{{ item.title }}</p>
+                @end
+                <p class="mt-1 line-clamp-3 text-sm text-gray-300">{{ item.body }}</p>
+                <p class="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-gray-400">
+                  <span class="inline-flex items-center gap-1.5">
+                    @!component('components/avatar', { user: item.user, size: 'h-5 w-5', text: 'text-[9px]' })
+                    @!component('components/user_name', { user: item.user, look, class: 'font-semibold' })
+                  </span>
+                  <span>· {{ agoOf(item.createdAt) }}</span>
+                  @if(item.helpfulCount)
+                    <span class="text-emerald-300">▲ {{ item.helpfulCount }} faydalı</span>
+                  @end
+                </p>
+              </div>
+            </div>
+          </a>
+        </li>
+      @end
+    </ul>
+  </div>
+</section>
+@end

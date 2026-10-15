@@ -1,0 +1,86 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div x-data="themeEditor" data-config="{{ JSON.stringify(config) }}" class="max-w-5xl">
+    <form action="/admin/tema/renkler" method="POST">
+      {{ csrfField() }}
+
+      <div class="mb-6 rounded-xl border border-gray-700 bg-(--t-surface) p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-200">Renkler</h3>
+            <p class="text-sm text-gray-500">Değişiklikler bu sayfada anında görünür; kalıcı olması için <strong class="text-gray-300">Kaydet</strong>'e basın. Sayfayı yenilerseniz kaydedilmemiş değişiklikler silinir.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="/" target="_blank" rel="noopener" class="rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-300 transition hover:border-gray-400">Siteyi aç ↗</a>
+            <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Hazır temalar</h4>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="preset in presets" :key="preset.key">
+              <button type="button" @click="applyPreset(preset)" class="flex items-center gap-2 rounded-lg border border-gray-600 px-3 py-1.5 text-sm text-gray-300 transition hover:border-emerald-500">
+                <span class="h-4 w-4 rounded-full ring-1 ring-white/20" :style="'background-color:' + preset.swatch"></span>
+                <span x-text="preset.label"></span>
+              </button>
+            </template>
+          </div>
+          <p x-show="notice" x-cloak x-text="notice" class="mt-2 text-sm text-emerald-400" role="status"></p>
+        </div>
+
+        <div class="mt-4">
+          <label for="l_scheme" class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500">Tarayıcı bileşenleri</label>
+          <select id="l_scheme" name="l_scheme" :value="lookValues.scheme" @change="setLook('scheme', $event.target.value)"
+                  class="rounded-lg border border-gray-600 bg-(--t-field) px-3 py-2 text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
+            <option value="dark">Koyu (kaydırma çubuğu, tarih seçici)</option>
+            <option value="light">Açık</option>
+          </select>
+        </div>
+      </div>
+
+      @!component('components/field_error', { field: 'c_bg' })
+
+      <div class="space-y-6">
+        @each((group, key) in config.groups)
+          <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-5" aria-labelledby="group-{{ key }}">
+            <h3 id="group-{{ key }}" class="text-base font-semibold text-gray-200">{{ group.label }}</h3>
+            <p class="mb-4 text-sm text-gray-500">{{ group.hint }}</p>
+            <div class="grid gap-3 md:grid-cols-2">
+              <template x-for="token in tokensOf('{{ key }}')" :key="token.key">
+                <div class="rounded-lg border border-gray-700/60 bg-(--t-field) p-3">
+                  <div class="flex items-center justify-between gap-2">
+                    <label :for="'c_' + token.key" class="text-sm font-medium text-gray-300" x-text="token.label"></label>
+                    <button type="button" x-show="!isDefault(token.key)" x-cloak @click="resetColor(token.key)" class="text-xs text-gray-500 transition hover:text-emerald-400" :aria-label="token.label + ' varsayılana dön'">↺ varsayılan</button>
+                  </div>
+                  <p x-show="token.hint" class="mt-0.5 text-xs text-gray-500" x-text="token.hint"></p>
+                  <div class="mt-2 flex items-center gap-2">
+                    <input type="color" :value="picker(token.key)" @input="setPicker(token.key, $event.target.value)" :aria-label="token.label + ' renk seçici'"
+                           class="h-9 w-12 shrink-0 cursor-pointer rounded border border-gray-600 bg-transparent p-0.5">
+                    <input type="text" :id="'c_' + token.key" :name="'c_' + token.key" :value="values[token.key]" @input="setColor(token.key, $event.target.value.trim())"
+                           maxlength="9" autocomplete="off" spellcheck="false"
+                           class="w-28 rounded-lg border border-gray-600 bg-transparent px-3 py-1.5 font-mono text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
+                    <template x-if="token.alpha">
+                      <label class="flex min-w-0 flex-1 items-center gap-2 text-xs text-gray-500">
+                        <span class="sr-only" x-text="token.label + ' saydamlık'"></span>
+                        <input type="range" min="0" max="100" :value="alpha(token.key)" @input="setAlpha(token.key, $event.target.value)" class="min-w-0 flex-1 accent-emerald-500">
+                        <span class="w-9 text-right tabular-nums" x-text="alpha(token.key) + '%'"></span>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </section>
+        @end
+      </div>
+
+      <div class="mt-6">
+        <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+      </div>
+    </form>
+  </div>
+@end
+
+@end

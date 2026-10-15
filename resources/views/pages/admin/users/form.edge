@@ -1,0 +1,42 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="max-w-xl">
+    <div class="mb-4">
+      <a href="/admin/kullanicilar" class="text-sm text-gray-400 transition hover:text-gray-200">← Kullanıcılara Dön</a>
+    </div>
+
+    <div class="rounded-xl border border-gray-700 bg-(--t-surface) p-6">
+      <div class="mb-6 flex items-center gap-4">
+        @!component('components/avatar', { user: member, size: 'h-14 w-14', text: 'text-xl' })
+        <div class="min-w-0">
+          <div class="truncate text-lg font-semibold text-gray-200">{{ member.fullName }}</div>
+          <div class="truncate text-sm text-gray-500">&#64;{{ member.username }} · {{ member.email }}</div>
+        </div>
+      </div>
+
+      <form action="/admin/kullanicilar/{{ member.id }}/duzenle" method="POST" class="space-y-5">
+        {{ csrfField() }}
+        <div>
+          <label for="role" class="mb-1 block text-sm font-medium text-gray-300">Rol</label>
+          <select id="role" name="role" class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            <option value="member" {{ member.role === 'member' ? 'selected' : '' }}>{{ roleLabels.member }} — yalnızca siteyi kullanır</option>
+            <option value="editor" {{ member.role === 'editor' ? 'selected' : '' }}>{{ roleLabels.editor }} — seri ve bölüm yönetir</option>
+            <option value="admin" {{ member.role === 'admin' ? 'selected' : '' }}>{{ roleLabels.admin }} — tam yetki (kullanıcılar dahil)</option>
+          </select>
+          @!component('components/field_error', { field: 'role' })
+        </div>
+        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-700 bg-(--t-field) p-4">
+          <input type="checkbox" name="banned" value="on" {{ member.bannedAt ? 'checked' : '' }} class="mt-1 h-4 w-4 accent-red-500">
+          <span>
+            <span class="block text-sm font-medium text-gray-200">Hesabı askıya al</span>
+            <span class="block text-xs text-gray-500">Kullanıcı giriş yapamaz, açık oturumları kapatılır ve profili gizlenir.</span>
+          </span>
+        </label>
+        <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Güncelle</button>
+      </form>
+    </div>
+  </div>
+@end
+
+@end

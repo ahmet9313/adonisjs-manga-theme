@@ -1,0 +1,322 @@
+@component('components/layout/main', { title, description: member.bio || site.description })
+
+@slot('main')
+  @let(look = lookOf(member))
+  @let(progress = levelOf(member))
+  @let(joined = member.createdAt ? new Date(member.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric', timeZone: site.timezone }) : null)
+  @let(iconButton = 'flex h-9 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/15 hover:text-(--t-heading) active:scale-95')
+  @!component('components/breadcrumb', { items: [{ label: member.username }] })
+
+  <div class="mx-auto max-w-5xl space-y-6">
+    <section class="glass relative isolate overflow-hidden rounded-3xl border border-white/10 p-4 sm:p-5">
+      @if(look.wallpaper)
+        <div class="wall {{ look.wallpaper.cls || '' }} absolute inset-0 -z-20 opacity-60" style="{{ visualStyle(look.wallpaper) }}"></div>
+        <div class="absolute inset-0 -z-10 bg-gradient-to-b from-black/40 via-black/70 to-black/85"></div>
+      @end
+
+      {{-- Cover --}}
+      <div class="relative aspect-[3/1] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-300/80 via-violet-300/70 to-emerald-200/70 sm:aspect-[4/1]">
+        @if(member.banner)
+          <img src="{{ member.banner }}" alt="" class="h-full w-full object-cover">
+        @else
+          <svg class="absolute inset-0 h-full w-full" viewBox="0 0 400 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 C80 20 160 120 260 50 S380 30 400 60 V100 H0Z" fill="rgb(255 255 255 / .25)"/><path d="M0 85 C100 50 200 110 300 70 S390 70 400 80 V100 H0Z" fill="rgb(255 255 255 / .2)"/></svg>
+        @end
+        @if(isOwner)
+          <a href="/ayarlar" class="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-(--t-heading) backdrop-blur hover:bg-black/60">
+            @!component('components/icon', { name: 'camera', class: 'h-4 w-4' })
+            Kapağı değiştir
+          </a>
+        @end
+      </div>
+
+      {{-- Identity --}}
+      <div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div class="shrink-0 self-start sm:self-auto">
+          @!component('components/avatar', { user: member, size: 'h-24 w-24 sm:h-28 sm:w-28', text: 'text-4xl', frame: look.frame })
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="presence" data-online="{{ member.isOnline ? '1' : '0' }}" title="{{ member.isOnline ? 'Çevrimiçi' : 'Çevrimdışı' }}"></span>
+            <h1 class="break-words text-2xl font-extrabold text-(--t-heading) sm:text-3xl">
+              @!component('components/user_name', { user: member, look })
+            </h1>
+            @!component('components/level_badge', { level: progress.level })
+            @if(member.role !== 'member')
+              @!component('components/role_badge', { user: member })
+            @end
+            @if(isOwner)
+              <a href="/ayarlar" class="rounded-full p-1.5 text-gray-400 hover:bg-white/10 hover:text-(--t-heading)" aria-label="Profili düzenle" title="Profili düzenle">
+                @!component('components/icon', { name: 'pencil', class: 'h-4 w-4' })
+              </a>
+            @end
+          </div>
+          <p class="text-sm text-gray-400">&#64;{{ member.username }}</p>
+
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" x-data="profileLike" data-config="{{ JSON.stringify({ liked, own: isOwner, count: member.profileLikeCount, url: '/uye/' + member.username + '/begen' }) }}"
+                    @click="toggle()" :disabled="busy || own" :aria-pressed="liked.toString()"
+                    class="inline-flex h-9 items-center gap-2 rounded-full px-5 text-sm font-semibold transition active:scale-95 disabled:cursor-default"
+                    :class="liked ? 'bg-pink-400 text-(--t-heading)' : 'bg-pink-200 text-pink-700 hover:bg-pink-300'"
+                    title="{{ isOwner ? 'Profil beğenileri' : 'Profili beğen' }}">
+              <svg class="h-4 w-4" :fill="liked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+              <span x-text="count">{{ member.profileLikeCount }}</span>
+            </button>
+            @if(isOwner)
+              <button type="button" @click="$dispatch('open-inventory', 'frame')" class="{{ iconButton }}" aria-label="Envanter" title="Envanter">
+                @!component('components/icon', { name: 'sliders', class: 'h-5 w-5' })
+              </button>
+              <a href="/kozmetik/duvar-kagitlari" class="{{ iconButton }}" aria-label="Duvar kağıtları" title="Duvar kağıtları">
+                @!component('components/icon', { name: 'photo', class: 'h-5 w-5' })
+              </a>
+            @end
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-6 md:grid-cols-[minmax(0,1fr)_17rem]">
+        <div>
+          <h2 class="section-title !text-gray-400">Hakkında</h2>
+          @if(member.bio)
+            <p class="mt-2 whitespace-pre-line break-words text-gray-200">{{ member.bio }}</p>
+          @else
+            <p class="mt-2 text-gray-400">{{ member.fullName }} profili.</p>
+          @end
+
+          <h2 class="section-title mt-6 !text-gray-400">Kuşanılanlar</h2>
+          <ul class="mt-2 flex flex-wrap gap-2 text-xs">
+            @each((label, kind) in { frame: 'Çerçeve', effect: 'Ad efekti', wallpaper: 'Duvar kağıdı' })
+              <li class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-gray-300">
+                <span class="text-gray-400">{{ label }}:</span>
+                <strong class="font-semibold {{ equipped[kind] ? 'text-emerald-300' : 'text-gray-500' }}">{{ equipped[kind] ? equipped[kind].name : 'yok' }}</strong>
+              </li>
+            @end
+            <li class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-gray-300">
+              <span class="text-gray-400">Çıkartma:</span>
+              <strong class="font-semibold text-emerald-300">{{ inventory.sticker.length }}</strong>
+            </li>
+          </ul>
+
+          @if(earnedBadges.length)
+            <h2 class="section-title mt-6 !text-gray-400">Rozetler</h2>
+            <ul class="mt-2 flex flex-wrap gap-2">
+              @each(badge in earnedBadges)
+                <li title="{{ badge.name }}: {{ badge.description }}" class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br text-xl shadow {{ badge.tone }}">
+                  <span aria-hidden="true">{{ badge.icon }}</span>
+                  <span class="sr-only">{{ badge.name }}</span>
+                </li>
+              @end
+            </ul>
+          @end
+        </div>
+
+        <dl class="grid grid-cols-2 gap-2 self-start text-center">
+          <div class="col-span-2 rounded-2xl border border-white/10 bg-black/20 p-3 text-left">
+            <dt class="flex justify-between text-xs text-gray-400"><span>Seviye {{ progress.level }}</span><span>{{ progress.current }} / {{ progress.needed }} EXP</span></dt>
+            <dd class="mt-2 h-2 overflow-hidden rounded-full bg-white/10"><div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300" style="width: {{ progress.progress }}%"></div></dd>
+          </div>
+          @each(tile in [
+            { label: 'Okunan bölüm', value: stats.chapters },
+            { label: 'Yorum', value: stats.roots },
+            { label: 'Yazdığı yanıt', value: stats.replies },
+            { label: 'Aldığı yanıt', value: stats.repliesReceived },
+            { label: 'Aldığı artı oy', value: stats.likes },
+            { label: 'İnceleme', value: stats.reviews },
+            { label: 'Ortalama puan', value: stats.ratings ? stats.averageRating.toFixed(1) : '—' },
+            { label: 'Rozet', value: earnedBadges.length }
+          ])
+            <div class="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <dt class="text-xs text-gray-400">{{ tile.label }}</dt>
+              <dd class="text-lg font-bold text-(--t-heading)">{{ tile.value }}</dd>
+            </div>
+          @end
+          <div class="col-span-2 rounded-2xl border border-white/10 bg-black/20 p-3">
+            <dt class="text-xs text-gray-400">Kart koleksiyonu</dt>
+            <dd class="text-lg font-bold text-(--t-heading)">{{ stats.cards }}<span class="text-xs font-normal text-gray-500"> / {{ cardTotal }}</span></dd>
+          </div>
+          @if(joined)
+            <div class="col-span-2 rounded-2xl border border-white/10 bg-black/20 p-2 text-xs text-gray-400">{{ joined }} tarihinde katıldı</div>
+          @end
+        </dl>
+      </div>
+    </section>
+
+    {{-- Activity --}}
+    <section class="glass rounded-3xl border border-white/10 p-5 sm:p-6" x-data="{ tab: 'comments' }">
+      <h2 class="section-title">Son etkinlik</h2>
+      <div class="mt-3 flex gap-1 overflow-x-auto border-b border-white/10" role="tablist">
+        @each(tab in [
+          { key: 'comments', label: 'Yorumlar', count: stats.comments },
+          { key: 'reviews', label: 'İncelemeler', count: stats.ratings },
+          { key: 'cards', label: 'Kart vitrini', count: stats.cards },
+          { key: 'collection', label: 'Koleksiyon', count: inventory.frame.length + inventory.effect.length + inventory.wallpaper.length + inventory.sticker.length }
+        ])
+          <button type="button" role="tab" @click="tab = '{{ tab.key }}'" :aria-selected="(tab === '{{ tab.key }}').toString()" class="-mb-px shrink-0 border-b-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wide" :class="tab === '{{ tab.key }}' ? 'border-white text-(--t-heading)' : 'border-transparent text-gray-400 hover:text-gray-200'">{{ tab.label }} <span class="ml-1 font-normal normal-case text-gray-500">{{ tab.count }}</span></button>
+        @end
+      </div>
+
+      {{-- Comments and replies --}}
+      <div x-show="tab === 'comments'" class="mt-4">
+        @if(recentComments.length)
+          <ul class="space-y-3">
+            @each(item in recentComments)
+              @let(link = '/series/' + item.series.contentType.slug + '/' + item.series.slug + (item.chapter ? '/' + item.chapter.number : '') + '#yorumlar')
+              <li>
+                <a href="{{ link }}" class="c-card group block p-4 transition hover:border-white/20">
+                  @if(look.wallpaper)
+                    <div class="c-wall wall {{ look.wallpaper.cls || '' }}" style="{{ visualStyle(look.wallpaper) }}"></div>
+                  @end
+                  <div class="c-veil"></div>
+                  <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-gray-400">
+                    <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ item.parentId ? 'border-sky-400/40 text-sky-300' : 'border-emerald-400/40 text-emerald-300' }}">{{ item.parentId ? 'Yanıt' : 'Yorum' }}</span>
+                    <span class="font-semibold text-emerald-300 group-hover:underline">{{ item.series.title }}</span>
+                    @if(item.chapter)
+                      <span>· Bölüm {{ item.chapter.number }}</span>
+                    @else
+                      <span>· Seri sayfası</span>
+                    @end
+                    <span>· {{ new Date(item.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: site.timezone }) }}</span>
+                    <span>· ▲ {{ item.likeCount }}</span>
+                    @if(item.replyCount)
+                      <span>· 💬 {{ item.replyCount }} yanıt</span>
+                    @end
+                  </div>
+                  @if(item.parent)
+                    <div class="reply-ref">
+                      @!component('components/icon', { name: 'reply', class: 'h-3.5 w-3.5 shrink-0 text-emerald-300' })
+                      @if(item.parent.deletedAt)
+                        <span class="italic text-gray-400">Silinmiş bir yoruma yanıt</span>
+                      @else
+                        <span class="min-w-0 truncate"><strong class="font-semibold text-emerald-300">&#64;{{ item.parent.user.username }}</strong><span class="text-gray-400"> kişisine yanıt: </span><span class="italic text-gray-300">“{{ excerptOf(item.parent) }}”</span></span>
+                      @end
+                    </div>
+                  @end
+                  @if(item.spoiler)
+                    <p class="mt-2 text-sm italic text-amber-300/80">Spoiler içeren yorum</p>
+                  @elseif(item.body)
+                    <p class="mt-2 line-clamp-3 whitespace-pre-wrap break-words text-sm text-gray-100">{{ item.body }}</p>
+                  @end
+                  @if(stickerOf(item.stickerId) && !item.spoiler)
+                    <img src="{{ stickerOf(item.stickerId).image }}" alt="{{ stickerOf(item.stickerId).name }} çıkartması" loading="lazy" class="mt-2 h-20 w-20 object-contain">
+                  @end
+                  @if(item.image && !item.spoiler)
+                    <img src="{{ item.image }}" alt="" loading="lazy" class="mt-2 max-h-40 rounded-lg border border-white/10 object-contain">
+                  @end
+                </a>
+              </li>
+            @end
+          </ul>
+        @else
+          <p class="text-gray-400">Yorum bulunamadı.</p>
+        @end
+      </div>
+
+      {{-- Ratings and reviews --}}
+      <div x-cloak x-show="tab === 'reviews'" class="mt-4">
+        @if(recentReviews.length)
+          <ul class="space-y-3">
+            @each(item in recentReviews)
+              @let(link = '/series/' + item.series.contentType.slug + '/' + item.series.slug + '#incelemeler')
+              <li>
+                <a href="{{ link }}" class="group flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:border-white/25">
+                  <img src="{{ item.series.coverImage }}" alt="" loading="lazy" class="h-24 w-16 shrink-0 rounded-lg object-cover" onerror="this.onerror=null;this.src='/images/no-cover.svg'">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="font-semibold text-(--t-heading) group-hover:underline">{{ item.series.title }}</span>
+                      <span class="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-xs font-bold text-amber-300">★ {{ item.rating }}<span class="font-normal text-amber-200/70">/10</span></span>
+                      <span class="text-xs text-gray-500">{{ new Date(item.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: site.timezone }) }}</span>
+                      @if(item.helpfulCount)
+                        <span class="text-xs text-emerald-300">▲ {{ item.helpfulCount }} faydalı</span>
+                      @end
+                    </div>
+                    @if(item.title)
+                      <p class="mt-1 text-sm font-semibold text-gray-100">{{ item.title }}</p>
+                    @end
+                    @if(item.body)
+                      @if(item.spoiler)
+                        <p class="mt-1 text-sm italic text-amber-300/80">Spoiler içeren inceleme</p>
+                      @else
+                        <p class="mt-1 line-clamp-3 text-sm text-gray-300">{{ item.body }}</p>
+                      @end
+                    @else
+                      <p class="mt-1 text-sm text-gray-500">Yalnızca puan verdi.</p>
+                    @end
+                  </div>
+                </a>
+              </li>
+            @end
+          </ul>
+        @else
+          <p class="text-gray-400">Henüz puan verilmemiş.</p>
+        @end
+      </div>
+
+      {{-- Card showcase --}}
+      <div x-cloak x-show="tab === 'cards'" class="mt-4">
+        @if(showcase.length)
+          <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+            @each(card in showcase)
+              <div title="{{ card.name }}">
+                <div class="tcg" data-rarity="{{ card.rarity }}">
+                  <img src="{{ card.image }}" alt="" loading="lazy">
+                  <span class="tcg-letter">{{ card.rarity }}</span>
+                </div>
+                <p class="mt-1.5 truncate text-xs font-semibold text-gray-200">{{ card.name }}</p>
+              </div>
+            @end
+          </div>
+        @else
+          <p class="text-gray-400">Henüz kart toplanmamış.</p>
+        @end
+      </div>
+
+      {{-- Owned cosmetics --}}
+      <div x-cloak x-show="tab === 'collection'" class="mt-4 space-y-6">
+        @if(isOwner)
+          <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-400">
+            <span>Kuşanmak için envanteri aç.</span>
+            <button type="button" @click="$dispatch('open-inventory', 'frame')" class="btn-soft">Envanteri aç</button>
+          </div>
+        @end
+        @each(group in [
+          { key: 'frame', label: 'Avatar çerçeveleri' },
+          { key: 'effect', label: 'Ad efektleri' },
+          { key: 'wallpaper', label: 'Duvar kağıtları' },
+          { key: 'sticker', label: 'Çıkartmalar' }
+        ])
+          @let(items = inventory[group.key])
+          <div x-data="{ all: false }">
+            <h3 class="section-title !text-gray-300">{{ group.label }} <span class="font-normal normal-case text-gray-500">({{ items.length }})</span></h3>
+            @if(items.length)
+              <ul class="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                @each((item, index) in items)
+                  <li x-show="all || {{ index < 12 }}" {{ index < 12 ? '' : 'x-cloak' }} class="flex flex-col items-center gap-2 rounded-2xl border bg-black/20 p-3 text-center {{ item.equipped ? 'border-emerald-400/60' : 'border-white/10' }}" title="{{ item.name }}">
+                    @if(group.key === 'frame')
+                      @!component('components/avatar', { user: member, size: 'h-14 w-14', text: 'text-lg', frame: item.visual })
+                    @elseif(group.key === 'effect')
+                      <span class="max-w-full truncate text-sm font-bold {{ item.visual.cls || '' }}" style="{{ visualStyle(item.visual) }}">{{ member.fullName }}</span>
+                    @elseif(group.key === 'wallpaper')
+                      <div class="wall {{ item.visual.cls || '' }} h-14 w-full rounded-xl" style="{{ visualStyle(item.visual) }}"></div>
+                    @else
+                      <img src="{{ item.visual.img }}" alt="{{ item.name }} çıkartması" loading="lazy" class="h-14 w-14 object-contain">
+                    @end
+                    <span class="w-full truncate text-xs text-gray-300">{{ item.name }}</span>
+                    @if(item.equipped)
+                      <span class="text-[10px] font-bold uppercase tracking-wide text-emerald-300">Kuşanılı</span>
+                    @end
+                  </li>
+                @end
+              </ul>
+              @if(items.length > 12)
+                <button type="button" @click="all = !all" class="mt-3 text-sm font-semibold text-emerald-300 hover:underline" x-text="all ? 'Daha az göster' : 'Tümünü göster ({{ items.length }})'"></button>
+              @end
+            @else
+              <p class="mt-2 text-sm text-gray-500">Henüz açılmış öğe yok.</p>
+            @end
+          </div>
+        @end
+      </div>
+    </section>
+  </div>
+@end
+
+@end

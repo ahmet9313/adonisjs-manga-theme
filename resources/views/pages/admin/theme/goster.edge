@@ -1,0 +1,37 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <form action="/admin/tema/goster" method="POST" class="max-w-3xl space-y-6">
+    {{ csrfField() }}
+    <div class="rounded-xl border border-gray-700 bg-(--t-surface) p-5">
+      <h3 class="text-lg font-semibold text-gray-200">Göster / Gizle</h3>
+      <p class="text-sm text-gray-500">Kapattığınız bölümler sayfadan tamamen kaldırılır. Değişiklikler Kaydet'ten sonra geçerli olur.</p>
+    </div>
+
+    @each(group in groups)
+      <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-5" aria-labelledby="flags-{{ group.key }}">
+        <h3 id="flags-{{ group.key }}" class="mb-3 text-base font-semibold text-gray-200">{{ group.label }}</h3>
+        <ul class="divide-y divide-gray-700/50">
+          @each(flag in group.flags)
+            <li>
+              <label class="flex cursor-pointer items-center justify-between gap-4 py-3">
+                <span class="min-w-0">
+                  <span class="block text-sm text-gray-200">{{ flag.label }}</span>
+                  @if(flag.hint)
+                    <span class="block text-xs text-gray-500">{{ flag.hint }}</span>
+                  @end
+                </span>
+                <input type="checkbox" name="f_{{ flag.key }}" value="on" {{ values[flag.key] ? 'checked' : '' }} class="peer sr-only">
+                <span class="relative h-6 w-11 shrink-0 rounded-full bg-gray-700 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-5 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-emerald-400" aria-hidden="true"></span>
+              </label>
+            </li>
+          @end
+        </ul>
+      </section>
+    @end
+
+    <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+  </form>
+@end
+
+@end

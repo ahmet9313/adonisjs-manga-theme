@@ -25,6 +25,7 @@ server.errorHandler(() => import('#exceptions/handler'))
 server.use([
   () => import('#middleware/container_bindings_middleware'),
   () => import('@adonisjs/static/static_middleware'),
+  () => import('#middleware/content_middleware'),
   () => import('@adonisjs/vite/vite_middleware'),
 ])
 
@@ -33,10 +34,14 @@ server.use([
  * requests with a registered route.
  */
 router.use([
-  () => import('@adonisjs/core/bodyparser_middleware'),
+  // Session and auth come first so `upload_gate` can refuse multipart bodies from guests
+  // before the body parser writes them to disk; shield (CSRF) still needs the parsed body.
   () => import('@adonisjs/session/session_middleware'),
-  () => import('@adonisjs/shield/shield_middleware'),
   () => import('@adonisjs/auth/initialize_auth_middleware'),
+  () => import('#middleware/upload_gate_middleware'),
+  () => import('@adonisjs/core/bodyparser_middleware'),
+  () => import('@adonisjs/shield/shield_middleware'),
+  () => import('#middleware/silent_auth_middleware'),
 ])
 
 /**
@@ -45,4 +50,5 @@ router.use([
  */
 export const middleware = router.named({
   auth: () => import('#middleware/auth_middleware'),
+  role: () => import('#middleware/role_middleware'),
 })

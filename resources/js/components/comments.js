@@ -1,0 +1,436 @@
+import { csrfToken } from './library.js'
+import { tierOf } from './community.js'
+
+const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const maxBytes = 8 * 1024 * 1024
+export const maxLength = 1000
+const maxIndent = 3
+
+/** Short X-style relative time: "şimdi", "5 dk", "3 sa", "2 g", "12 Eki". */
+export function shortTime(iso) {
+  const date = new Date(iso)
+  const seconds = Math.max(0, (Date.now() - date.getTime()) / 1000)
+  if (!Number.isFinite(seconds)) return ''
+  if (seconds < 60) return 'şimdi'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} dk`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} sa`
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)} g`
+  return date.toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }),
+  })
+}
+
+/** Absolute stamp shown under names: 08/12/2025, 11:20. */
+export function stamp(iso) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (value) => String(value).padStart(2, '0')
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+const emptyComposer = () => ({
+  text: '',
+  sticker: null,
+  file: null,
+  preview: '',
+  spoiler: false,
+  busy: false,
+  error: '',
+  dragging: false,
+})
+
+/**
+ * Threaded comments. The tree is kept as a node map and rendered as a flat list with depth,
+ * because Alpine has no recursive templates. Replies load lazily per comment.
+ */
+export default function commentSection() {
+  return {
+    seriesId: null,
+    chapterId: null,
+    me: null,
+    sort: 'new',
+    total: 0,
+    counts: { roots: 0, replies: 0 },
+    roots: [],
+    nodes: {},
+    page: 1,
+    hasMore: false,
+    loading: false,
+    loadError: '',
+    replyingTo: null,
+    composers: { root: emptyComposer() },
+    revealed: {},
+    lightbox: '',
+    stickers: null,
+    maxLength,
+
+    init() {
+      const config = JSON.parse(this.$el.dataset.config)
+      Object.assign(this, { seriesId: config.seriesId, chapterId: config.chapterId, me: config.me })
+      this.load(true)
+    },
+
+    url(path, params = {}) {
+      const query = new URLSearchParams(
+        Object.entries(params).filter(([, value]) => value !== null && value !== undefined)
+      )
+      return `${path}?${query}`
+    },
+
+    async load(reset = false) {
+      if (this.loading) return
+      this.loading = true
+      this.loadError = ''
+      const page = reset ? 1 : this.page + 1
+      try {
+        const response = await fetch(
+          this.url('/yorumlar', {
+            series: this.seriesId,
+            chapter: this.chapterId,
+            sort: this.sort,
+            page,
+          }),
+          { headers: { accept: 'application/json' }, credentials: 'same-origin' }
+        )
+        if (!response.ok) throw new Error()
+        const data = await response.json()
+        if (reset) {
+          this.roots = []
+          this.nodes = {}
+        }
+        for (const item of data.items) {
+          this.add(item)
+          this.roots.push(item.id)
+        }
+        this.page = page
+        this.hasMore = data.hasMore
+        this.total = data.total
+        this.counts = { roots: data.roots ?? data.total, replies: data.replies ?? 0 }
+      } catch {
+        this.loadError = 'Yorumlar yüklenemedi.'
+      }
+      this.loading = false
+    },
+
+    changeSort(sort) {
+      if (this.sort === sort) return
+      this.sort = sort
+      this.load(true)
+    },
+
+    /** Adds a comment and its preloaded replies to the node map. */
+    add(item) {
+      const { replies = [], ...comment } = item
+      this.nodes[comment.id] = {
+        ...comment,
+        expanded: false,
+        children: [],
+        page: 0,
+        hasMore: false,
+        loadingReplies: false,
+      }
+      for (const reply of replies) {
+        this.add(reply)
+        this.nodes[comment.id].children.push(reply.id)
+      }
+    },
+
+    rows() {
+      const rows = []
+      const walk = (id) => {
+        const node = this.nodes[id]
+        if (!node) return
+        rows.push({ key: `c${id}`, kind: 'comment', id, depth: node.depth })
+        if (!node.expanded) return
+        for (const child of node.children) walk(child)
+        const remaining = node.replyCount - node.children.length
+        if (remaining > 0)
+          rows.push({ key: `m${id}`, kind: 'more', id, depth: node.depth + 1, remaining })
+      }
+      for (const id of this.roots) walk(id)
+      return rows
+    },
+
+    indent(depth) {
+      return `--d:${Math.min(depth, maxIndent)}`
+    },
+
+    /** Scrolls to the comment a reply answers and flashes it. */
+    jumpTo(id) {
+      const element = document.getElementById(`yorum-${id}`)
+      if (!element) return
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      element.classList.remove('c-flash')
+      // Restart the animation when the same target is clicked twice.
+      void element.offsetWidth
+      element.classList.add('c-flash')
+      setTimeout(() => element.classList.remove('c-flash'), 2000)
+    },
+
+    /** "Yanıtları görüntüle": shows the preview (or fetches the first page) and hides it again. */
+    toggleReplies(id) {
+      const node = this.nodes[id]
+      if (!node) return
+      node.expanded = !node.expanded
+      if (node.expanded && !node.children.length && node.replyCount) this.loadReplies(id)
+    },
+
+    async loadReplies(id) {
+      const node = this.nodes[id]
+      if (!node || node.loadingReplies) return
+      node.loadingReplies = true
+      // The preview holds the oldest replies; fetch pages and skip the ones already shown.
+      try {
+        const page = node.page + 1
+        const response = await fetch(this.url(`/yorumlar/${id}/yanitlar`, { page }), {
+          headers: { accept: 'application/json' },
+          credentials: 'same-origin',
+        })
+        if (!response.ok) throw new Error()
+        const data = await response.json()
+        for (const item of data.items) {
+          if (this.nodes[item.id]) continue
+          this.add(item)
+          node.children.push(item.id)
+        }
+        node.page = page
+        node.hasMore = data.hasMore
+        if (!data.hasMore) node.replyCount = node.children.length
+      } catch {
+        this.loadError = 'Yanıtlar yüklenemedi.'
+      }
+      node.loadingReplies = false
+    },
+
+    // ---- Composer -------------------------------------------------------------------------
+
+    composer(key) {
+      if (!this.composers[key]) this.composers[key] = emptyComposer()
+      return this.composers[key]
+    },
+
+    openReply(id) {
+      if (!this.me) return this.$dispatch('open-auth', 'login')
+      this.replyingTo = this.replyingTo === id ? null : id
+      this.composer(id)
+      this.$nextTick(() => document.getElementById(`reply-${id}`)?.focus())
+    },
+
+    attach(key, file) {
+      const state = this.composer(key)
+      state.error = ''
+      if (!file) return
+      if (!allowedTypes.includes(file.type)) {
+        state.error = 'Yalnızca JPG, PNG, WebP veya GIF ekleyebilirsin.'
+        return
+      }
+      if (file.size > maxBytes) {
+        state.error = 'Görsel en fazla 8 MB olabilir.'
+        return
+      }
+      if (state.preview) URL.revokeObjectURL(state.preview)
+      state.file = file
+      state.preview = URL.createObjectURL(file)
+    },
+
+    pick(key, event) {
+      this.attach(key, event.target.files?.[0])
+      event.target.value = ''
+    },
+
+    paste(key, event) {
+      const file = [...(event.clipboardData?.files || [])].find((item) =>
+        item.type.startsWith('image/')
+      )
+      if (!file) return
+      event.preventDefault()
+      this.attach(key, file)
+    },
+
+    drop(key, event) {
+      this.composer(key).dragging = false
+      const file = [...(event.dataTransfer?.files || [])].find((item) =>
+        item.type.startsWith('image/')
+      )
+      if (file) this.attach(key, file)
+      else this.composer(key).error = 'Bırakılan öğe bir görsel değil.'
+    },
+
+    clearImage(key) {
+      const state = this.composer(key)
+      if (state.preview) URL.revokeObjectURL(state.preview)
+      state.file = null
+      state.preview = ''
+    },
+
+    canSend(key) {
+      const state = this.composer(key)
+      return (
+        !state.busy && (state.text.trim() || state.file || state.sticker) && state.text.length <= maxLength
+      )
+    },
+
+    async loadStickers() {
+      if (this.stickers !== null) return
+      try {
+        const response = await fetch('/envanter', {
+          headers: { accept: 'application/json' },
+          credentials: 'same-origin',
+        })
+        if (!response.ok) throw new Error()
+        this.stickers = (await response.json()).sticker || []
+      } catch {
+        this.stickers = []
+      }
+    },
+
+    grow(event) {
+      event.target.style.height = 'auto'
+      event.target.style.height = `${event.target.scrollHeight}px`
+    },
+
+    async submit(key) {
+      if (!this.me) return this.$dispatch('open-auth', 'login')
+      const state = this.composer(key)
+      if (!this.canSend(key)) return
+      const form = new FormData()
+      form.append('series_id', this.seriesId)
+      if (this.chapterId) form.append('chapter_id', this.chapterId)
+      if (key !== 'root') form.append('parent_id', key)
+      form.append('body', state.text.trim())
+      if (state.spoiler) form.append('spoiler', '1')
+      if (state.sticker) form.append('sticker_id', state.sticker.id)
+      if (state.file) form.append('image', state.file, state.file.name || 'gorsel')
+      state.busy = true
+      state.error = ''
+      try {
+        const response = await fetch('/yorumlar', {
+          method: 'POST',
+          body: form,
+          credentials: 'same-origin',
+          headers: { 'accept': 'application/json', 'x-csrf-token': csrfToken() },
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          state.error = data.error || data.errors?.[0]?.message || 'Yorum gönderilemedi.'
+          state.busy = false
+          return
+        }
+        this.add(data)
+        if (key === 'root') {
+          if (this.sort === 'new') this.roots.unshift(data.id)
+          else this.roots.push(data.id)
+        } else {
+          const parent = this.nodes[key]
+          parent.children.push(data.id)
+          parent.replyCount++
+          parent.expanded = true
+          this.replyingTo = null
+        }
+        this.total++
+        if (key === 'root') this.counts.roots++
+        else this.counts.replies++
+        this.clearImage(key)
+        Object.assign(state, { text: '', sticker: null, spoiler: false, busy: false })
+      } catch {
+        state.error = 'Sunucuya ulaşılamadı.'
+        state.busy = false
+      }
+    },
+
+    // ---- Actions --------------------------------------------------------------------------
+
+    async post(path) {
+      const response = await fetch(path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'accept': 'application/json', 'x-csrf-token': csrfToken() },
+      })
+      if (!response.ok) throw new Error()
+      return response.json()
+    },
+
+    /** Up/down vote with an optimistic update corrected by the server answer. */
+    async vote(id, value) {
+      if (!this.me) return this.$dispatch('open-auth', 'login')
+      const node = this.nodes[id]
+      const before = { vote: node.vote, likeCount: node.likeCount, dislikeCount: node.dislikeCount }
+      const next = node.vote === value ? 0 : value
+      if (node.vote === 1) node.likeCount--
+      if (node.vote === -1) node.dislikeCount--
+      if (next === 1) node.likeCount++
+      if (next === -1) node.dislikeCount++
+      node.vote = next
+      try {
+        const response = await fetch(`/yorumlar/${id}/oy`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'content-type': 'application/json',
+            'accept': 'application/json',
+            'x-csrf-token': csrfToken(),
+          },
+          body: JSON.stringify({ value }),
+        })
+        if (!response.ok) throw new Error()
+        const result = await response.json()
+        Object.assign(node, {
+          vote: result.vote,
+          likeCount: result.likeCount,
+          dislikeCount: result.dislikeCount,
+        })
+      } catch {
+        Object.assign(node, before)
+      }
+    },
+
+    confirmingDelete: null,
+
+    async remove(id) {
+      if (this.confirmingDelete !== id) {
+        this.confirmingDelete = id
+        return
+      }
+      this.confirmingDelete = null
+      const node = this.nodes[id]
+      try {
+        const { deleted } = await this.post(`/yorumlar/${id}/sil`)
+        this.total = Math.max(0, this.total - 1)
+        if (node.parentId) this.counts.replies = Math.max(0, this.counts.replies - 1)
+        else this.counts.roots = Math.max(0, this.counts.roots - 1)
+        if (deleted === 'soft') {
+          Object.assign(node, {
+            deleted: true,
+            body: '',
+            image: null,
+            author: null,
+            sticker: null,
+            canDelete: false,
+            spoiler: false,
+          })
+          return
+        }
+        if (node.parentId && this.nodes[node.parentId]) {
+          const parent = this.nodes[node.parentId]
+          parent.children = parent.children.filter((child) => child !== id)
+          parent.replyCount = Math.max(0, parent.replyCount - 1)
+        } else {
+          this.roots = this.roots.filter((root) => root !== id)
+        }
+        delete this.nodes[id]
+      } catch {
+        this.loadError = 'Yorum silinemedi.'
+      }
+    },
+
+    wallStyle(visual) {
+      return visual.img ? `background-image:url('${visual.img}')` : visual.css || ''
+    },
+
+    time: shortTime,
+    stamp,
+    tierOf,
+  }
+}

@@ -1,6 +1,10 @@
 import { buildPaginationPages, pageNumber, filterValues, searchText } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
 import seriesService from '#services/series_service'
+import library from '#services/library_service'
+import reviews, { ratingLabels } from '#services/review_service'
+import Author from '#models/author'
+import Artist from '#models/artist'
 
 export default class SeriesController {
   async index({ view, request }: HttpContext) {
@@ -10,6 +14,8 @@ export default class SeriesController {
       genres: filterValues(qs.genre),
       statuses: filterValues(qs.status),
       types: filterValues(qs.type),
+      authors: filterValues(qs.author),
+      artists: filterValues(qs.artist),
       search: searchText(qs.search),
       orderBy: searchText(qs.order),
     }
@@ -17,16 +23,48 @@ export default class SeriesController {
     const page = pageNumber(qs.page)
     const perPage = 24
 
-    const [{ items: results, hasNextPage, totalResults, totalPages }, genres] = await Promise.all([
-      seriesService.filterSeries(filters, page, perPage),
-      seriesService.getAllGenres(),
-    ])
+    const [{ items: results, hasNextPage, totalResults, totalPages }, genres, authors, artists] =
+      await Promise.all([
+        seriesService.filterSeries(filters, page, perPage),
+        seriesService.getAllGenres(),
+        filters.authors.length ? Author.query().whereIn('slug', filters.authors) : [],
+        filters.artists.length ? Artist.query().whereIn('slug', filters.artists) : [],
+      ])
+    // Author/artist filters have no dropdown; they are shown as removable chips.
+    const chipUrl = (key: 'author' | 'artist', slug: string) => {
+      const params = new URLSearchParams()
+      for (const [name, value] of Object.entries(qs)) {
+        if (name === 'page') continue
+        for (const item of filterValues(value)) {
+          if (!(name === key && item === slug)) params.append(name, item)
+        }
+      }
+      const query = params.toString()
+      return query ? `/seriler?${query}` : '/seriler'
+    }
+    const people = [
+      ...authors.map((a) => ({
+        field: 'author',
+        label: 'Yazar',
+        name: a.name,
+        slug: a.slug,
+        removeUrl: chipUrl('author', a.slug),
+      })),
+      ...artists.map((a) => ({
+        field: 'artist',
+        label: 'Sanatçı',
+        name: a.name,
+        slug: a.slug,
+        removeUrl: chipUrl('artist', a.slug),
+      })),
+    ]
 
     return view.render('pages/series_list', {
       title: 'Seriler',
       results,
       filters,
       genres,
+      people,
       currentPage: page,
       hasNextPage,
       totalResults,
@@ -35,7 +73,7 @@ export default class SeriesController {
     })
   }
 
-  async show({ view, params, response }: HttpContext) {
+  async show({ view, params, response, auth }: HttpContext) {
     const { type, slug } = params
     const series = await seriesService.getSeriesBySlug(type, slug)
 
@@ -45,6 +83,7 @@ export default class SeriesController {
 
     const chapters = await seriesService.getChapters(type, slug)
     const similar = await seriesService.getSimilarSeries(type, slug)
+    const reading = auth.user ? await library.state(auth.user.id, series.id) : null
 
     return view.render('pages/series_detail', {
       title: series.title,
@@ -52,6 +91,13 @@ export default class SeriesController {
       series,
       chapters,
       similar,
+      reading,
+      commentThread: { seriesId: series.id, chapterId: null },
+      reviewConfig: {
+        seriesId: series.id,
+        labels: ratingLabels,
+        summary: await reviews.summary(series.id),
+      },
     })
   }
 

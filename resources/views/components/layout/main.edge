@@ -1,21 +1,36 @@
 <!DOCTYPE html>
-<html lang="{{ site.language }}">
+<html lang="{{ site.language }}"{{{ themeAttrs() }}}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title ?? site.name }}</title>
   <meta name="description" content="{{ description ?? site.description }}">
+  <meta name="csrf-token" content="{{ csrfToken || '' }}">
   @if($slots.meta)
     {{{ await $slots.meta() }}}
   @endif
   @vite(['resources/css/app.css', 'resources/js/app.js'])
+  @if(themeCss())
+  <style>{{{ themeCss() }}}</style>
+  @end
 </head>
-<body class="bg-[#0d1117] text-gray-200 min-h-screen flex flex-col font-sans">
+<body class="site-bg text-gray-200 min-h-screen flex flex-col font-sans" data-account="{{ auth && auth.user ? '1' : '0' }}" data-unread="{{ account ? account.unread : 0 }}" data-name="{{ auth && auth.user ? auth.user.fullName : '' }}">
+  @if(auth && auth.user)
+    <div x-data="librarySync" hidden></div>
+    @include('partials/community/inbox')
+    @include('partials/community/inventory')
+  @end
+  @include('partials/community/toast')
+  @include('partials/announcement')
   @include('partials/navbar')
+  @include('partials/flash_toast')
+  @if(!(auth && auth.user))
+    @include('partials/auth_modal')
+  @end
   @if($slots.banner)
     {{{ await $slots.banner() }}}
   @endif
-  <main class="flex-1 w-full max-w-7xl mx-auto px-4 {{ $slots.banner ? 'pt-0' : 'py-6' }} pb-6">
+  <main class="flex-1 w-full max-w-(--t-container) mx-auto px-4 {{ $slots.banner ? 'pt-0' : 'py-6' }} pb-6">
     {{{ await $slots.main() }}}
   </main>
   @include('partials/footer')

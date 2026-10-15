@@ -1,0 +1,105 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="grid gap-6 lg:grid-cols-[18rem_1fr]">
+    {{-- Role list --}}
+    <nav aria-label="Roller" class="rounded-xl border border-gray-700 bg-(--t-surface) p-3">
+      <h3 class="px-2 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Roller — {{ roles.length }}</h3>
+      <ul class="space-y-1">
+        @each(role in roles)
+          <li>
+            <a href="/admin/roller?rol={{ role.key }}" {{ role.key === selected.key ? 'aria-current=page' : '' }}
+               class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition {{ role.key === selected.key ? 'bg-gray-700/60 text-(--t-heading)' : 'text-gray-300 hover:bg-gray-800' }}">
+              <span class="h-3.5 w-3.5 shrink-0 rounded-full" style="background-color: {{ role.color }}" aria-hidden="true"></span>
+              <span class="min-w-0 flex-1 truncate font-medium" style="color: {{ role.color }}">{{ role.label }}</span>
+              <span class="flex items-center gap-1 text-xs text-gray-400" title="Üye sayısı">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                {{ role.members }}
+              </span>
+            </a>
+          </li>
+        @end
+      </ul>
+      <p class="mt-3 px-2 text-xs leading-relaxed text-gray-500">Roller yukarıdan aşağı yetkisi azalan sırayla listelenir. Kullanıcıya rol atamak için <a href="/admin/kullanicilar" class="text-emerald-400 hover:underline">Kullanıcılar</a> sayfasını kullanın.</p>
+    </nav>
+
+    {{-- Selected role --}}
+    <div class="min-w-0 space-y-6" x-data="roleEditor" data-label="{{ flashMessages.get('label') || selected.label }}" data-color="{{ flashMessages.get('color') || selected.color }}">
+      <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-6" aria-labelledby="role-look">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <h3 id="role-look" class="text-lg font-semibold text-gray-200">Görünüm</h3>
+          <span class="inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold leading-none" :style="badgeStyle" x-text="label || '—'">{{ selected.label }}</span>
+        </div>
+        <form action="/admin/roller/{{ selected.key }}" method="POST" class="space-y-5">
+          {{ csrfField() }}
+          <div>
+            <label for="role-label" class="mb-1 block text-sm font-medium text-gray-300">Rol adı</label>
+            <input id="role-label" name="label" type="text" required minlength="2" maxlength="24" x-model="label"
+                   value="{{ flashMessages.get('label') || selected.label }}"
+                   class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            @!component('components/field_error', { field: 'label' })
+          </div>
+          <div>
+            <label for="role-color" class="mb-1 block text-sm font-medium text-gray-300">Rol rengi</label>
+            <div class="flex items-center gap-3">
+              <input type="color" aria-label="Renk seçici" :value="validColor ? color : '#ffffff'" @input="pick($event.target.value)"
+                     class="h-11 w-14 cursor-pointer rounded-lg border border-gray-600 bg-(--t-field) p-1">
+              <input id="role-color" name="color" type="text" required maxlength="7" pattern="#[0-9a-fA-F]{6}" x-model="color"
+                     value="{{ flashMessages.get('color') || selected.color }}" autocomplete="off"
+                     class="w-32 rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 font-mono text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+              <span class="text-xs text-gray-500">Varsayılan: <span class="font-mono">{{ defaults.color }}</span></span>
+            </div>
+            @!component('components/field_error', { field: 'color' })
+          </div>
+          <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+        </form>
+      </section>
+
+      <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-6" aria-labelledby="role-perms">
+        <h3 id="role-perms" class="mb-1 text-lg font-semibold text-gray-200">İzinler</h3>
+        <p class="mb-4 text-sm text-gray-500">İzinler rol başına sabittir; burada yalnızca görüntülenir.</p>
+        <ul class="divide-y divide-gray-700/50">
+          @each(permission in permissions)
+            <li class="flex items-center justify-between gap-4 py-3">
+              <span class="text-sm {{ permission.granted ? 'text-gray-200' : 'text-gray-500' }}">{{ permission.label }}</span>
+              <span class="inline-flex shrink-0 items-center gap-2 text-xs {{ permission.granted ? 'text-emerald-400' : 'text-gray-500' }}">
+                <span class="relative h-5 w-9 rounded-full {{ permission.granted ? 'bg-emerald-500/80' : 'bg-gray-700' }}" aria-hidden="true">
+                  <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all {{ permission.granted ? 'left-[1.1rem]' : 'left-0.5' }}"></span>
+                </span>
+                {{ permission.granted ? 'Var' : 'Yok' }}
+              </span>
+            </li>
+          @end
+        </ul>
+      </section>
+
+      <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-6" aria-labelledby="role-members">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <h3 id="role-members" class="text-lg font-semibold text-gray-200">Üyeler — {{ selected.members }}</h3>
+          @if(selected.members > members.length)
+            <a href="/admin/kullanicilar?role={{ selected.key }}" class="text-sm text-emerald-400 hover:underline">Tümünü gör</a>
+          @end
+        </div>
+        @if(members.length)
+          <ul class="grid gap-2 sm:grid-cols-2">
+            @each(member in members)
+              <li>
+                <a href="/uye/{{ member.username }}" class="flex items-center gap-3 rounded-lg border border-gray-700/60 bg-(--t-field) px-3 py-2 transition hover:border-gray-500">
+                  @!component('components/avatar', { user: member, size: 'h-8 w-8', text: 'text-xs' })
+                  <span class="min-w-0">
+                    <span class="block truncate text-sm font-medium" style="color: {{ selected.color }}">{{ member.fullName }}</span>
+                    <span class="block truncate text-xs text-gray-500">&#64;{{ member.username }}</span>
+                  </span>
+                </a>
+              </li>
+            @end
+          </ul>
+        @else
+          <p class="text-sm text-gray-500">Bu role sahip kullanıcı yok.</p>
+        @end
+      </section>
+    </div>
+  </div>
+@end
+
+@end

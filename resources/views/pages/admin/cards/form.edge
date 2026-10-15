@@ -1,0 +1,58 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  @let(field = 'w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500')
+  <div class="max-w-3xl space-y-4">
+    <a href="/admin/kartlar" class="text-sm text-gray-400 hover:text-gray-200">← Kartlara dön</a>
+    <form action="{{ card ? '/admin/kartlar/' + card.id + '/duzenle' : '/admin/kartlar/ekle' }}" method="POST" enctype="multipart/form-data" class="grid gap-6 rounded-xl border border-gray-700 bg-(--t-surface) p-6 sm:grid-cols-[10rem_minmax(0,1fr)]">
+      {{ csrfField() }}
+      <div>
+        @if(card)
+          <div class="tcg" data-rarity="{{ card.rarity }}">
+            <img src="{{ card.image }}" alt="">
+            <span class="tcg-letter">{{ card.rarity }}</span>
+          </div>
+        @else
+          <div class="flex aspect-[5/7] items-center justify-center rounded-xl border-2 border-dashed border-gray-600 text-center text-xs text-gray-500">Görsel seçmezsen seri kapağı kullanılır</div>
+        @end
+      </div>
+      <div class="space-y-4">
+        <h3 class="text-lg font-semibold text-gray-200">{{ card ? 'Kart düzenle' : 'Yeni kart' }}</h3>
+        <div>
+          <label for="name" class="mb-1 block text-sm font-medium text-gray-300">Karakter / kart adı</label>
+          <input id="name" name="name" required maxlength="80" value="{{ flashMessages.get('name') || (card ? card.name : '') }}" class="{{ field }}">
+          @!component('components/field_error', { field: 'name' })
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="rarity" class="mb-1 block text-sm font-medium text-gray-300">Nadirlik</label>
+            <select id="rarity" name="rarity" class="{{ field }}">
+              @each(entry in rarities)
+                <option value="{{ entry.rarity }}" {{ card && card.rarity === entry.rarity ? 'selected' : '' }}>{{ entry.rarity }} — {{ entry.label }}</option>
+              @end
+            </select>
+          </div>
+          <div>
+            <label for="series_id" class="mb-1 block text-sm font-medium text-gray-300">Seri</label>
+            <select id="series_id" name="series_id" class="{{ field }}">
+              <option value="">— Seriden bağımsız —</option>
+              @each(series in seriesList)
+                <option value="{{ series.id }}" {{ card && card.seriesId === series.id ? 'selected' : '' }}>{{ series.title }}</option>
+              @end
+            </select>
+            @!component('components/field_error', { field: 'series_id' })
+          </div>
+        </div>
+        <div>
+          <label for="image" class="mb-1 block text-sm font-medium text-gray-300">Görsel (dikey 5:7 önerilir)</label>
+          <input type="file" id="image" name="image" accept="image/png,image/webp,image/gif,image/jpeg" class="block w-full text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-700 file:px-3 file:py-2 file:text-gray-200">
+          @!component('components/field_error', { field: 'image' })
+        </div>
+        <label class="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" name="active" {{ !card || card.active ? 'checked' : '' }} class="accent-emerald-500"> Aktif (düşebilir ve üretilebilir)</label>
+        <button type="submit" class="rounded-lg bg-emerald-600 px-6 py-2.5 font-semibold text-(--t-on-accent) hover:bg-emerald-500">{{ card ? 'Güncelle' : 'Ekle' }}</button>
+      </div>
+    </form>
+  </div>
+@end
+
+@end

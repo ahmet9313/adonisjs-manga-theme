@@ -1,0 +1,129 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  @let(field = 'w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500')
+  @let(currentKind = flashMessages.get('kind') || kind)
+  @let(currentMode = flashMessages.get('style_mode') || (item ? (item.image ? 'image' : item.style && item.style.startsWith('grad:') ? 'gradient' : 'preset') : 'preset'))
+  @let(colors = item && item.style && item.style.startsWith('grad:') ? item.style.slice(5).split(',') : ['#34d399', '#22d3ee', '#a855f7'])
+  <div class="max-w-3xl space-y-6">
+    <a href="/admin/kozmetikler" class="text-sm text-gray-400 hover:text-gray-200">← Kozmetiklere dön</a>
+
+    <form action="{{ item ? '/admin/kozmetikler/' + item.id + '/duzenle' : '/admin/kozmetikler/ekle' }}" method="POST" enctype="multipart/form-data"
+          class="space-y-5 rounded-xl border border-gray-700 bg-(--t-surface) p-6"
+          x-data="{ kind: '{{ currentKind }}', mode: '{{ currentMode }}' }">
+      {{ csrfField() }}
+      <h3 class="text-lg font-semibold text-gray-200">{{ item ? 'Kozmetik düzenle' : 'Yeni kozmetik' }}</h3>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="kind" class="mb-1 block text-sm font-medium text-gray-300">Tür</label>
+          <select id="kind" name="kind" x-model="kind" class="{{ field }}">
+            @each(entry in kinds)
+              <option value="{{ entry.name }}" {{ currentKind === entry.name ? 'selected' : '' }}>{{ entry.label }}</option>
+            @end
+          </select>
+          @!component('components/field_error', { field: 'kind' })
+        </div>
+        <div>
+          <label for="name" class="mb-1 block text-sm font-medium text-gray-300">Ad</label>
+          <input id="name" name="name" required maxlength="60" value="{{ flashMessages.get('name') || (item ? item.name : '') }}" class="{{ field }}">
+          @!component('components/field_error', { field: 'name' })
+        </div>
+      </div>
+
+      {{-- Appearance --}}
+      <fieldset class="space-y-3 rounded-lg border border-gray-700 p-4">
+        <legend class="px-1 text-sm font-medium text-gray-300">Görünüm</legend>
+        <div class="flex flex-wrap gap-4 text-sm text-gray-300" x-show="kind !== 'sticker'">
+          <label class="flex items-center gap-2"><input type="radio" name="style_mode" value="preset" x-model="mode" class="accent-emerald-500"> Hazır stil</label>
+          <label class="flex items-center gap-2" x-show="kind === 'effect'"><input type="radio" name="style_mode" value="gradient" x-model="mode" class="accent-emerald-500"> Özel renk geçişi</label>
+          <label class="flex items-center gap-2" x-show="kind !== 'effect'"><input type="radio" name="style_mode" value="image" x-model="mode" class="accent-emerald-500"> Görsel yükle</label>
+        </div>
+        <template x-if="kind === 'sticker'"><input type="hidden" name="style_mode" value="image"></template>
+
+        @each(group in Object.keys(presets))
+          <div x-show="kind === '{{ group }}' && mode === 'preset'">
+            <label class="mb-1 block text-sm text-gray-400">Hazır stil</label>
+            <select name="preset" :disabled="!(kind === '{{ group }}' && mode === 'preset')" class="{{ field }}">
+              @each(key in Object.keys(presets[group]))
+                <option value="{{ key }}" {{ item && item.style === key ? 'selected' : '' }}>{{ presets[group][key] }}</option>
+              @end
+            </select>
+          </div>
+        @end
+        @!component('components/field_error', { field: 'preset' })
+
+        <div x-show="kind === 'effect' && mode === 'gradient'" class="flex flex-wrap items-center gap-3">
+          @each((color, index) in colors)
+            <input type="color" name="colors[{{ index }}]" value="{{ color }}" :disabled="!(kind === 'effect' && mode === 'gradient')" class="h-10 w-14 cursor-pointer rounded border border-gray-600 bg-transparent">
+          @end
+          <span class="text-xs text-gray-500">2-3 renk; ad soldan sağa bu renklerle boyanır.</span>
+        </div>
+        @!component('components/field_error', { field: 'colors' })
+
+        <div x-show="kind === 'sticker' || mode === 'image'">
+          <label for="image" class="mb-1 block text-sm text-gray-400">Görsel (PNG/WebP/GIF önerilir, en fazla 6 MB)</label>
+          @if(item && item.image)
+            <img src="{{ item.image }}" alt="" class="mb-2 max-h-24 rounded border border-gray-700 bg-black/30 object-contain p-1">
+          @end
+          <input type="file" id="image" name="image" accept="image/png,image/webp,image/gif,image/jpeg" class="block w-full text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-700 file:px-3 file:py-2 file:text-gray-200">
+          <p class="mt-1 text-xs text-gray-500">Çerçeve görselleri avatarın etrafına %140 boyutunda, ortası şeffaf olacak şekilde hazırlanmalıdır.</p>
+          @!component('components/field_error', { field: 'image' })
+        </div>
+      </fieldset>
+
+      {{-- Unlock --}}
+      <fieldset class="grid gap-4 rounded-lg border border-gray-700 p-4 sm:grid-cols-2">
+        <legend class="px-1 text-sm font-medium text-gray-300">Kilit</legend>
+        <div>
+          <label for="required_level" class="mb-1 block text-sm text-gray-400">Gereken seviye</label>
+          <input type="number" id="required_level" name="required_level" min="1" max="100" value="{{ flashMessages.get('required_level') || (item ? item.requiredLevel : 1) }}" class="{{ field }}">
+          @!component('components/field_error', { field: 'required_level' })
+        </div>
+        <div>
+          <label for="required_badge" class="mb-1 block text-sm text-gray-400">Ya da gereken rozet</label>
+          <select id="required_badge" name="required_badge" class="{{ field }}">
+            <option value="">— Yok (seviye kullanılır) —</option>
+            @each(badge in badges)
+              <option value="{{ badge.slug }}" {{ item && item.requiredBadge === badge.slug ? 'selected' : '' }}>{{ badge.name }}</option>
+            @end
+          </select>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-gray-300 sm:col-span-2">
+          <input type="checkbox" name="grant_only" {{ item && item.grantOnly ? 'checked' : '' }} class="accent-emerald-500">
+          Yalnızca hediye (seviye/rozetle açılmaz; aşağıdan üyelere verilir)
+        </label>
+      </fieldset>
+
+      <div class="flex flex-wrap items-center gap-5 text-sm text-gray-300">
+        <label class="flex items-center gap-2"><input type="checkbox" name="active" {{ !item || item.active ? 'checked' : '' }} class="accent-emerald-500"> Aktif</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="featured" {{ item && item.featured ? 'checked' : '' }} class="accent-emerald-500"> Öne çıkan</label>
+        <label class="flex items-center gap-2">Sıra <input type="number" name="sort_order" value="{{ item ? item.sortOrder : 0 }}" class="w-24 rounded-lg border border-gray-600 bg-(--t-field) px-3 py-1.5 text-gray-200"></label>
+      </div>
+
+      <button type="submit" class="rounded-lg bg-emerald-600 px-6 py-2.5 font-semibold text-(--t-on-accent) hover:bg-emerald-500">{{ item ? 'Güncelle' : 'Ekle' }}</button>
+    </form>
+
+    @if(item)
+      <form action="/admin/kozmetikler/{{ item.id }}/hediye" method="POST" class="space-y-3 rounded-xl border border-gray-700 bg-(--t-surface) p-6">
+        {{ csrfField() }}
+        <h3 class="font-semibold text-gray-200">Üyeye hediye et</h3>
+        <p class="text-sm text-gray-500">Üye öğeyi kilit koşulundan bağımsız olarak hemen kullanabilir ve gelen kutusuna bildirim düşer.</p>
+        <div class="flex flex-wrap gap-2">
+          <input name="username" required placeholder="kullanici_adi" class="min-w-0 flex-1 rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none">
+          <button type="submit" class="rounded-lg border border-emerald-700 px-4 py-2.5 text-sm font-semibold text-emerald-300 hover:border-emerald-500">Hediye et</button>
+        </div>
+        @!component('components/field_error', { field: 'username' })
+        @if(owners && owners.length)
+          <p class="text-sm text-gray-400">Hediye edilenler:
+            @each((owner, index) in owners)
+              <a href="/uye/{{ owner.username }}" class="text-emerald-300 hover:underline">&#64;{{ owner.username }}</a>{{ index < owners.length - 1 ? ',' : '' }}
+            @end
+          </p>
+        @end
+      </form>
+    @end
+  </div>
+@end
+
+@end

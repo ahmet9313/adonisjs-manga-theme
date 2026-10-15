@@ -1,0 +1,7 @@
+@if(flashMessages.has('success') || flashMessages.has('error') || flashMessages.has('info'))
+  <div class="pointer-events-none fixed inset-x-0 top-20 z-[70] mx-auto w-full max-w-md px-4">
+    <div class="pointer-events-auto">
+      @include('partials/admin/flash_messages')
+    </div>
+  </div>
+@end

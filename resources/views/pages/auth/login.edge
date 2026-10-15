@@ -1,0 +1,14 @@
+@component('components/layout/main', { title })
+
+@slot('main')
+  <div class="mx-auto w-full max-w-sm py-8">
+    <div class="rounded-2xl border border-white/10 glass p-6 shadow-xl sm:p-8">
+      <h1 class="mb-1 text-2xl font-bold text-(--t-heading)">Giriş Yap</h1>
+      <p class="mb-6 text-sm text-gray-400">{{ site.name }} hesabınla devam et.</p>
+      @!component('components/auth/login_form', { prefix: 'page', next })
+      <a href="/kayit?next={{ encodeURIComponent(next) }}" class="mt-4 block w-full rounded-lg border border-gray-600 py-2.5 text-center text-sm font-medium text-gray-200 hover:border-emerald-500">Yeni hesap oluştur</a>
+    </div>
+  </div>
+@end
+
+@end

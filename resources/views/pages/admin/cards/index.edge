@@ -1,0 +1,52 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h3 class="text-lg font-semibold text-gray-200">Kartlar</h3>
+      <p class="text-sm text-gray-500">Okurlar yeni bölüm okurken ve 7 günlük giriş serisinde kart kazanır.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      @if(missingSeries)
+        <form action="/admin/kartlar/seri-kapaklari" method="POST" onsubmit="return confirm('Kartı olmayan her seri için kapağından bir kart oluşturulsun mu?')">
+          {{ csrfField() }}
+          <button type="submit" class="rounded-lg border border-emerald-700 px-4 py-2 text-sm font-semibold text-emerald-300 hover:border-emerald-500">Seri kapaklarından oluştur ({{ missingSeries }})</button>
+        </form>
+      @end
+      <a href="/admin/kartlar/ekle" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-(--t-on-accent) hover:bg-emerald-500">+ Yeni Kart</a>
+    </div>
+  </div>
+
+  <div class="mb-4 flex flex-wrap gap-2">
+    <a href="/admin/kartlar" class="pill {{ rarity ? '' : 'pill-active' }}">Tümü</a>
+    @each(entry in rarities)
+      <a href="/admin/kartlar?nadirlik={{ entry }}" class="pill {{ rarity === entry ? 'pill-active' : '' }}">{{ entry }}</a>
+    @end
+  </div>
+
+  @if(items.total === 0)
+    <p class="rounded-xl border border-gray-700 bg-(--t-surface) px-5 py-10 text-center text-gray-500">Henüz kart yok.</p>
+  @end
+  <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
+    @each(card in items)
+      <div class="{{ card.active ? '' : 'opacity-50' }}">
+        <a href="/admin/kartlar/{{ card.id }}/duzenle" class="tcg block" data-rarity="{{ card.rarity }}">
+          <img src="{{ card.image }}" alt="" loading="lazy">
+          <span class="tcg-letter">{{ card.rarity }}</span>
+        </a>
+        <p class="mt-2 truncate text-sm font-semibold text-gray-200">{{ card.name }}</p>
+        <p class="truncate text-xs text-gray-500">{{ card.series ? card.series.title : 'Seriden bağımsız' }}</p>
+        <div class="mt-1 flex gap-2 text-xs">
+          <a href="/admin/kartlar/{{ card.id }}/duzenle" class="text-emerald-400 hover:underline">Düzenle</a>
+          <form action="/admin/kartlar/{{ card.id }}/sil" method="POST" onsubmit="return confirm('Kart silinsin mi? Sahip olan okurların koleksiyonundan da çıkar.')">
+            {{ csrfField() }}
+            <button type="submit" class="text-red-400 hover:underline">Sil</button>
+          </form>
+        </div>
+      </div>
+    @end
+  </div>
+  @include('partials/admin/pagination')
+@end
+
+@end

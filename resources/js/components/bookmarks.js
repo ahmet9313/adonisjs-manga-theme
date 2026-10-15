@@ -1,3 +1,5 @@
+import { isAccount, postJson, readLocal } from './library.js'
+
 export function bookmarkCover(item) {
   const cover = item.coverImage
   if (typeof cover !== 'string') return '/images/no-cover.svg'
@@ -27,36 +29,60 @@ export function readBookmarks(storage) {
         slug,
         title: typeof data?.title === 'string' ? data.title : slug.replaceAll('-', ' '),
         coverImage: data?.coverImage,
+        savedAt: Number(data?.savedAt) || 0,
+        lastRead: readLocal(type, slug).last,
+        latestChapter: null,
       })
     }
   } catch {
     /* Storage may be disabled by the browser. */
   }
-  return items
+  return items.sort((a, b) => b.savedAt - a.savedAt)
 }
 
 export function bookmarkPage() {
   return {
     bookmarks: [],
     error: '',
+    busy: false,
+    account: false,
     cover: bookmarkCover,
     init() {
+      this.account = isAccount() && this.$el.dataset.items !== undefined
+      if (this.account) {
+        this.bookmarks = JSON.parse(this.$el.dataset.items)
+        return
+      }
       try {
         this.bookmarks = readBookmarks(window.localStorage)
       } catch {
         this.error = 'Tarayıcı depolamasına erişilemiyor.'
       }
     },
-    removeBookmark(key) {
+    chapterUrl(item, number) {
+      return `/series/${encodeURIComponent(item.type)}/${encodeURIComponent(item.slug)}/${number}`
+    },
+    hasNew(item) {
+      return (
+        item.lastRead !== null && item.latestChapter !== null && item.latestChapter > item.lastRead
+      )
+    },
+    async removeBookmark(key) {
+      const item = this.bookmarks.find((entry) => entry.key === key)
+      if (!item) return
+      this.error = ''
       try {
-        window.localStorage.removeItem(key)
-        this.bookmarks = this.bookmarks.filter((item) => item.key !== key)
+        if (this.account) await postJson('/kutuphane/kaldir', { type: item.type, slug: item.slug })
+        else window.localStorage.removeItem(key)
+        this.bookmarks = this.bookmarks.filter((entry) => entry.key !== key)
       } catch {
-        this.error = 'Kayıt kaldırılamadı.'
+        this.error = 'Kayıt kaldırılamadı. Lütfen tekrar deneyin.'
       }
     },
-    clearAll() {
-      for (const item of [...this.bookmarks]) this.removeBookmark(item.key)
+    async clearAll() {
+      this.busy = true
+      for (const item of [...this.bookmarks]) await this.removeBookmark(item.key)
+      this.busy = false
     },
   }
 }
@@ -64,24 +90,50 @@ export function bookmarkPage() {
 export function bookmarkButton() {
   return {
     saved: false,
+    busy: false,
+    failed: false,
     item: null,
     key: '',
     init() {
       this.item = JSON.parse(this.$el.dataset.bookmark)
       this.key = `bookmark:${this.item.type}:${this.item.slug}`
+      if (isAccount()) {
+        this.saved = this.$el.dataset.saved === 'true'
+        return
+      }
       try {
         this.saved = window.localStorage.getItem(this.key) !== null
       } catch {
         /* Keep the button usable. */
       }
     },
-    toggle() {
+    async toggle() {
+      if (this.busy) return
+      this.failed = false
+      if (isAccount()) {
+        this.busy = true
+        try {
+          const result = await postJson('/kutuphane/kaydet', {
+            type: this.item.type,
+            slug: this.item.slug,
+          })
+          this.saved = result.saved
+        } catch {
+          this.failed = true
+        }
+        this.busy = false
+        return
+      }
       try {
         if (this.saved) window.localStorage.removeItem(this.key)
-        else window.localStorage.setItem(this.key, JSON.stringify(this.item))
+        else
+          window.localStorage.setItem(
+            this.key,
+            JSON.stringify({ ...this.item, savedAt: Date.now() })
+          )
         this.saved = !this.saved
       } catch {
-        this.$el.setAttribute('title', 'Tarayıcı depolamasına erişilemiyor.')
+        this.failed = true
       }
     },
   }

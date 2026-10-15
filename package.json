@@ -1,6 +1,6 @@
 {
   "name": "Mangahub",
-  "version": "0.8.2",
+  "version": "0.9.0-beta.1",
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
@@ -20,7 +20,12 @@
     "migrate:rollback": "node ace migration:rollback",
     "migrate:fresh": "node ace migration:fresh",
     "seed": "node ace db:seed",
-    "db:reset": "node ace migration:fresh && node ace db:seed"
+    "seed:demo": "node ace db:seed --files=database/seeders/social_seeder.ts",
+    "seed:clear": "node scripts/clear-demo.mjs",
+    "covers:fetch": "node scripts/fetch-covers.mjs",
+    "db:reset": "node ace migration:fresh && node ace db:seed",
+    "admin:promote": "node scripts/promote-admin.mjs",
+    "measure": "node scripts/measure-baseline.mjs"
   },
   "engines": {
     "node": ">=24.0.0",

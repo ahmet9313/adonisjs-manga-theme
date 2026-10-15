@@ -1,6 +1,16 @@
 import app from '@adonisjs/core/services/app'
+import logger from '@adonisjs/core/services/logger'
 import { type HttpContext, ExceptionHandler } from '@adonisjs/core/http'
-import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
+import type { HttpError, StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
+
+/** Shown instead of internal error details (SQL, file paths) when debugging is off. */
+export const GENERIC_SERVER_ERROR = 'Sunucu hatası. Lütfen biraz sonra tekrar deneyin.'
+
+/** Last resort when even the error template fails to render. */
+const FALLBACK_HTML =
+  '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>Hata</title></head>' +
+  '<body style="background:#000022;color:#fff;font-family:system-ui;text-align:center;padding:4rem">' +
+  '<h1>Bir şeyler ters gitti</h1><p><a href="/" style="color:#3fba67">Ana sayfaya dön</a></p></body></html>'
 
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
@@ -17,16 +27,47 @@ export default class HttpExceptionHandler extends ExceptionHandler {
   protected renderStatusPages = app.inProduction
 
   /**
-   * Status pages is a collection of error code range and a callback
-   * to return the HTML contents to send as a response.
+   * Error templates use the session-free `layout/error`: unmatched URLs never reach the router
+   * middleware, so flash messages, CSRF and auth are not available while rendering them.
    */
   protected statusPages: Record<StatusPageRange, StatusPageRenderer> = {
-    '404': (error, { view }) => {
-      return view.render('pages/errors/not_found', { error })
-    },
-    '500..599': (error, { view }) => {
-      return view.render('pages/errors/server_error', { error })
-    },
+    '403': (_error, ctx) => this.renderPage(ctx, 'pages/errors/forbidden'),
+    '404': (_error, ctx) => this.renderPage(ctx, 'pages/errors/not_found'),
+    '500..599': (_error, ctx) => this.renderPage(ctx, 'pages/errors/server_error'),
+  }
+
+  private async renderPage({ view }: HttpContext, template: string) {
+    try {
+      return await view.render(template)
+    } catch (error) {
+      logger.error({ err: error }, `Hata sayfası oluşturulamadı: ${template}`)
+      return FALLBACK_HTML
+    }
+  }
+
+  /** Server errors never echo their message to clients unless debugging is enabled. */
+  private hideDetails(error: HttpError, ctx: HttpContext) {
+    return error.status >= 500 && !this.isDebuggingEnabled(ctx)
+  }
+
+  async renderErrorAsJSON(error: HttpError, ctx: HttpContext) {
+    if (this.hideDetails(error, ctx))
+      return ctx.response.status(error.status).send({ message: GENERIC_SERVER_ERROR })
+    return super.renderErrorAsJSON(error, ctx)
+  }
+
+  async renderErrorAsJSONAPI(error: HttpError, ctx: HttpContext) {
+    if (this.hideDetails(error, ctx))
+      return ctx.response
+        .status(error.status)
+        .send({ errors: [{ title: GENERIC_SERVER_ERROR, status: error.status }] })
+    return super.renderErrorAsJSONAPI(error, ctx)
+  }
+
+  async renderErrorAsHTML(error: HttpError, ctx: HttpContext) {
+    if (this.hideDetails(error, ctx) && !this.renderStatusPages)
+      return ctx.response.status(error.status).send(FALLBACK_HTML)
+    return super.renderErrorAsHTML(error, ctx)
   }
 
   /**

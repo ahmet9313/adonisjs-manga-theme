@@ -1,0 +1,189 @@
+@if(auth && auth.user)
+  @let(me = auth.user)
+  @let(summary = account || null)
+  @let(look = summary ? summary.look : lookOf(me))
+  @let(item = 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 transition hover:bg-white/5 hover:text-(--t-heading)')
+  @let(chip = 'inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-gray-200 transition hover:border-white/15 hover:bg-white/10 hover:text-(--t-heading) active:scale-95')
+  <div
+    class="relative"
+    x-data="accountMenu"
+    data-config="{{ JSON.stringify({ checkedIn: summary ? summary.checkedIn : true, streak: summary ? summary.streak : 0, nextCheckin: summary ? summary.nextCheckin : 0, level: summary ? summary.level : me.level, current: summary ? summary.current : 0, needed: summary ? summary.needed : 0, progress: summary ? summary.progress : 0, exp: summary ? summary.exp : me.exp }) }}"
+    @keydown.escape.window="open = false"
+    @click.outside="open = false"
+  >
+    <button
+      type="button"
+      @click="open = !open"
+      :aria-expanded="open.toString()"
+      aria-haspopup="menu"
+      aria-controls="account-menu"
+      aria-label="Hesap menüsü: {{ me.fullName }}"
+      class="relative flex h-11 w-11 items-center justify-center rounded-full transition hover:brightness-110"
+    >
+      @!component('components/avatar', { user: me, size: 'h-9 w-9', text: 'text-sm', frame: look.frame })
+      <span x-cloak x-show="!checkedIn" class="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-(--t-field)" title="Günlük giriş ödülü hazır"></span>
+    </button>
+
+    <div
+      id="account-menu"
+      role="menu"
+      x-cloak
+      x-show="open"
+      x-transition.origin.top.right
+      class="glass-strong fixed inset-x-3 top-[4.5rem] z-50 max-h-[calc(100vh-5.5rem)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[21rem] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 shadow-2xl shadow-black/60"
+    >
+      {{-- Header: wallpaper, avatar, name, level and progress --}}
+      <div class="relative isolate overflow-hidden p-4">
+        @if(look.wallpaper)
+          <div class="wall {{ look.wallpaper.cls || '' }} absolute inset-0 -z-20 opacity-80" style="{{ visualStyle(look.wallpaper) }}"></div>
+          <div class="absolute inset-0 -z-10 bg-gradient-to-r from-black/85 to-black/55"></div>
+        @end
+        <div class="flex items-center gap-3">
+          <a href="/uye/{{ me.username }}" role="menuitem" class="shrink-0" title="Profilim">
+            @!component('components/avatar', { user: me, size: 'h-12 w-12', text: 'text-lg', frame: look.frame })
+          </a>
+          <div class="min-w-0 flex-1">
+            <div class="flex min-w-0 items-center gap-1.5">
+              <span class="presence" data-online="1" aria-hidden="true"></span>
+              <a href="/uye/{{ me.username }}" class="truncate text-[15px] font-bold text-(--t-heading) hover:underline">
+                @!component('components/user_name', { user: me, look })
+              </a>
+              <span class="lv-badge" :data-tier="level >= 50 ? 4 : level >= 25 ? 3 : level >= 10 ? 2 : 1" x-text="'Lv.' + level">Lv.{{ me.level }}</span>
+            </div>
+            <div class="mt-1 flex items-center gap-3 text-xs text-gray-300">
+              <span class="inline-flex items-center gap-1" title="Toplam deneyim puanı">
+                @!component('components/icon', { name: 'bolt', class: 'h-3.5 w-3.5 text-amber-300' })
+                <span x-text="exp.toLocaleString('tr-TR')">{{ me.exp }}</span>
+              </span>
+              <a href="/kartlar" class="inline-flex items-center gap-1 hover:text-(--t-heading)" title="Kartlar">
+                @!component('components/icon', { name: 'cards', class: 'h-3.5 w-3.5 text-sky-300' })
+                {{ summary ? summary.cards : 0 }}
+              </a>
+              <a href="/rozetler" class="inline-flex items-center gap-1 hover:text-(--t-heading)" title="Rozetler">
+                @!component('components/icon', { name: 'badge', class: 'h-3.5 w-3.5 text-fuchsia-300' })
+                {{ summary ? summary.badges : 0 }}
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3" title="Sonraki seviyeye">
+          <div class="h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 transition-all duration-500" :style="'width:' + progress + '%'" style="width: {{ summary ? summary.progress : 0 }}%"></div>
+          </div>
+          <div class="mt-1 flex justify-between text-[11px] text-gray-400">
+            <span x-text="current + ' / ' + needed + ' EXP'"></span>
+            <span x-text="'Lv.' + (level + 1) + ' için ' + Math.max(0, needed - current)"></span>
+          </div>
+        </div>
+      </div>
+
+      {{-- Streak + daily check-in --}}
+      <div class="mx-3 mb-2 flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.04] px-3 py-2">
+        <span class="inline-flex items-center gap-1 text-sm font-semibold" :class="streak ? 'text-orange-300' : 'text-gray-400'" title="Üst üste günlük giriş">
+          @!component('components/icon', { name: 'fire', class: 'h-4 w-4' })
+          <span x-text="streak">{{ summary ? summary.streak : 0 }}</span>
+        </span>
+        <span class="text-xs text-gray-500" x-text="checkedIn ? 'Yarın tekrar gel' : '+' + nextCheckin + ' EXP hazır'"></span>
+        <button type="button" @click="checkin()" :disabled="checkedIn || busy"
+                class="btn-soft ml-auto !px-3 !py-1.5 !text-[11px]"
+                :class="checkedIn ? '' : 'btn-green'">
+          @!component('components/icon', { name: 'pin', class: 'h-3.5 w-3.5' })
+          <span x-text="checkedIn ? 'Alındı' : 'Günlük Giriş'">Günlük Giriş</span>
+        </button>
+      </div>
+
+      <nav class="px-2 pb-2" aria-label="Hesap">
+        <a role="menuitem" href="/oneriler" class="{{ item }}">
+          @!component('components/icon', { name: 'bulb', class: 'h-5 w-5 text-gray-400' })
+          Sana Özel Öneriler
+        </a>
+        <button type="button" role="menuitem" @click="open = false; $dispatch('open-inbox')" class="{{ item }} w-full text-left">
+          @!component('components/icon', { name: 'mail', class: 'h-5 w-5 text-gray-400' })
+          Gelen Kutusu
+          <span x-cloak x-show="$store.account.unread" class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-bold leading-5 text-(--t-on-accent)" x-text="$store.account.unread"></span>
+        </button>
+
+        <div class="my-2 border-t border-white/10"></div>
+
+        @each(section in [
+          { key: 'library', icon: 'library', label: 'Kütüphane ve Geçmiş', links: [
+            { href: '/kaydedilenler', icon: 'bookmark', label: 'Kaydedilenler' },
+            { href: '/gecmis', icon: 'clock', label: 'Okuma Geçmişi' },
+          ] },
+          { key: 'daily', icon: 'calendar', label: 'Günlük & Ödüller', dot: true, links: [
+            { href: '/oduller', icon: 'gift', label: 'Seviye ve Ödüller' },
+            { href: '/rozetler', icon: 'trophy', label: 'Başarımlar' },
+          ] },
+          { key: 'cosmetics', icon: 'smile', label: 'Çıkartmalar ve Kozmetikler', links: [
+            { href: '/kozmetik/cikartmalar', icon: 'smile', label: 'Çıkartma' },
+            { href: '/kozmetik/cerceveler', icon: 'frame', label: 'Çerçeve' },
+            { href: '/kozmetik/efektler', icon: 'sparkles', label: 'Efekt' },
+            { href: '/kozmetik/duvar-kagitlari', icon: 'photo', label: 'Duvar Kağıdı' },
+            { event: 'open-inventory', icon: 'stack', label: 'Envanter' },
+          ] },
+          { key: 'profile', icon: 'user', label: 'Profil ve Başarımlar', links: [
+            { href: '/rozetler', icon: 'badge', label: 'Rozet' },
+            { href: '/kartlar', icon: 'cards', label: 'Kart' },
+            { href: '/uye/' + me.username, icon: 'user', label: 'Profilim' },
+            { href: '/ayarlar', icon: 'pencil', label: 'Profili Düzenle' },
+            { href: '/ayarlar', icon: 'cog', label: 'Ayarlar' },
+          ] },
+        ])
+          <div>
+            <button type="button" @click="toggle('{{ section.key }}')" :aria-expanded="isOpen('{{ section.key }}').toString()" class="{{ item }} w-full text-left">
+              @!component('components/icon', { name: section.icon, class: 'h-5 w-5 text-gray-400' })
+              <span>{{ section.label }}</span>
+              @if(section.dot)
+                <span x-cloak x-show="!checkedIn" class="h-2 w-2 rounded-full bg-emerald-400" aria-label="Ödül hazır"></span>
+              @end
+              <span class="ml-auto text-gray-500">
+                <span x-show="!isOpen('{{ section.key }}')">
+                  @!component('components/icon', { name: 'plus', class: 'h-4 w-4' })
+                </span>
+                <span x-cloak x-show="isOpen('{{ section.key }}')">
+                  @!component('components/icon', { name: 'minus', class: 'h-4 w-4' })
+                </span>
+              </span>
+            </button>
+            <div x-cloak x-show="isOpen('{{ section.key }}')" x-transition.opacity class="flex flex-wrap gap-1.5 px-3 pb-2 pt-1">
+              @each(link in section.links)
+                @if(link.event)
+                  <button type="button" role="menuitem" @click="open = false; $dispatch('{{ link.event }}')" class="{{ chip }}">
+                    @!component('components/icon', { name: link.icon, class: 'h-4 w-4 text-emerald-300' })
+                    {{ link.label }}
+                  </button>
+                @else
+                  <a role="menuitem" href="{{ link.href }}" class="{{ chip }}">
+                    @!component('components/icon', { name: link.icon, class: 'h-4 w-4 text-emerald-300' })
+                    {{ link.label }}
+                  </a>
+                @end
+              @end
+            </div>
+          </div>
+        @end
+
+        @if(me.isStaff)
+          <a role="menuitem" href="/admin" class="{{ item }}">
+            @!component('components/icon', { name: 'shield', class: 'h-5 w-5 text-gray-400' })
+            Yönetim Paneli
+          </a>
+        @end
+
+        <div class="my-2 border-t border-white/10"></div>
+        <form action="/cikis" method="POST">
+          {{ csrfField() }}
+          <button type="submit" role="menuitem" class="{{ item }} w-full text-left !text-red-300 hover:!bg-red-500/10">
+            @!component('components/icon', { name: 'logout', class: 'h-5 w-5' })
+            Çıkış Yap
+          </button>
+        </form>
+      </nav>
+    </div>
+  </div>
+@else
+  <div class="flex items-center gap-2">
+    <button type="button" @click="$dispatch('open-auth', 'login')" class="hidden h-10 items-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-200 transition hover:border-emerald-500 hover:text-(--t-heading) sm:inline-flex">Giriş Yap</button>
+    <button type="button" @click="$dispatch('open-auth', 'register')" class="hidden h-10 items-center rounded-full bg-emerald-600 px-4 text-sm font-semibold text-(--t-on-accent) transition hover:bg-emerald-500 sm:inline-flex">Kayıt Ol</button>
+  </div>
+@end

@@ -1,11 +1,18 @@
 @component('components/layout/main', { title })
 
 @slot('main')
+  <div x-data="readingTracker" data-chapter="{{ JSON.stringify({ type: series.type, slug: series.slug, number: chapter.number }) }}" hidden></div>
+  @if(reward)
+    <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Yeni bölüm okundu: +' + reward.exp + ' EXP', tone: 'success' }) }}"></div>
+    @if(reward.card)
+      <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Kart düştü! ' + reward.card.name + ' (' + reward.card.rarity + ')', tone: 'reward', image: reward.card.image }) }}"></div>
+    @end
+  @end
   {{-- Header --}}
   <div class="text-center mb-6">
-    <h1 class="text-xl font-bold text-white">{{ series.title }} {{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</h1>
+    <h1 class="text-xl font-bold text-(--t-heading)">{{ series.title }} {{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</h1>
     <p class="text-sm text-gray-500 mt-1">
-      Okuduğunuz Seri: <a href="/series/{{ series.type }}/{{ series.slug }}" class="text-cyan-400 hover:text-cyan-300">{{ series.title }}</a>
+      Okuduğunuz Seri: <a href="/series/{{ series.type }}/{{ series.slug }}" class="text-emerald-400 hover:text-emerald-300">{{ series.title }}</a>
     </p>
   </div>
 
@@ -28,7 +35,7 @@
 
   {{-- Novel Text Content --}}
   @if(chapter.textContent)
-  <article class="max-w-3xl mx-auto bg-[#161b22] rounded-lg p-6 md:p-10">
+  <article class="glass max-w-3xl mx-auto rounded-2xl border border-white/10 p-6 md:p-10">
     <div class="prose prose-invert prose-sm md:prose-base max-w-none text-gray-300 leading-relaxed whitespace-pre-line break-words">{{ chapter.textContent }}</div>
   </article>
   @end
@@ -40,11 +47,17 @@
   {{-- End Message --}}
   <div class="text-center py-8 text-sm text-gray-500">
     <p><strong class="text-gray-300">{{ series.title }} — Bölüm {{ chapter.number }}</strong> sonuna geldiniz.</p>
-    <p class="mt-1 text-cyan-400">Bir sonraki bölümde görüşmek üzere keyifli okumalar dileriz.</p>
+    <p class="mt-1 text-emerald-400">Bir sonraki bölümde görüşmek üzere keyifli okumalar dileriz.</p>
   </div>
 
   {{-- Bottom Navigation --}}
   @include('partials/chapter_navigation')
+
+  @if(ui('reader_comments'))
+  <div class="mx-auto max-w-3xl">
+    @include('partials/comments/section')
+  </div>
+  @end
 @end
 
 @end

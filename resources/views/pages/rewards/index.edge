@@ -1,0 +1,118 @@
+@component('components/layout/main', { title })
+
+@slot('main')
+  @let(me = auth.user)
+  @let(info = account || levelOf(me))
+  @let(dayInWeek = account && account.streak ? ((account.streak - 1) % 7) + 1 : 0)
+  @!component('components/breadcrumb', { items: [{ label: 'Günlük & Ödüller' }] })
+
+  <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <div class="space-y-5">
+      {{-- Level --}}
+      <section class="glass relative isolate overflow-hidden rounded-3xl border border-white/10 p-5 sm:p-7">
+        <div class="absolute -right-16 -top-16 -z-10 h-56 w-56 rounded-full bg-emerald-500/20 blur-3xl"></div>
+        <h1 class="section-title">Seviye ve Ödüller</h1>
+        <div class="mt-4 flex flex-wrap items-center gap-5">
+          <div class="flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-3xl border border-amber-300/40 bg-gradient-to-br from-amber-300/25 to-orange-600/20 shadow-[0_0_30px_rgb(245_158_11_/_0.25)]">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-amber-200">Seviye</span>
+            <span class="text-4xl font-black text-(--t-heading)">{{ info.level }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm text-gray-300">Toplam <strong class="text-(--t-heading)">{{ info.exp.toLocaleString('tr-TR') }} EXP</strong></p>
+            <div class="mt-2 h-3 overflow-hidden rounded-full bg-white/10">
+              <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300" style="width: {{ info.progress }}%"></div>
+            </div>
+            <p class="mt-1.5 text-xs text-gray-400">Lv.{{ info.level + 1 }} için {{ Math.max(0, info.needed - info.current) }} EXP kaldı ({{ info.current }} / {{ info.needed }})</p>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-gray-400">Burada satın alınacak bir şey yok. Seviye atladıkça çerçeve, ad efekti, duvar kağıdı ve çıkartmalar kendiliğinden açılır; bazıları rozetlere bağlıdır.</p>
+      </section>
+
+      {{-- Upcoming unlocks --}}
+      <section class="glass rounded-3xl border border-white/10 p-5 sm:p-7">
+        <div class="flex items-center justify-between">
+          <h2 class="section-title">Sıradaki açılımlar</h2>
+          <a href="/kozmetik/efektler" class="text-sm text-emerald-300 hover:underline">Koleksiyon →</a>
+        </div>
+        @if(upcoming.length)
+          <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+            @each(entry in upcoming)
+              <li class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-black/30">
+                  @if(entry.type === 'sticker')
+                    <img src="{{ entry.visual.img }}" alt="" class="h-12 w-12 object-contain" loading="lazy">
+                  @elseif(entry.type === 'frame')
+                    <span class="relative inline-flex h-9 w-9">
+                      <span class="h-full w-full rounded-full bg-gradient-to-br from-slate-500 to-slate-700"></span>
+                      @if(entry.visual.img)
+                        <img src="{{ entry.visual.img }}" alt="" class="avatar-frame-img">
+                      @else
+                        <span class="avatar-frame {{ entry.visual.cls }}"></span>
+                      @end
+                    </span>
+                  @elseif(entry.type === 'effect')
+                    <span class="text-lg font-black {{ entry.visual.cls || '' }}" style="{{ visualStyle(entry.visual) }}">Aa</span>
+                  @else
+                    <span class="wall h-full w-full {{ entry.visual.cls || '' }}" style="{{ visualStyle(entry.visual) }}"></span>
+                  @end
+                </span>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate font-semibold text-(--t-heading)">{{ entry.name }}</p>
+                  <p class="text-xs text-gray-400">{{ entry.kind }} · {{ entry.expLeft }} EXP kaldı</p>
+                </div>
+                @!component('components/level_badge', { level: entry.level })
+              </li>
+            @end
+          </ul>
+        @else
+          <p class="mt-4 text-gray-400">Seviyeyle açılan her şeyi açtın.</p>
+        @end
+      </section>
+    </div>
+
+    <aside class="space-y-5">
+      {{-- Daily check-in --}}
+      <section class="glass rounded-3xl border border-white/10 p-5">
+        <h2 class="section-title">Günlük giriş</h2>
+        <p class="mt-2 text-sm text-gray-300">Her gün uğra, serini büyüt. 7. gün bir kart garanti!</p>
+        <ol class="mt-4 grid grid-cols-7 gap-1.5">
+          @each(day in week)
+            <li class="flex flex-col items-center gap-1 rounded-xl border py-2 text-center {{ day.day <= dayInWeek ? 'border-emerald-500/60 bg-emerald-500/15' : 'border-white/10 bg-white/[0.03]' }}">
+              <span class="text-[10px] font-bold text-gray-400">{{ day.day }}. gün</span>
+              <span class="text-base" aria-hidden="true">{{ day.card ? '🃏' : day.day <= dayInWeek ? '✅' : '⚡' }}</span>
+              <span class="text-[10px] font-semibold text-gray-200">+{{ day.exp }}</span>
+            </li>
+          @end
+        </ol>
+        <div class="mt-4 flex items-center justify-between gap-3">
+          <span class="inline-flex items-center gap-1 font-semibold text-orange-300">
+            @!component('components/icon', { name: 'fire', class: 'h-5 w-5' })
+            {{ account ? account.streak : 0 }} gün
+          </span>
+          <form action="/gunluk-giris" method="POST">
+            {{ csrfField() }}
+            <button type="submit" class="btn-soft {{ account && account.checkedIn ? '' : 'btn-green' }}" {{ account && account.checkedIn ? 'disabled' : '' }}>
+              {{ account && account.checkedIn ? 'Bugün alındı' : 'Günlük giriş (+' + (account ? account.nextCheckin : 0) + ')' }}
+            </button>
+          </form>
+        </div>
+      </section>
+
+      {{-- EXP sources --}}
+      <section class="glass rounded-3xl border border-white/10 p-5">
+        <h2 class="section-title">EXP nasıl kazanılır?</h2>
+        <ul class="mt-3 divide-y divide-white/5 text-sm">
+          <li class="flex justify-between gap-3 py-2"><span class="text-gray-300">📖 Yeni bir bölüm okumak</span><strong class="text-emerald-300">+{{ exp.chapterRead }}</strong></li>
+          <li class="flex justify-between gap-3 py-2"><span class="text-gray-300">💬 Yorum yazmak</span><strong class="text-emerald-300">+{{ exp.comment }}</strong></li>
+          <li class="flex justify-between gap-3 py-2"><span class="text-gray-300">⭐ Bir seriye ilk kez puan vermek</span><strong class="text-emerald-300">+{{ exp.review }}</strong></li>
+          <li class="flex justify-between gap-3 py-2"><span class="text-gray-300">📅 Günlük giriş</span><strong class="text-emerald-300">+{{ week[0].exp }} – {{ week[6].exp }}</strong></li>
+          <li class="flex justify-between gap-3 py-2"><span class="text-gray-300">🏅 Rozet kazanmak ({{ badgeCount }} rozet)</span><strong class="text-emerald-300">bonus</strong></li>
+          <li class="flex justify-between gap-3 py-2"><span class="text-gray-300">🃏 Okurken kart düşme şansı</span><strong class="text-sky-300">%12</strong></li>
+        </ul>
+        <a href="/rozetler" class="btn-soft mt-4 w-full">Başarımlara git</a>
+      </section>
+    </aside>
+  </div>
+@end
+
+@end

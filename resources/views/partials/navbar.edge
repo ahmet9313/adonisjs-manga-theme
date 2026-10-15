@@ -1,89 +1,117 @@
+@if(ui('header'))
 <nav
-  class="sticky top-0 z-50 border-b border-gray-800 bg-[#161b22]"
+  class="site-header glass-strong sticky top-0 z-50 border-b border-white/10"
   x-data="{ mobileOpen: false }"
   @click.outside="mobileOpen = false"
   @keydown.escape.window="mobileOpen = false"
   @resize.window="if (window.innerWidth >= 1024) mobileOpen = false"
 >
-  <div class="mx-auto max-w-7xl px-4">
+  <div class="mx-auto max-w-(--t-container) px-4">
     <div class="flex min-h-16 items-center justify-between gap-4 py-2">
       {{-- Logo --}}
       <a href="/" class="flex shrink-0 items-center gap-2" aria-label="{{ site.name }} ana sayfa">
         @if(site.logo)
         <img src="{{ site.logo }}" alt="" class="h-10">
         @end
-        <span class="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-xl font-bold text-transparent">
+        @if(ui('logo_text'))
+        <span class="bg-gradient-to-r from-(--t-logo-1) via-(--t-logo-2) to-(--t-logo-3) bg-clip-text text-xl font-bold text-transparent">
           {{ site.name }}
         </span>
+        @end
       </a>
 
       {{-- Desktop Nav --}}
       <div class="hidden items-center gap-6 lg:flex">
-        <a href="/" class="text-gray-300 transition-colors hover:text-white">Ana Sayfa</a>
-        <a href="/seriler" class="text-gray-300 transition-colors hover:text-white">Seri Listesi</a>
-        @if(site.recruitmentUrl)
-        <a href="{{ site.recruitmentUrl }}" class="text-gray-300 transition-colors hover:text-white">Ekip Alım</a>
+        @if(ui('nav_home'))
+        <a href="/" class="text-gray-300 transition-colors hover:text-(--t-heading)">Ana Sayfa</a>
         @end
-        <a href="/kaydedilenler" class="text-gray-300 transition-colors hover:text-white">Kaydedilenler</a>
+        @if(ui('nav_series'))
+        <a href="/seriler" class="text-gray-300 transition-colors hover:text-(--t-heading)">Seri Listesi</a>
+        @end
+        @if(site.recruitmentUrl)
+        <a href="{{ site.recruitmentUrl }}" class="text-gray-300 transition-colors hover:text-(--t-heading)">Ekip Alım</a>
+        @end
+        @if(ui('nav_recommend'))
+        <a href="/oneriler" class="text-gray-300 transition-colors hover:text-(--t-heading)">Öneriler</a>
+        @end
+        @if(ui('nav_bookmarks'))
+        <a href="/kaydedilenler" class="text-gray-300 transition-colors hover:text-(--t-heading)">Kaydedilenler</a>
+        @end
       </div>
 
-      {{-- Desktop Search --}}
-      <div class="relative hidden lg:block" x-data="navSearch()">
-        <label for="desktop-series-search" class="sr-only">Seri ara</label>
-        <div class="relative">
-          <input
-            id="desktop-series-search"
-            type="search"
-            x-model="query"
-            @input.debounce.300ms="search()"
-            @focus="if(results.length) showResults = true"
-            @click.away="showResults = false"
-            placeholder="Seri ara..."
-            autocomplete="off"
-            class="w-64 rounded-lg border border-gray-700 bg-[#0d1117] px-4 py-1.5 pr-10 text-sm text-gray-300 placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
+      <div class="flex items-center gap-3">
+        {{-- Desktop Search --}}
+        @if(ui('search'))
+        <div class="relative hidden lg:block" x-data="navSearch()">
+          <label for="desktop-series-search" class="sr-only">Seri ara</label>
+          <div class="relative">
+            <input
+              id="desktop-series-search"
+              type="search"
+              x-model="query"
+              @input.debounce.300ms="search()"
+              @focus="if(results.length) showResults = true"
+              @click.away="showResults = false"
+              placeholder="Seri ara..."
+              autocomplete="off"
+              class="w-64 rounded-lg border border-white/10 bg-(--t-field) px-4 py-1.5 pr-10 text-sm text-gray-300 placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
+            >
+            <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+
+          {{-- Results Dropdown --}}
+          <div
+            x-cloak
+            x-show="showResults"
+            x-transition
+            class="absolute right-0 top-full z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-lg border border-white/10 glass shadow-2xl"
           >
-          <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <template x-if="loading">
+              <div class="px-4 py-3 text-sm text-gray-500">Aranıyor...</div>
+            </template>
+            <template x-if="!loading && results.length === 0 && query.length >= 2">
+              <div class="px-4 py-3 text-sm text-gray-500">Sonuç bulunamadı</div>
+            </template>
+            <template x-for="item in results" :key="item.type + item.slug">
+              <a :href="'/series/' + item.type + '/' + item.slug" class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/5">
+                <img :src="item.coverImage" :alt="item.title" class="h-14 w-10 rounded object-cover" onerror="this.onerror=null;this.style.display='none'">
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium text-(--t-heading)" x-text="item.title"></div>
+                  <div class="text-xs text-gray-500" x-text="item.type.charAt(0).toUpperCase() + item.type.slice(1)"></div>
+                </div>
+              </a>
+            </template>
+          </div>
         </div>
 
-        {{-- Results Dropdown --}}
-        <div
-          x-cloak
-          x-show="showResults"
-          x-transition
-          class="absolute right-0 top-full z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-lg border border-gray-700 bg-[#161b22] shadow-2xl"
+        @end
+
+        {{-- Inbox --}}
+        @if(ui('bell') && auth && auth.user)
+        <button type="button" @click="$dispatch('open-inbox')" class="relative flex h-11 w-11 items-center justify-center rounded-full text-gray-300 transition hover:bg-white/10 hover:text-(--t-heading)" aria-label="Gelen kutusu">
+          @!component('components/icon', { name: 'bell', class: 'h-6 w-6' })
+          <span x-cloak x-show="$store.account.unread" class="absolute right-1 top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold leading-[1.1rem] text-(--t-on-accent) ring-2 ring-(--t-field)" x-text="$store.account.unread > 99 ? '99+' : $store.account.unread"></span>
+        </button>
+        @end
+
+        {{-- Account --}}
+        @include('partials/account_menu')
+
+        {{-- Mobile Hamburger --}}
+        <button
+          type="button"
+          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/10 text-gray-300 hover:border-emerald-500 hover:text-(--t-heading) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 lg:hidden"
+          @click="mobileOpen = !mobileOpen"
+          :aria-expanded="mobileOpen.toString()"
+          aria-controls="mobile-navigation"
+          aria-label="Menüyü aç veya kapat"
         >
-          <template x-if="loading">
-            <div class="px-4 py-3 text-sm text-gray-500">Aranıyor...</div>
-          </template>
-          <template x-if="!loading && results.length === 0 && query.length >= 2">
-            <div class="px-4 py-3 text-sm text-gray-500">Sonuç bulunamadı</div>
-          </template>
-          <template x-for="item in results" :key="item.type + item.slug">
-            <a :href="'/series/' + item.type + '/' + item.slug" class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[#1c2333]">
-              <img :src="item.coverImage" :alt="item.title" class="h-14 w-10 rounded object-cover" onerror="this.onerror=null;this.style.display='none'">
-              <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium text-white" x-text="item.title"></div>
-                <div class="text-xs text-gray-500" x-text="item.type.charAt(0).toUpperCase() + item.type.slice(1)"></div>
-              </div>
-            </a>
-          </template>
-        </div>
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path x-show="!mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            <path x-cloak x-show="mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
-
-      {{-- Mobile Hamburger --}}
-      <button
-        type="button"
-        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-700 text-gray-300 hover:border-cyan-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 lg:hidden"
-        @click="mobileOpen = !mobileOpen"
-        :aria-expanded="mobileOpen.toString()"
-        aria-controls="mobile-navigation"
-        aria-label="Menüyü aç veya kapat"
-      >
-        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path x-show="!mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          <path x-cloak x-show="mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
     </div>
 
     {{-- Mobile Menu --}}
@@ -94,17 +122,30 @@
       x-transition.origin.top
       class="pb-4 lg:hidden"
     >
-      <div class="border-t border-gray-800 pt-2">
-        <a href="/" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-[#1c2333] hover:text-white">Ana Sayfa</a>
-        <a href="/seriler" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-[#1c2333] hover:text-white">Seri Listesi</a>
-        @if(site.recruitmentUrl)
-        <a href="{{ site.recruitmentUrl }}" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-[#1c2333] hover:text-white">Ekip Alım</a>
+      <div class="border-t border-white/5 pt-2">
+        @if(ui('nav_home'))
+        <a href="/" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Ana Sayfa</a>
         @end
-        <a href="/kaydedilenler" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-[#1c2333] hover:text-white">Kaydedilenler</a>
+        @if(ui('nav_series'))
+        <a href="/seriler" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Seri Listesi</a>
+        @end
+        @if(site.recruitmentUrl)
+        <a href="{{ site.recruitmentUrl }}" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Ekip Alım</a>
+        @end
+        @if(ui('nav_recommend'))
+        <a href="/oneriler" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Sana Özel Öneriler</a>
+        @end
+        @if(ui('nav_bookmarks'))
+        <a href="/kaydedilenler" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Kaydedilenler</a>
+        @end
+        @if(!(auth && auth.user))
+        <button type="button" @click="mobileOpen = false; $dispatch('open-auth', 'login')" class="block w-full rounded-lg px-3 py-3 text-left text-emerald-300 hover:bg-white/5">Giriş Yap / Kayıt Ol</button>
+        @end
       </div>
 
       {{-- Mobile Search --}}
-      <div class="relative mt-2 border-t border-gray-800 pt-4" x-data="navSearch()">
+      @if(ui('search'))
+      <div class="relative mt-2 border-t border-white/5 pt-4" x-data="navSearch()">
         <label for="mobile-series-search" class="sr-only">Seri ara</label>
         <div class="relative">
           <input
@@ -115,7 +156,7 @@
             @focus="if(results.length) showResults = true"
             placeholder="Seri ara..."
             autocomplete="off"
-            class="w-full rounded-lg border border-gray-700 bg-[#0d1117] px-4 py-3 pr-11 text-base text-gray-300 placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
+            class="w-full rounded-lg border border-white/10 bg-(--t-field) px-4 py-3 pr-11 text-base text-gray-300 placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
           >
           <svg class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
@@ -124,7 +165,7 @@
           x-cloak
           x-show="showResults"
           x-transition
-          class="mt-2 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-700 bg-[#0d1117] shadow-2xl"
+          class="mt-2 max-h-72 w-full overflow-y-auto rounded-lg border border-white/10 bg-(--t-field) shadow-2xl"
         >
           <template x-if="loading">
             <div class="px-4 py-3 text-sm text-gray-500">Aranıyor...</div>
@@ -133,16 +174,18 @@
             <div class="px-4 py-3 text-sm text-gray-500">Sonuç bulunamadı</div>
           </template>
           <template x-for="item in results" :key="item.type + item.slug">
-            <a :href="'/series/' + item.type + '/' + item.slug" class="flex items-center gap-3 border-t border-gray-800 px-4 py-3 first:border-0 hover:bg-[#1c2333]">
+            <a :href="'/series/' + item.type + '/' + item.slug" class="flex items-center gap-3 border-t border-white/5 px-4 py-3 first:border-0 hover:bg-white/5">
               <img :src="item.coverImage" :alt="item.title" class="h-14 w-10 rounded object-cover" onerror="this.onerror=null;this.style.display='none'">
               <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium text-white" x-text="item.title"></div>
+                <div class="truncate text-sm font-medium text-(--t-heading)" x-text="item.title"></div>
                 <div class="text-xs text-gray-500" x-text="item.type.charAt(0).toUpperCase() + item.type.slice(1)"></div>
               </div>
             </a>
           </template>
         </div>
       </div>
+      @end
     </div>
   </div>
 </nav>
+@end

@@ -1,0 +1,36 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="max-w-2xl rounded-xl border border-gray-700 bg-(--t-surface) p-6">
+    <h3 class="mb-1 text-lg font-semibold text-gray-200">Genel</h3>
+    <p class="mb-6 text-sm text-gray-500">Site adı, açıklama ve logo menüde, altbilgide ve sekme başlığında kullanılır.</p>
+
+    <form action="/admin/tema/genel" method="POST" class="space-y-5">
+      {{ csrfField() }}
+      <div>
+        <label for="site_name" class="mb-1 block text-sm font-medium text-gray-300">Site adı</label>
+        <input id="site_name" name="site_name" type="text" required minlength="2" maxlength="40"
+               value="{{ flashMessages.get('site_name') || values.site_name }}"
+               class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+        @!component('components/field_error', { field: 'site_name' })
+      </div>
+      <div>
+        <label for="site_description" class="mb-1 block text-sm font-medium text-gray-300">Açıklama</label>
+        <textarea id="site_description" name="site_description" rows="3" maxlength="200"
+                  class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">{{ flashMessages.get('site_description') || values.site_description }}</textarea>
+        @!component('components/field_error', { field: 'site_description' })
+      </div>
+      <div>
+        <label for="logo_url" class="mb-1 block text-sm font-medium text-gray-300">Logo adresi <span class="font-normal text-gray-500">(isteğe bağlı)</span></label>
+        <input id="logo_url" name="logo_url" type="text" maxlength="300" placeholder="/images/logo.png veya https://…"
+               value="{{ flashMessages.get('logo_url') || values.logo_url }}"
+               class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+        <p class="mt-1 text-xs text-gray-500">Boş bırakırsanız yalnızca site adı gösterilir.</p>
+        @!component('components/field_error', { field: 'logo_url' })
+      </div>
+      <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+    </form>
+  </div>
+@end
+
+@end

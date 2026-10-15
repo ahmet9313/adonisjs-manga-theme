@@ -1,0 +1,46 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div x-data="themeEditor" data-config="{{ JSON.stringify(config) }}" class="max-w-3xl">
+    <form action="/admin/tema/gorunum" method="POST" class="rounded-xl border border-gray-700 bg-(--t-surface) p-6">
+      {{ csrfField() }}
+      <h3 class="text-lg font-semibold text-gray-200">Düzen ve görünüm</h3>
+      <p class="mb-6 text-sm text-gray-500">Genişlik, köşeler, yazı ve arka plan görseli. Değişiklikler bu sayfada anında görünür; kalıcı olması için Kaydet'e basın.</p>
+
+      <div class="space-y-6">
+        <template x-for="look in looks" :key="look.key">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <label :for="'l_' + look.key" class="text-sm font-medium text-gray-300" x-text="look.label"></label>
+              <span x-show="look.type === 'range'" class="text-sm tabular-nums text-gray-400" x-text="lookValues[look.key] + look.unit"></span>
+            </div>
+            <p x-show="look.hint" class="mb-1 text-xs text-gray-500" x-text="look.hint"></p>
+
+            <template x-if="look.type === 'range'">
+              <input type="range" :id="'l_' + look.key" :name="'l_' + look.key" :min="look.min" :max="look.max" :step="look.step" :value="lookValues[look.key]"
+                     @input="setLook(look.key, $event.target.value)" class="mt-1 w-full accent-emerald-500">
+            </template>
+            <template x-if="look.type === 'select'">
+              <select :id="'l_' + look.key" :name="'l_' + look.key" @change="setLook(look.key, $event.target.value)"
+                      class="mt-1 w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none">
+                <template x-for="choice in look.choices" :key="choice.value">
+                  <option :value="choice.value" :selected="lookValues[look.key] === choice.value" x-text="choice.label"></option>
+                </template>
+              </select>
+            </template>
+            <template x-if="look.type === 'url'">
+              <input type="text" :id="'l_' + look.key" :name="'l_' + look.key" :value="lookValues[look.key]" maxlength="300" placeholder="/content/arka-plan.jpg veya https://…"
+                     @input="setLook(look.key, $event.target.value.trim())"
+                     class="mt-1 w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none">
+            </template>
+          </div>
+        </template>
+      </div>
+
+      @!component('components/field_error', { field: 'l_bg_image' })
+      <button type="submit" class="mt-8 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+    </form>
+  </div>
+@end
+
+@end

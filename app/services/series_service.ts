@@ -73,6 +73,7 @@ class SeriesService {
 
     const content = chapter.content
     const result: ChapterWithPages = {
+      id: chapter.id,
       number: chapter.number,
       title: chapter.title,
       publishedAt: chapter.publishedAt,
@@ -124,6 +125,8 @@ class SeriesService {
       genres?: string[]
       statuses?: string[]
       types?: string[]
+      authors?: string[]
+      artists?: string[]
       search?: string
       orderBy?: string
     },
@@ -145,6 +148,12 @@ class SeriesService {
         ctIds.map((ct) => ct.id)
       )
     }
+    if (filters.authors && filters.authors.length > 0) {
+      query.whereHas('authors', (authors) => authors.whereIn('slug', filters.authors!))
+    }
+    if (filters.artists && filters.artists.length > 0) {
+      query.whereHas('artists', (artists) => artists.whereIn('slug', filters.artists!))
+    }
     if (filters.search) {
       const q = `%${filters.search}%`
       query.where((builder) => {
@@ -158,6 +167,11 @@ class SeriesService {
       query.orderBy('title', 'desc')
     } else if (filters.orderBy === 'newest') {
       query.orderBy('createdAt', 'desc')
+    } else if (filters.orderBy === 'rating') {
+      // Weighted score (prior of 5 votes at 7.0) so one perfect vote cannot beat hundreds.
+      query.orderByRaw('((rating_avg * rating_count) + 35.0) / (rating_count + 5) desc')
+    } else if (filters.orderBy === 'votes') {
+      query.orderBy('ratingCount', 'desc')
     } else {
       query.orderBy('updatedAt', 'desc')
     }

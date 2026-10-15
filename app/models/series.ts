@@ -58,6 +58,16 @@ export default class Series extends BaseModel {
   @column()
   declare featuredDescription: string | null
 
+  /** Denormalised from `series_reviews` (see review_service). */
+  @column({ consume: (value) => Number(value) || 0 })
+  declare ratingAvg: number
+
+  @column()
+  declare ratingCount: number
+
+  @column()
+  declare reviewCount: number
+
   @column()
   declare createdAt: string
 

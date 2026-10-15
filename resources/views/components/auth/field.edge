@@ -1,0 +1,8 @@
+{{-- Shared text input. Locals: id, name, type, label, placeholder, value, autocomplete, error --}}
+<div>
+  <label for="{{ id }}" class="mb-1 block text-sm font-medium text-gray-300">{{ label }}</label>
+  <input type="{{ type }}" id="{{ id }}" name="{{ name }}" required value="{{ value || '' }}"
+         autocomplete="{{ autocomplete }}" placeholder="{{ placeholder || '' }}"
+         class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 placeholder-gray-500 transition focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+  @!component('components/field_error', { field: name })
+</div>

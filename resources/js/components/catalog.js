@@ -30,6 +30,8 @@ export function filterBar() {
       if (this.selectedOrder === 'title') return 'A-Z'
       if (this.selectedOrder === 'title-desc') return 'Z-A'
       if (this.selectedOrder === 'newest') return 'En Yeni'
+      if (this.selectedOrder === 'rating') return 'En Yüksek Puan'
+      if (this.selectedOrder === 'votes') return 'En Çok Puanlanan'
       return 'Son Güncellenen'
     },
     hasActiveFilters() {
@@ -40,6 +42,8 @@ export function filterBar() {
         url.has('status') ||
         url.has('type') ||
         url.has('order') ||
+        url.has('author') ||
+        url.has('artist') ||
         (url.has('search') && url.get('search').trim() !== '')
       )
     },

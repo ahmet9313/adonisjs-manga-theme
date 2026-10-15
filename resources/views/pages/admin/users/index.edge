@@ -1,0 +1,82 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-3">
+      <h3 class="text-lg font-semibold text-gray-200">Tüm Kullanıcılar</h3>
+      <a href="/admin/roller" class="text-sm text-emerald-400 hover:underline">Rolleri yönet</a>
+    </div>
+    <form method="GET" action="/admin/kullanicilar" class="flex flex-wrap items-center gap-2">
+      <label for="user-search" class="sr-only">Kullanıcı ara</label>
+      <input id="user-search" type="search" name="search" value="{{ search }}" placeholder="Kullanıcı adı veya e-posta"
+             class="w-56 rounded-lg border border-gray-600 bg-(--t-field) px-3 py-2 text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
+      <label for="user-role" class="sr-only">Rol</label>
+      <select id="user-role" name="role" class="rounded-lg border border-gray-600 bg-(--t-field) px-3 py-2 text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
+        <option value="">Tüm roller</option>
+        @each(item in roleList)
+          <option value="{{ item.key }}" {{ role === item.key ? 'selected' : '' }}>{{ item.label }}</option>
+        @end
+      </select>
+      <button type="submit" class="rounded-lg border border-emerald-800 px-4 py-2 text-sm text-emerald-400 hover:border-emerald-600">Filtrele</button>
+    </form>
+  </div>
+
+  @include('partials/admin/pagination')
+
+  <div class="overflow-hidden rounded-xl border border-gray-700 bg-(--t-surface)">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-700 text-left text-gray-400">
+            <th class="px-5 py-3 font-medium">Kullanıcı</th>
+            <th class="px-5 py-3 font-medium">E-posta</th>
+            <th class="px-5 py-3 font-medium">Rol</th>
+            <th class="px-5 py-3 font-medium">Durum</th>
+            <th class="px-5 py-3 text-right font-medium">İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          @each(member in users)
+            <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  @!component('components/avatar', { user: member, size: 'h-9 w-9', text: 'text-sm' })
+                  <div class="min-w-0">
+                    <div class="truncate font-medium text-gray-200">{{ member.fullName }}</div>
+                    <div class="truncate text-xs text-gray-500">&#64;{{ member.username }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3 text-gray-400">{{ member.email }}</td>
+              <td class="px-5 py-3">
+                @!component('components/role_badge', { user: member })
+              </td>
+              <td class="px-5 py-3">
+                @if(member.bannedAt)
+                  <span class="rounded-md border border-red-700 bg-red-900/30 px-2 py-0.5 text-xs text-red-300">Askıda</span>
+                @else
+                  <span class="rounded-md border border-green-700 bg-green-900/30 px-2 py-0.5 text-xs text-green-300">Aktif</span>
+                @end
+              </td>
+              <td class="px-5 py-3 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <a href="/uye/{{ member.username }}" class="rounded border border-gray-700 px-3 py-1 text-xs text-gray-400 transition hover:border-gray-500">Profil</a>
+                  @if(member.id !== auth.user.id)
+                    <a href="/admin/kullanicilar/{{ member.id }}/duzenle" class="rounded border border-emerald-800 px-3 py-1 text-xs text-emerald-400 transition hover:border-emerald-600 hover:text-emerald-300">Düzenle</a>
+                  @end
+                </div>
+              </td>
+            </tr>
+          @end
+          @if(users.total === 0)
+            <tr><td colspan="5" class="px-5 py-8 text-center text-gray-500">Kullanıcı bulunamadı</td></tr>
+          @end
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  @include('partials/admin/pagination')
+@end
+
+@end

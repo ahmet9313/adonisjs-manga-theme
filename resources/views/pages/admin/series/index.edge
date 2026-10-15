@@ -3,14 +3,14 @@
 @slot('main')
   <div class="flex items-center justify-between mb-6">
     <h3 class="text-lg font-semibold text-gray-200">Tüm Seriler</h3>
-    <a href="/admin/seriler/ekle" class="bg-gradient-to-r from-cyan-500 to-purple-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:from-cyan-600 hover:to-purple-700 transition-all">
+    <a href="/admin/seriler/ekle" class="bg-gradient-to-r from-emerald-500 to-teal-600 text-(--t-on-accent) text-sm font-semibold px-4 py-2 rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all">
       + Yeni Seri Ekle
     </a>
   </div>
 
   @include('partials/admin/pagination')
 
-  <div class="bg-[#161b22] border border-gray-700 rounded-xl overflow-hidden">
+  <div class="bg-(--t-surface) border border-gray-700 rounded-xl overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
@@ -62,7 +62,7 @@
               </td>
               <td class="px-5 py-3 text-right">
                 <div class="flex items-center justify-end gap-2">
-                  <a href="/admin/seriler/{{ series.id }}/duzenle" class="text-cyan-400 hover:text-cyan-300 text-xs px-3 py-1 rounded border border-cyan-800 hover:border-cyan-600 transition">Düzenle</a>
+                  <a href="/admin/seriler/{{ series.id }}/duzenle" class="text-emerald-400 hover:text-emerald-300 text-xs px-3 py-1 rounded border border-emerald-800 hover:border-emerald-600 transition">Düzenle</a>
                   <form action="/admin/seriler/{{ series.id }}/sil" method="POST" class="inline"
                         onsubmit="return confirm('Bu seriyi ve tüm bölümlerini silmek istediğinize emin misiniz?')">
                     {{ csrfField() }}

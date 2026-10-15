@@ -1,0 +1,19 @@
+{{-- Locals: prefix, next --}}
+<form action="/kayit" method="POST" class="space-y-4">
+  {{ csrfField() }}
+  <input type="hidden" name="next" value="{{ next || '/' }}">
+  @!component('components/auth/field', { id: prefix + '-username', name: 'username', type: 'text', label: 'Kullanıcı adı', value: flashMessages.get('username'), autocomplete: 'username', placeholder: 'ornek_kullanici' })
+  @!component('components/auth/field', { id: prefix + '-email', name: 'email', type: 'email', label: 'E-posta', value: flashMessages.get('email'), autocomplete: 'email', placeholder: 'ornek@eposta.com' })
+  <div>
+    <label for="{{ prefix }}-reg-password" class="mb-1 block text-sm font-medium text-gray-300">Parola</label>
+    <input type="password" id="{{ prefix }}-reg-password" name="password" required minlength="8" autocomplete="new-password" placeholder="En az 8 karakter"
+           class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 placeholder-gray-500 transition focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+    @!component('components/field_error', { field: 'password' })
+  </div>
+  <div>
+    <label for="{{ prefix }}-reg-confirm" class="mb-1 block text-sm font-medium text-gray-300">Parola (tekrar)</label>
+    <input type="password" id="{{ prefix }}-reg-confirm" name="password_confirmation" required autocomplete="new-password" placeholder="Parolayı tekrar girin"
+           class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 placeholder-gray-500 transition focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+  </div>
+  <button type="submit" class="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 py-2.5 font-semibold text-(--t-on-accent) transition hover:from-emerald-600 hover:to-teal-700">Hesap Oluştur</button>
+</form>

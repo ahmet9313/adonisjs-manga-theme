@@ -1,0 +1,14 @@
+{{-- Breadcrumb starting at the home page. Props: items = [{ label, href? }]. --}}
+<nav aria-label="Konum" class="mb-4 flex items-center gap-2 text-sm text-gray-400">
+  <a href="/" class="rounded p-0.5 hover:text-(--t-heading)" aria-label="Ana sayfa">
+    @!component('components/icon', { name: 'home', class: 'h-5 w-5' })
+  </a>
+  @each(entry in items)
+    <span aria-hidden="true">/</span>
+    @if(entry.href)
+      <a href="{{ entry.href }}" class="hover:text-(--t-heading)">{{ entry.label }}</a>
+    @else
+      <span class="text-gray-200" aria-current="page">{{ entry.label }}</span>
+    @end
+  @end
+</nav>

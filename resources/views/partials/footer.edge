@@ -1,15 +1,19 @@
-<footer class="bg-[#161b22] border-t border-gray-800 mt-12">
-  <div class="max-w-7xl mx-auto px-4 py-8">
-    @if(site.socialLinks.length)
+@if(ui('footer'))
+<footer class="site-footer glass border-t border-white/5 mt-12">
+  <div class="max-w-(--t-container) mx-auto px-4 py-8">
+    @if(ui('footer_social') && site.socialLinks.length)
     <nav aria-label="Sosyal medya" class="flex flex-wrap justify-center gap-4 mb-6">
       @each(link in site.socialLinks)
-      <a href="{{ link.url }}" class="text-gray-400 hover:text-cyan-400" rel="noopener noreferrer">{{ link.label }}</a>
+      <a href="{{ link.url }}" class="text-gray-400 hover:text-emerald-400" rel="noopener noreferrer">{{ link.label }}</a>
       @end
     </nav>
     @end
-    <div class="flex flex-col md:flex-row gap-2 items-center justify-between text-sm text-gray-500">
+    <div class="flex flex-col md:flex-row gap-2 items-center justify-between text-sm text-white/55">
       <span>&copy; {{ site.name }} {{ new Date().getFullYear() }}</span>
+      @if(ui('footer_description'))
       <span>{{ site.description }}</span>
+      @end
     </div>
   </div>
 </footer>
+@end

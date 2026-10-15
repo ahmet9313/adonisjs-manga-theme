@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import content from '#config/content'
 import { errors } from '@vinejs/vine'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { resolve, sep } from 'node:path'
 import type Chapter from '#models/chapter'
@@ -89,4 +89,12 @@ export async function chapterContent(
   for (const entry of order)
     pages.push(entry === '__new__' ? await saveImage(files[index++], segments) : entry)
   return { type: 'images', pages }
+}
+
+/** Deletes a file previously stored by saveImage; paths outside the content root are ignored. */
+export async function removeContentFile(publicPath: string | null | undefined) {
+  if (!publicPath?.startsWith('/content/')) return
+  const target = resolve(content.root, ...publicPath.slice('/content/'.length).split('/'))
+  if (!target.startsWith(content.root + sep)) return
+  await rm(target, { force: true })
 }

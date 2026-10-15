@@ -162,7 +162,14 @@ async function main() {
   step('Veritabanı migration işlemleri uygulanıyor')
   run(process.execPath, ['ace.js', 'migration:run', '--force'])
 
-  if (seed) {
+  if (seed && production) {
+    // The .env usually says NODE_ENV=development, which would bypass the seeders' production
+    // guard and create the demo admin (admin@admin.com / admin) on a public server.
+    step(
+      'UYARI: Üretim modunda örnek veri ve demo yönetici yüklenmez; --seed yok sayıldı. ' +
+        'İlk yönetici için siteden kayıt olup "npm run admin:promote -- <kullanıcı adı>" çalıştırın.'
+    )
+  } else if (seed) {
     if (await databaseHasSeries(env, sqlitePath)) {
       step('Örnek veriler zaten mevcut; tekrar yükleme atlandı')
     } else {

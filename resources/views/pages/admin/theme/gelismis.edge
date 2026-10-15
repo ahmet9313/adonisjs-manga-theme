@@ -1,0 +1,45 @@
+@component('components/layout/admin', { title })
+
+@slot('main')
+  <div class="max-w-3xl space-y-6">
+    <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-6" aria-labelledby="css-title">
+      <h3 id="css-title" class="text-lg font-semibold text-gray-200">Özel CSS</h3>
+      <p class="mb-4 text-sm text-gray-500">Her sayfanın sonuna eklenir; diğer tüm ayarları ezer. Örn: <code class="rounded bg-(--t-field) px-1 text-gray-300">.glass { border-radius: 0 }</code></p>
+      <form action="/admin/tema/gelismis" method="POST" class="space-y-4">
+        {{ csrfField() }}
+        <label for="custom_css" class="sr-only">Özel CSS</label>
+        <textarea id="custom_css" name="custom_css" rows="12" maxlength="20000" spellcheck="false"
+                  class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-3 font-mono text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">{{ flashMessages.get('custom_css') || customCss }}</textarea>
+        @!component('components/field_error', { field: 'custom_css' })
+        <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+      </form>
+    </section>
+
+    <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-6" aria-labelledby="io-title">
+      <h3 id="io-title" class="text-lg font-semibold text-gray-200">Dışa / içe aktar</h3>
+      <p class="mb-4 text-sm text-gray-500">Renkler, görünüm, anahtarlar ve özel CSS tek bir JSON belgesidir. Başka bir kuruluma yapıştırarak taşıyabilirsiniz.</p>
+      <form action="/admin/tema/ice-aktar" method="POST" class="space-y-4">
+        {{ csrfField() }}
+        <label for="theme_json" class="sr-only">Tema JSON</label>
+        <textarea id="theme_json" name="theme_json" rows="10" spellcheck="false"
+                  class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-3 font-mono text-xs text-gray-300 focus:border-emerald-500 focus:outline-none">{{ flashMessages.get('theme_json') || exported }}</textarea>
+        @!component('components/field_error', { field: 'theme_json' })
+        <div class="flex flex-wrap gap-3">
+          <button type="submit" class="rounded-lg border border-emerald-700 px-5 py-2 text-sm font-medium text-emerald-400 transition hover:border-emerald-500">İçe aktar</button>
+          <a href="/admin/tema/disa-aktar" class="rounded-lg border border-gray-600 px-5 py-2 text-sm text-gray-300 transition hover:border-gray-400">tema.json indir</a>
+        </div>
+      </form>
+    </section>
+
+    <section class="rounded-xl border border-red-900/60 bg-(--t-surface) p-6" aria-labelledby="reset-title">
+      <h3 id="reset-title" class="text-lg font-semibold text-gray-200">Varsayılana dön</h3>
+      <p class="mb-4 text-sm text-gray-500">Tüm renkleri, görünüm ayarlarını, göster/gizle anahtarlarını ve özel CSS'i siler. Site adı, logo ve duyuru korunur. Panel okunmaz hale geldiyse bu sayfayı <code class="rounded bg-(--t-field) px-1 text-gray-300">/admin/tema/gelismis?guvenli=1</code> adresinden açın.</p>
+      <form action="/admin/tema/sifirla" method="POST" onsubmit="return confirm('Tüm tema ayarları silinecek. Emin misiniz?')">
+        {{ csrfField() }}
+        <button type="submit" class="rounded-lg border border-red-700 px-5 py-2 text-sm font-medium text-red-400 transition hover:bg-red-900/20">Temayı sıfırla</button>
+      </form>
+    </section>
+  </div>
+@end
+
+@end

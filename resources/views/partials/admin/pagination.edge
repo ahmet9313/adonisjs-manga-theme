@@ -5,7 +5,7 @@
   <div class="flex items-center gap-2" x-data>
     <span class="text-sm text-gray-400">Sayfa başına:</span>
     <select aria-label="Sayfa başına kayıt sayısı"
-      class="bg-[#0d1117] border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:border-cyan-500 focus:outline-none cursor-pointer"
+      class="bg-(--t-field) border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:border-emerald-500 focus:outline-none cursor-pointer"
       @change="
         const url = new URL(window.location.href);
         url.searchParams.set('per_page', $el.value);
@@ -52,7 +52,7 @@
 
       @each(p in Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i))
         @if(p === paginator.currentPage)
-          <span aria-current="page" class="px-3 py-1.5 text-sm rounded-lg bg-cyan-600 text-white font-medium">{{ p }}</span>
+          <span aria-current="page" class="px-3 py-1.5 text-sm rounded-lg bg-emerald-600 text-(--t-on-accent) font-medium">{{ p }}</span>
         @else
           <a href="{{ paginator.getUrl(p) }}"
              class="px-3 py-1.5 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition">{{ p }}</a>

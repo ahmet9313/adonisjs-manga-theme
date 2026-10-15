@@ -1,0 +1,26 @@
+{{-- Sign-in / registration dialog for guests. Open with $dispatch('open-auth', 'login' | 'register'). --}}
+<div
+  x-data="{ open: false, view: 'login' }"
+  @open-auth.window="view = $event.detail === 'register' ? 'register' : 'login'; open = true; $nextTick(() => $refs[view === 'login' ? 'loginFocus' : 'registerFocus']?.querySelector('input:not([type=hidden])')?.focus())"
+  @keydown.escape.window="open = false"
+>
+  <div x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center" @click.self="open = false">
+    <div role="dialog" aria-modal="true" :aria-label="view === 'login' ? 'Giriş Yap' : 'Kayıt Ol'" class="relative my-8 w-full max-w-sm rounded-2xl border border-white/10 glass p-6 shadow-2xl">
+      <button type="button" @click="open = false" class="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-(--t-heading)" aria-label="Kapat">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <div x-show="view === 'login'" x-ref="loginFocus">
+        <h2 class="mb-5 text-xl font-bold text-(--t-heading)">Giriş Yap</h2>
+        @!component('components/auth/login_form', { prefix: 'modal', next: request.url(true) })
+        <button type="button" @click="view = 'register'" class="mt-4 w-full rounded-lg border border-gray-600 py-2.5 text-sm font-medium text-gray-200 hover:border-emerald-500">Yeni hesap oluştur</button>
+      </div>
+
+      <div x-cloak x-show="view === 'register'" x-ref="registerFocus">
+        <h2 class="mb-5 text-xl font-bold text-(--t-heading)">Kayıt Ol</h2>
+        @!component('components/auth/register_form', { prefix: 'modal', next: request.url(true) })
+        <button type="button" @click="view = 'login'" class="mt-4 w-full rounded-lg border border-gray-600 py-2.5 text-sm font-medium text-gray-200 hover:border-emerald-500">Zaten hesabım var</button>
+      </div>
+    </div>
+  </div>
+</div>
