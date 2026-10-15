@@ -1,0 +1,15 @@
+{{--
+  Alpine name line of the comment or review `author` in scope, like components/ui/user_chip:
+  name with the equipped effect, online dot, level and role (members show no role label).
+--}}
+<p class="user-chip__name">
+  <a :href="'/uye/' + author.username" class="min-w-0 max-w-[14rem] truncate hover:underline">
+    <span :class="author.look && author.look.effect ? author.look.effect.cls : ''" :style="author.look && author.look.effect ? author.look.effect.css : ''" x-text="author.fullName"></span>
+  </a>
+  <span class="presence" :data-online="author.online ? '1' : '0'" :title="author.online ? 'Çevrimiçi' : 'Çevrimdışı'"></span>
+  <span class="lv-badge" :data-tier="tierOf(author.level)" :title="'Seviye ' + author.level" x-text="'Lv.' + author.level"></span>
+  {{-- x-if, not x-show: a :style string replaces the whole style attribute, display included. --}}
+  <template x-if="author.role !== 'member'">
+    <span class="role-badge" :style="author.roleStyle" x-text="author.roleLabel"></span>
+  </template>
+</p>

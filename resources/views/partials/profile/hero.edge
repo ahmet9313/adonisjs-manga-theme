@@ -1,0 +1,89 @@
+{{--
+  Profile hero. Banner: the member's banner image, else the equipped wallpaper, else an accent
+  tint (also shown behind a banner image that fails to load). The equipped wallpaper also lies
+  behind the identity block under a .wall-veil, like the member's comment cards.
+  Actions: like (profileLike, guests get the sign-in dialog); the owner instead sees the like
+  count, "Profili düzenle" and "Envanter".
+--}}
+<section class="profile-hero" aria-labelledby="profile-name">
+  @if(look.wallpaper)
+  <div class="profile-hero__wall wall {{ look.wallpaper.cls || '' }}" style="{{ visualStyle(look.wallpaper) }}" aria-hidden="true"></div>
+  @end
+
+  <div class="profile-hero__banner" data-art="{{ member.banner ? 'image' : (look.wallpaper ? 'wall' : 'plain') }}">
+    @if(member.banner)
+    <img src="{{ member.banner }}" alt="" width="1500" height="500" decoding="async" fetchpriority="high" data-fallback="">
+    @end
+    @if(isOwner)
+    <a href="/ayarlar" class="btn btn--sm profile-hero__cover-btn">
+      @!component('components/icon', { name: 'camera', class: 'btn__icon' })
+      <span>Kapağı değiştir</span>
+    </a>
+    @end
+  </div>
+
+  <div class="profile-hero__body {{ look.wallpaper ? 'wall-veil' : '' }}">
+    <div class="profile-hero__avatar">
+      @!component('components/avatar', { user: member, size: 'h-22 w-22 sm:h-32 sm:w-32', text: 'text-4xl sm:text-5xl', frame: look.frame })
+    </div>
+
+    <div class="profile-hero__actions" x-data>
+      @if(isOwner)
+      <span class="profile-likes" title="Profil beğenileri">
+        @!component('components/icon', { name: 'heart', class: 'h-4 w-4' })
+        <span class="t-num">{{ fmt(member.profileLikeCount) }}</span>
+        <span class="sr-only">profil beğenisi</span>
+      </span>
+      @component('components/ui/button', { variant: 'secondary', href: '/ayarlar', icon: 'pencil', class: 'profile-hero__action' })
+        <span class="max-sm:sr-only">Profili düzenle</span>
+      @end
+      @component('components/ui/button', { variant: 'secondary', icon: 'archive', class: 'profile-hero__action', '@click': "$dispatch('open-inventory', 'frame')" })
+        <span class="max-sm:sr-only">Envanter</span>
+      @end
+      @else
+      <button type="button" x-data="profileLike" class="btn btn--secondary btn--md profile-like"
+              data-config="{{ JSON.stringify({ liked, count: member.profileLikeCount, url: '/uye/' + member.username + '/begen' }) }}"
+              aria-pressed="{{ liked ? 'true' : 'false' }}" :aria-pressed="liked.toString()" @click="toggle()">
+        @!component('components/icon', { name: 'heart', class: 'btn__icon' })
+        <span>Beğen</span>
+        <span class="profile-like__count t-num" x-text="count.toLocaleString('tr-TR')">{{ fmt(member.profileLikeCount) }}</span>
+      </button>
+      @end
+    </div>
+
+    <div class="profile-hero__identity">
+      <div class="profile-hero__title">
+        <h1 id="profile-name" class="profile-hero__name">
+          @!component('components/user_name', { user: member, look })
+        </h1>
+        @!component('components/level_badge', { level: progress.level })
+        @if(member.role !== 'member')
+        @!component('components/role_badge', { user: member })
+        @end
+      </div>
+
+      <ul class="profile-hero__meta">
+        <li class="profile-hero__handle">&#64;{{ member.username }}</li>
+        <li>
+          <span class="presence" data-online="{{ member.isOnline ? '1' : '0' }}" aria-hidden="true"></span>
+          {{ member.isOnline ? 'Çevrimiçi' : 'Çevrimdışı' }}
+        </li>
+        @if(member.createdAt)
+        <li>
+          @!component('components/icon', { name: 'calendar', class: 'h-4 w-4' })
+          {{ dateOf(member.createdAt) }} tarihinde katıldı
+        </li>
+        @end
+      </ul>
+
+      @if(member.bio)
+      <p class="profile-hero__bio">{{ member.bio }}</p>
+      @elseif(isOwner)
+      <p class="profile-hero__bio profile-hero__bio--empty">
+        Profiline kısa bir tanıtım yazısı ekle.
+        <a href="/ayarlar" class="link">Biyografi ekle</a>
+      </p>
+      @end
+    </div>
+  </div>
+</section>

@@ -1,19 +1,22 @@
-{{-- Alpine avatar (with equipped frame) for a comment author held in `author`. --}}
-<span class="relative inline-flex h-10 w-10 shrink-0 sm:h-12 sm:w-12">
+{{--
+  Avatar (with the equipped frame) of the Alpine `author` in scope: a comment or review author.
+  Mirrors components/avatar: the photo, or the initial on a colour derived from the username.
+--}}
+<span class="relative inline-flex h-10 w-10 shrink-0">
   <span class="relative inline-flex h-full w-full overflow-hidden rounded-full bg-(--t-surface-2)">
     <template x-if="author && author.avatar">
-      <img :src="author.avatar" alt="" class="h-full w-full object-cover" loading="lazy">
+      <img :src="author.avatar" alt="" class="h-full w-full object-cover" loading="lazy" decoding="async">
     </template>
     <template x-if="author && !author.avatar">
-      <span class="flex h-full w-full items-center justify-center text-base font-bold text-(--t-heading)"
+      <span class="flex h-full w-full items-center justify-center text-sm font-bold text-on-image"
             :style="`background: linear-gradient(135deg, hsl(${author.hue} 70% 45%), hsl(${(author.hue + 50) % 360} 70% 35%))`"
             x-text="author.fullName.charAt(0).toUpperCase()"></span>
     </template>
   </span>
-  <template x-if="author && author.look.frame && author.look.frame.img">
-    <img :src="author.look.frame.img" alt="" class="avatar-frame-img" loading="lazy">
+  <template x-if="author && author.look && author.look.frame && author.look.frame.img">
+    <img :src="author.look.frame.img" alt="" class="avatar-frame-img" loading="lazy" decoding="async">
   </template>
-  <template x-if="author && author.look.frame && !author.look.frame.img">
-    <span class="avatar-frame" :class="author.look.frame.cls"></span>
+  <template x-if="author && author.look && author.look.frame && !author.look.frame.img">
+    <span class="avatar-frame" :class="author.look.frame.cls" aria-hidden="true"></span>
   </template>
 </span>

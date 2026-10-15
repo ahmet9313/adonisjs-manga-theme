@@ -1,0 +1,32 @@
+{{--
+  Page heading: the page's single <h1>, optional eyebrow, description, breadcrumb and actions.
+  Props: title, description, eyebrow, breadcrumb ([{ label, href? }], shown above), id, class.
+  Slots: actions (buttons on the right), main (extra content under the description).
+--}}
+@let(body = (await $slots.main()).trim())
+@if($props.get('breadcrumb'))
+@!component('components/breadcrumb', { items: $props.get('breadcrumb') })
+@end
+<header class="page-head {{ $props.get('class', '') }}">
+  <div class="min-w-0">
+    @if($props.get('eyebrow'))
+    <p class="page-head__eyebrow">{{ $props.get('eyebrow') }}</p>
+    @end
+    <h1 class="page-head__title"
+      @if($props.get('id'))
+      id="{{ $props.get('id') }}"
+      @end
+      >{{ $props.get('title', '') }}</h1>
+    @if($props.get('description'))
+    <p class="page-head__desc">{{ $props.get('description') }}</p>
+    @end
+    @if(body)
+    {{{ body }}}
+    @end
+  </div>
+  @if($slots.actions)
+  <div class="page-head__actions">
+    {{{ await $slots.actions() }}}
+  </div>
+  @end
+</header>

@@ -61,7 +61,7 @@ class SettingsService {
     return {
       label,
       color,
-      style: `color:${color};border-color:${color}66;background-color:${color}26`,
+      style: `--role:${color};color:${color};border-color:${color}66;background-color:${color}26`,
     }
   }
 

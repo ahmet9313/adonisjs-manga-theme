@@ -4,7 +4,7 @@ Bu belge mevcut kod incelemesinden çıkan **henüz uygulanmamış** işleri iç
 
 ## Onaylı optimizasyon ve yeniden tasarım planı
 
-Site genelindeki tasarım sistemi (merlintoon tarzı koyu cam tema, admin dahil), yönetimden düzenlenebilir tema ayarları (renk, logo, zemin, rozetler, ana sayfa bölümleri), veritabanı tabanlı arka plan kuyruğu, `sharp` görsel hattı ve güvenlik/performans düzeltmeleri fazlara bölünmüş olarak [OPTIMIZATION_PLAN.md](OPTIMIZATION_PLAN.md) içinde izlenir. Tamamlanan fazlar AGENTS.md günlüğüne yazılır; bu bölümdeki bağlantı plan bitene kadar kalır.
+Site genelindeki tasarım sistemi (ilk plandaki merlintoon tarzı cam tema yerine uygulanan "Mürekkep & Kâğıt" sistemi; README.md → Tasarım sistemi), yönetimden düzenlenebilir tema ayarları (renk, logo, zemin, rozetler, ana sayfa bölümleri), veritabanı tabanlı arka plan kuyruğu, `sharp` görsel hattı ve güvenlik/performans düzeltmeleri fazlara bölünmüş olarak [OPTIMIZATION_PLAN.md](OPTIMIZATION_PLAN.md) içinde izlenir. Tamamlanan fazlar AGENTS.md günlüğüne yazılır; bu bölümdeki bağlantı plan bitene kadar kalır.
 
 ## Öncelik 1 — Yayına hazırlık
 
@@ -66,3 +66,10 @@ Her işi küçük, doğrulanabilir değişikliklere ayırın. Veri silen migrati
 - **Demo veri:** Tohumu ve ölçeği komut satırından seçmek (`seed:demo --scale=0.3 --seed=7`); gerçek GIF için isteğe bağlı bir sağlayıcı (yalnız geliştirme).
 - **Kozmetik:** Yönetim formunda özel çerçeve (halka renkleri) ve duvar kağıdı geçişi oluşturmak (şu an görsel yükleme ya da hazır stil).
 
+## Tasarım sistemi sonrası açık işler (2026-10-15)
+
+- **Paket boyutu:** Yeniden tasarımla ilk CSS ve JS büyüdü (gzip ~40 KB + ~40 KB). Sayfa CSS'lerinin yalnız ilgili sayfada yüklenmesi (ayrı giriş dosyaları veya `@layer` ile ölü kural temizliği) ve Manrope alt kümelerinin daraltılması değerlendirilmeli.
+- **Kozmetikler açık şemada:** Koyu zemin için tasarlanmış bazı ad efektleri ve beyaz çıkartmalar kâğıt zeminde soluk; açık şemaya özel varyantlar tasarlanabilir.
+- **Profil etkinliği:** Yorum ve inceleme sekmeleri son 12 kaydı gösterir; üye etkinliği için sayfalı uç nokta yok.
+- **Okuma ilerlemesi:** "Devam et" son okunan bölüme gider; sayfa düzeyinde ilerleme yoktur.
+- **Envanter → sayfa eşitlemesi:** Envanterde kuşanılan kozmetik `cosmetic-change` olayı yayar; profil ve yorum kartları bu olayı dinleyip sayfayı yenilemeden güncellenebilir.

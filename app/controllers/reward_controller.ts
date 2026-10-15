@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import progress from '#services/progress_service'
 import cosmetics from '#services/cosmetic_service'
-import { badges, exp } from '#config/rewards'
+import { badges, cardDrops, exp } from '#config/rewards'
 import { cosmeticKinds } from '#config/cosmetics'
 import { expForLevel } from '#services/level'
 
@@ -32,8 +32,9 @@ export default class RewardController {
       card: index + 1 === 7,
     }))
     return view.render('pages/rewards/index', {
-      title: 'Günlük & Ödüller',
+      title: 'Seviye ve Ödüller',
       upcoming,
+      cardChance: Math.round(cardDrops.readChance * 100),
       week,
       exp,
       badgeCount: badges.length,

@@ -1,88 +1,164 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin series list: GET filters (search, status, content type; page size kept), table that
+  turns into cards on phones, filter-aware empty state, pagination and page size.
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(typeName = (type) => type ? type.name.charAt(0).toLocaleUpperCase('tr') + type.name.slice(1) : 'Tür yok')
+@let(statusOptions = [{ value: '', label: 'Tüm durumlar' }].concat(site.statuses.map((value) => ({ value, label: value }))))
+@let(typeOptions = [{ value: '', label: 'Tüm içerik türleri' }].concat(contentTypes.map((type) => ({ value: type.slug, label: typeName(type) }))))
+@let(first = seriesList.total ? (seriesList.currentPage - 1) * seriesList.perPage + 1 : 0)
+@let(last = Math.min(seriesList.currentPage * seriesList.perPage, seriesList.total))
+@component('components/layout/admin', { title, description: 'Katalogdaki ' + number(catalogTotal) + ' seri. Bir seriyi düzenleyin, bölümlerini yönetin veya sitede açın.' })
+  @slot('actions')
+    @component('components/ui/button', { variant: 'primary', href: '/admin/seriler/ekle', icon: 'plus' })
+      Yeni seri
+    @end
+  @end
 
-@slot('main')
-  <div class="flex items-center justify-between mb-6">
-    <h3 class="text-lg font-semibold text-gray-200">Tüm Seriler</h3>
-    <a href="/admin/seriler/ekle" class="bg-gradient-to-r from-emerald-500 to-teal-600 text-(--t-on-accent) text-sm font-semibold px-4 py-2 rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all">
-      + Yeni Seri Ekle
-    </a>
-  </div>
+  @slot('main')
+    <form method="GET" action="/admin/seriler" class="panel panel--tight admin-filters" role="search" aria-label="Serileri filtrele" x-data>
+      @!component('components/ui/field', { name: 'search', label: 'Ara', type: 'search', value: filters.search, placeholder: 'Başlık, adres veya alternatif başlık', autocomplete: 'off' })
+      @!component('components/ui/field', { name: 'status', label: 'Durum', type: 'select', value: filters.status, options: statusOptions, '@change': '$el.form.requestSubmit()' })
+      @!component('components/ui/field', { name: 'type', label: 'İçerik türü', type: 'select', value: filters.type, options: typeOptions, '@change': '$el.form.requestSubmit()' })
+      @if(perPage !== 20)
+      <input type="hidden" name="per_page" value="{{ perPage }}">
+      @end
+      <div class="admin-filters__actions">
+        @component('components/ui/button', { type: 'submit', icon: 'filter' })
+          Filtrele
+        @end
+        @if(filtered)
+        @component('components/ui/button', { variant: 'ghost', href: '/admin/seriler' + (perPage !== 20 ? '?per_page=' + perPage : '') })
+          Temizle
+        @end
+        @end
+      </div>
+    </form>
 
-  @include('partials/admin/pagination')
+    <p class="admin-summary">
+      @if(filtered)
+      <span><strong>{{ number(seriesList.total) }}</strong> sonuç</span>
+      <span aria-hidden="true">·</span>
+      <span>{{ number(catalogTotal) }} seri içinde arandı</span>
+      @else
+      <span><strong>{{ number(seriesList.total) }}</strong> seri, son güncellenen önce</span>
+      @end
+    </p>
 
-  <div class="bg-(--t-surface) border border-gray-700 rounded-xl overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    @if(seriesList.length)
+    <div class="table-wrap">
+      <table class="table table--stack admin-table">
+        <caption class="sr-only">Seriler</caption>
         <thead>
-          <tr class="text-left text-gray-400 border-b border-gray-700">
-            <th class="px-5 py-3 font-medium">Kapak</th>
-            <th class="px-5 py-3 font-medium">Başlık</th>
-            <th class="px-5 py-3 font-medium">Tür</th>
-            <th class="px-5 py-3 font-medium">Durum</th>
-            <th class="px-5 py-3 font-medium">Çeviri</th>
-            <th class="px-5 py-3 font-medium">Bölüm</th>
-            <th class="px-5 py-3 font-medium">Öne Çıkan</th>
-            <th class="px-5 py-3 font-medium text-right">İşlemler</th>
+          <tr>
+            <th scope="col">Seri</th>
+            <th scope="col">Durum</th>
+            <th scope="col" class="max-xl:hidden">Çeviri</th>
+            <th scope="col" class="num">Bölüm</th>
+            <th scope="col">Güncellendi</th>
+            <th scope="col"><span class="sr-only">İşlemler</span></th>
           </tr>
         </thead>
         <tbody>
           @each(series in seriesList)
-            <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
-              <td class="px-5 py-3">
-                @if(series.coverImage && series.coverImage.startsWith('/'))
-                  <img src="{{ series.coverImage }}" alt="{{ series.title }}" class="w-10 h-14 object-cover rounded">
-                @elseif(series.coverImage && series.contentType)
-                  <img src="{{ series.coverImage || '/images/no-cover.svg' }}" alt="{{ series.title }}" class="w-10 h-14 object-cover rounded">
-                @else
-                  <div class="w-10 h-14 bg-gray-700 rounded flex items-center justify-center text-gray-500 text-xs">N/A</div>
-                @end
-              </td>
-              <td class="px-5 py-3">
-                <div class="text-gray-200 font-medium">{{ series.title }}</div>
-                <div class="text-gray-500 text-xs">{{ series.slug }}</div>
-              </td>
-              <td class="px-5 py-3 text-gray-400">{{ series.contentType?.name || '-' }}</td>
-              <td class="px-5 py-3">
-                <span class="inline-block px-2 py-0.5 rounded text-xs {{ series.status === 'Devam Ediyor' ? 'bg-green-900/50 text-green-400' : series.status === 'Tamamlandı' ? 'bg-blue-900/50 text-blue-400' : 'bg-red-900/50 text-red-400' }}">
-                  {{ series.status }}
-                </span>
-              </td>
-              <td class="px-5 py-3">
-                <span class="inline-block px-2 py-0.5 rounded text-xs {{ series.translationStatus === 'Aktif' ? 'bg-green-900/50 text-green-400' : series.translationStatus === 'Tamamlandı' ? 'bg-blue-900/50 text-blue-400' : 'bg-red-900/50 text-red-400' }}">
-                  {{ series.translationStatus }}
-                </span>
-              </td>
-              <td class="px-5 py-3 text-gray-400">{{ series.$extras.chapters_count || 0 }}</td>
-              <td class="px-5 py-3">
-                @if(series.featured)
-                  <span class="inline-block px-2 py-0.5 rounded text-xs bg-yellow-900/50 text-yellow-400">Evet</span>
-                @else
-                  <span class="text-gray-600">-</span>
-                @end
-              </td>
-              <td class="px-5 py-3 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <a href="/admin/seriler/{{ series.id }}/duzenle" class="text-emerald-400 hover:text-emerald-300 text-xs px-3 py-1 rounded border border-emerald-800 hover:border-emerald-600 transition">Düzenle</a>
-                  <form action="/admin/seriler/{{ series.id }}/sil" method="POST" class="inline"
-                        onsubmit="return confirm('Bu seriyi ve tüm bölümlerini silmek istediğinize emin misiniz?')">
-                    {{ csrfField() }}
-                    <button type="submit" class="text-red-400 hover:text-red-300 text-xs px-3 py-1 rounded border border-red-800 hover:border-red-600 transition">Sil</button>
-                  </form>
+          @let(chapterCount = Number(series.$extras.chapters_count || 0))
+          @let(siteUrl = series.contentType ? '/series/' + series.contentType.slug + '/' + series.slug : '')
+          <tr>
+            <td class="cell-main">
+              <div class="admin-cell">
+                <img src="{{ series.coverImage || '/images/no-cover.svg' }}" alt="" class="admin-thumb" width="40" height="53" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+                <div class="admin-cell__body">
+                  <a href="/admin/seriler/{{ series.id }}/duzenle" class="admin-title line-clamp-2">{{ series.title }}</a>
+                  <div class="admin-cell__meta">
+                    @!component('components/ui/badge', { kind: 'type', value: series.contentType ? series.contentType.slug : '', text: typeName(series.contentType), size: 'sm' })
+                    @!component('components/ui/badge', { kind: 'status', value: series.status, size: 'sm', class: 'md:hidden' })
+                    @if(series.featured)
+                    @!component('components/ui/badge', { kind: 'accent', text: 'Öne çıkan', size: 'sm', title: 'Ana sayfa vitrininde' })
+                    @end
+                    <span class="admin-mono truncate max-lg:hidden">/{{ series.slug }}</span>
+                  </div>
+                  <p class="admin-cell__meta md:hidden">Çeviri: {{ series.translationStatus }} · {{ number(chapterCount) }} bölüm · {{ agoOf(series.updatedAt) }}</p>
                 </div>
-              </td>
-            </tr>
-          @end
-          @if(seriesList.total === 0)
-            <tr>
-              <td colspan="8" class="px-5 py-8 text-center text-gray-500">Henüz seri eklenmemiş</td>
-            </tr>
+              </div>
+            </td>
+            <td data-label="Durum" class="max-md:hidden">
+              <div class="flex flex-col items-start gap-1">
+                @!component('components/ui/badge', { kind: 'status', value: series.status })
+                @!component('components/ui/badge', { kind: 'status', value: series.translationStatus, text: 'Çeviri: ' + series.translationStatus, size: 'sm', class: 'xl:hidden' })
+              </div>
+            </td>
+            <td data-label="Çeviri" class="max-xl:hidden">
+              @!component('components/ui/badge', { kind: 'status', value: series.translationStatus })
+            </td>
+            <td data-label="Bölüm" class="num max-md:hidden">
+              @if(chapterCount)
+              <a href="/admin/bolumler?series_id={{ series.id }}" class="link" title="{{ series.title }} bölümleri">{{ number(chapterCount) }}</a>
+              @else
+              <span class="text-muted">0</span>
+              @end
+            </td>
+            <td data-label="Güncellendi" class="whitespace-nowrap text-muted max-md:hidden">
+              <time datetime="{{ series.updatedAt }}" title="{{ dateOf(series.updatedAt) }}">{{ agoOf(series.updatedAt) }}</time>
+            </td>
+            <td class="actions">
+              <div class="admin-actions">
+                @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: '/admin/seriler/' + series.id + '/duzenle', label: 'Düzenle: ' + series.title, title: 'Düzenle' })
+                @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'document', href: '/admin/bolumler?series_id=' + series.id, label: 'Bölümler: ' + series.title, title: 'Bölümler' })
+                @if(siteUrl)
+                @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'external', href: siteUrl, target: '_blank', rel: 'noopener', label: 'Sitede aç: ' + series.title, title: 'Sitede aç' })
+                @end
+                <form action="/admin/seriler/{{ series.id }}/sil" method="POST" data-submit-once
+                      data-confirm="“{{ series.title }}” serisi{{ chapterCount ? ', ' + chapterCount + ' bölümü' : '' }}, yorumları, incelemeleri ve okuma kayıtlarıyla birlikte kalıcı olarak silinecek. Bu işlem geri alınamaz."
+                      data-confirm-title="Seri silinsin mi?" data-confirm-label="Seriyi sil">
+                  {{ csrfField() }}
+                  @!component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'trash', label: 'Sil: ' + series.title, title: 'Sil', class: 'admin-danger' })
+                </form>
+              </div>
+            </td>
+          </tr>
           @end
         </tbody>
       </table>
     </div>
-  </div>
 
-  @include('partials/admin/pagination')
-@end
-
+    <div class="admin-listfoot">
+      <p class="admin-listfoot__info">{{ number(first) }}–{{ number(last) }} / {{ number(seriesList.total) }} seri</p>
+      @!component('components/ui/pagination', { current: seriesList.currentPage, total: seriesList.lastPage, label: 'Seri sayfaları' })
+      <form method="GET" action="/admin/seriler" class="admin-perpage" x-data>
+        @each((value, key) in { search: filters.search, status: filters.status, type: filters.type })
+        @if(value)
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+        @end
+        @end
+        <label for="per-page">Sayfa başına</label>
+        <select id="per-page" name="per_page" class="control control--sm" @change="$el.form.requestSubmit()">
+          @each(size in site.adminPageSizes)
+          <option value="{{ size }}" {{ perPage === size ? 'selected' : '' }}>{{ size }}</option>
+          @end
+        </select>
+        <noscript>
+          <button type="submit" class="btn btn--secondary btn--sm">Uygula</button>
+        </noscript>
+      </form>
+    </div>
+    @elseif(seriesList.total)
+    @component('components/ui/empty_state', { icon: 'list', title: 'Bu sayfada kayıt yok', description: 'İstenen sayfa son sayfadan sonra geliyor.' })
+      @component('components/ui/button', { href: withQuery(request, { page: null }), icon: 'arrow-left' })
+        İlk sayfaya dön
+      @end
+    @end
+    @elseif(filtered)
+    @component('components/ui/empty_state', { icon: 'search', title: 'Filtrelere uyan seri yok', description: 'Aramayı kısaltın ya da durum ve içerik türü filtrelerini kaldırın.' })
+      @component('components/ui/button', { href: '/admin/seriler', icon: 'x' })
+        Filtreleri temizle
+      @end
+    @end
+    @else
+    @component('components/ui/empty_state', { icon: 'library', title: 'Henüz seri eklenmemiş', description: 'İlk seriyi ekleyin; ardından bölümlerini yükleyebilirsiniz.' })
+      @component('components/ui/button', { variant: 'primary', href: '/admin/seriler/ekle', icon: 'plus' })
+        Yeni seri
+      @end
+    @end
+    @end
+  @end
 @end

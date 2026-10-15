@@ -1,37 +1,93 @@
-@component('components/layout/admin', { title })
-
-@slot('main')
-  <form action="/admin/tema/goster" method="POST" class="max-w-3xl space-y-6">
-    {{ csrfField() }}
-    <div class="rounded-xl border border-gray-700 bg-(--t-surface) p-5">
-      <h3 class="text-lg font-semibold text-gray-200">Göster / Gizle</h3>
-      <p class="text-sm text-gray-500">Kapattığınız bölümler sayfadan tamamen kaldırılır. Değişiklikler Kaydet'ten sonra geçerli olur.</p>
-    </div>
-
-    @each(group in groups)
-      <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-5" aria-labelledby="flags-{{ group.key }}">
-        <h3 id="flags-{{ group.key }}" class="mb-3 text-base font-semibold text-gray-200">{{ group.label }}</h3>
-        <ul class="divide-y divide-gray-700/50">
-          @each(flag in group.flags)
-            <li>
-              <label class="flex cursor-pointer items-center justify-between gap-4 py-3">
-                <span class="min-w-0">
-                  <span class="block text-sm text-gray-200">{{ flag.label }}</span>
-                  @if(flag.hint)
-                    <span class="block text-xs text-gray-500">{{ flag.hint }}</span>
-                  @end
-                </span>
-                <input type="checkbox" name="f_{{ flag.key }}" value="on" {{ values[flag.key] ? 'checked' : '' }} class="peer sr-only">
-                <span class="relative h-6 w-11 shrink-0 rounded-full bg-gray-700 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-5 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-emerald-400" aria-hidden="true"></span>
-              </label>
-            </li>
-          @end
-        </ul>
-      </section>
+{{--
+  Admin → Tema → Göster / Gizle: every switch of config/theme.ts `flags`, grouped by `flagGroups`.
+  Each one is a checkbox `f_<key>` (value "on"); the controller reads ALL flags from this form and
+  a missing box means "off", so every flag must be rendered here.
+--}}
+@let(groupIcons = { header: 'menu', home: 'home', series: 'book-open', footer: 'document', effects: 'sparkles' })
+@let(changed = groups.reduce((total, group) => total + group.flags.filter((flag) => values[flag.key] !== flag.default).length, 0))
+@component('components/layout/admin', {
+  title,
+  description: 'Sitedeki bölümleri açıp kapatın. Kapalı bölümler sayfadan tamamen kaldırılır; değişiklikler Kaydet\'ten sonra geçerli olur.',
+  crumbs: [{ label: 'Tema', href: '/admin/tema/genel' }, { label: 'Göster / Gizle' }]
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/', iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Siteyi aç<span class="sr-only"> (yeni sekmede)</span>
     @end
+  @end
 
-    <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
-  </form>
-@end
+  @slot('main')
+    @include('partials/admin/theme_nav')
 
+    <form action="/admin/tema/goster" method="POST" class="te-flags-form" data-submit-once
+          x-data="{ dirty: false }" x-on:change="dirty = true" x-on:submit="dirty = false"
+          x-on:beforeunload.window="if (dirty) { $event.preventDefault(); $event.returnValue = '' }">
+      {{ csrfField() }}
+
+      <div class="te-flags">
+        @each(group in groups)
+        <section id="flags-{{ group.key }}" class="panel te-flag-group" aria-labelledby="flags-{{ group.key }}-title"
+                 x-data="{ on: {{ group.flags.filter((flag) => values[flag.key]).length }} }" x-on:change="on = $el.querySelectorAll('input:checked').length">
+          <div class="panel__head">
+            <h2 id="flags-{{ group.key }}-title" class="panel__title te-title">
+              @!component('components/icon', { name: groupIcons[group.key] || 'eye' })
+              {{ group.label }}
+            </h2>
+            <span class="badge t-num gap-0" data-tone="neutral"><span x-text="on">{{ group.flags.filter((flag) => values[flag.key]).length }}</span>/{{ group.flags.length }} açık</span>
+          </div>
+          <div>
+            @each(flag in group.flags)
+            @let(describedBy = [flag.hint ? 'f-' + flag.key + '-hint' : '', values[flag.key] !== flag.default ? 'f-' + flag.key + '-meta' : ''].filter(Boolean).join(' '))
+            <div class="te-flag">
+              <div class="min-w-0">
+                <label for="f-{{ flag.key }}" class="te-flag__label">{{ flag.label }}</label>
+                @if(flag.hint)
+                <p id="f-{{ flag.key }}-hint" class="te-flag__hint">{{ flag.hint }}</p>
+                @end
+                @if(values[flag.key] !== flag.default)
+                <p id="f-{{ flag.key }}-meta" class="te-flag__meta">
+                  <span class="badge badge--sm" data-tone="warning">Varsayılan: {{ flag.default ? 'açık' : 'kapalı' }}</span>
+                </p>
+                @end
+              </div>
+              <input type="checkbox" role="switch" class="switch" id="f-{{ flag.key }}" name="f_{{ flag.key }}" value="on"
+                     {{ values[flag.key] ? 'checked' : '' }}
+                     @if(describedBy)
+                     aria-describedby="{{ describedBy }}"
+                     @end
+                     >
+            </div>
+            @end
+          </div>
+        </section>
+        @end
+      </div>
+
+      <div class="savebar te-savebar">
+        <div class="te-savebar__status">
+          <span class="te-dot" data-tone="success" :data-tone="dirty ? 'warning' : 'success'" aria-hidden="true"></span>
+          <div class="min-w-0">
+            <p class="te-savebar__title" aria-live="polite">
+              <span x-show="!dirty">Tüm değişiklikler kayıtlı</span>
+              <span x-show="dirty" x-cloak>Kaydedilmemiş değişiklikler var</span>
+            </p>
+            <p class="te-savebar__meta">
+              @if(changed)
+              {{ changed }} ayar varsayılandan farklı.
+              @else
+              Tüm ayarlar varsayılan değerinde.
+              @end
+            </p>
+          </div>
+        </div>
+        <div class="te-savebar__actions">
+          <a href="{{ request.url(true) }}" class="btn btn--ghost btn--md" x-show="dirty" x-cloak title="Kaydedilmemiş değişiklikleri at">Vazgeç</a>
+          <button type="submit" class="btn btn--primary btn--md">
+            @!component('components/icon', { name: 'check', class: 'btn__icon' })
+            Kaydet
+          </button>
+        </div>
+      </div>
+    </form>
+  @end
 @end

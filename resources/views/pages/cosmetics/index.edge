@@ -9,155 +9,233 @@
     effect: 'Görünen adını süslemek için ad efektlerini keşfet ve topla.',
     wallpaper: 'Yorum kartlarının ve profilinin arkasında görünen duvar kağıtlarını keşfet ve topla.',
   })
+  @let(nouns = { sticker: 'çıkartma', frame: 'çerçeve', effect: 'efekt', wallpaper: 'duvar kağıdı' })
+  @let(tabLabels = { frame: 'Çerçeveler', effect: 'Efektler', wallpaper: 'Duvar Kağıtları', sticker: 'Çıkartmalar' })
+  @let(kindTabs = ['frame', 'effect', 'wallpaper', 'sticker'].map((name) => kinds.find((entry) => entry.name === name)).filter(Boolean).map((entry) => ({ key: entry.name, label: tabLabels[entry.name] || entry.plural, href: '/kozmetik/' + entry.path })))
+  @let(sortOptions = [['featured', 'Öne çıkanlar'], ['level', 'Seviyeye göre'], ['popular', 'En çok kullanılan'], ['name', 'Ada göre']])
+  @let(sortChips = sortOptions.map((option) => ({ label: option[1], href: withQuery(request, { sirala: option[0] === 'featured' ? null : option[0] }), active: sort === option[0] })))
+  @let(unlockedCount = items.filter((item) => item.unlocked).length)
   <div
     x-data="cosmeticStore"
     data-config="{{ JSON.stringify({ kind, items, me: me ? { name: me.fullName, username: me.username, avatar: me.avatar, hue, level: me.level, look: lookOf(me) } : null }) }}"
   >
-    @!component('components/breadcrumb', { items: [{ label: info.plural }] })
-
-    <div class="glass rounded-3xl border border-white/10 p-5 sm:p-7">
-      <h1 class="section-title">{{ info.plural }}</h1>
-      <p class="mt-3 text-sm text-gray-300">{{ descriptions[kind] }} Hiçbiri satılmaz: okudukça, yorum yaptıkça ve rozet kazandıkça açılır.</p>
-
-      {{-- Kind switcher --}}
-      <div class="mt-4 flex flex-wrap gap-2">
-        @each(entry in kinds)
-          <a href="/kozmetik/{{ entry.path }}" class="pill {{ entry.name === kind ? 'pill-active' : '' }}">{{ entry.plural }}</a>
-        @end
+    @component('components/ui/page_header', {
+      title: info.plural,
+      eyebrow: 'Kozmetikler',
+      description: descriptions[kind] + ' Hiçbiri satılmaz: okudukça, yorum yaptıkça ve rozet kazandıkça açılır.',
+      breadcrumb: [{ label: info.plural }],
+    })
+      @slot('actions')
         @if(me)
-          <button type="button" @click="$dispatch('open-inventory', '{{ kind }}')" class="pill">
-            @!component('components/icon', { name: 'stack', class: 'h-4 w-4' })
-            Envanter
+          <a href="/oduller" class="btn btn--ghost btn--md">
+            @!component('components/icon', { name: 'gift', class: 'btn__icon' })
+            <span>Seviye ve ödüller</span>
+          </a>
+          <button type="button" class="btn btn--secondary btn--md" @click="$dispatch('open-inventory', kind)">
+            @!component('components/icon', { name: 'stack', class: 'btn__icon' })
+            <span>Envanter</span>
+          </button>
+        @else
+          <button type="button" class="btn btn--primary btn--md" @click="$dispatch('open-auth', 'login')">
+            @!component('components/icon', { name: 'login', class: 'btn__icon' })
+            <span>Giriş yap ve topla</span>
           </button>
         @end
-      </div>
-
-      <div class="mt-5 flex items-center justify-between border-b border-white/10 pb-3">
-        <p class="text-sm text-gray-300"><strong class="text-(--t-heading)">{{ items.length }}</strong> {{ info.plural }}</p>
-        <div class="relative" x-data="{ menu: false }" @click.outside="menu = false">
-          <button type="button" @click="menu = !menu" class="flex h-9 w-9 items-center justify-center rounded-full text-gray-300 hover:bg-white/10 hover:text-(--t-heading)" aria-label="Sıralama ve filtre" :aria-expanded="menu.toString()">
-            @!component('components/icon', { name: 'dots', class: 'h-6 w-6' })
-          </button>
-          <div x-cloak x-show="menu" x-transition class="absolute right-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-xl border border-white/10 bg-(--t-surface-2) py-1 text-sm shadow-2xl">
-            @each(option in [['featured', 'Öne çıkanlar'], ['level', 'Seviyeye göre'], ['popular', 'En çok kullanılan'], ['name', 'Ada göre']])
-              <a href="?sirala={{ option[0] }}{{ onlyUnlocked ? '&acik=1' : '' }}" class="flex items-center justify-between px-4 py-2 {{ sort === option[0] ? 'text-emerald-300' : 'text-gray-200' }} hover:bg-white/5">
-                {{ option[1] }}
-                @if(sort === option[0])
-                  @!component('components/icon', { name: 'check', class: 'h-4 w-4' })
-                @end
-              </a>
-            @end
-            @if(me)
-              <div class="my-1 border-t border-white/10"></div>
-              <a href="?sirala={{ sort }}{{ onlyUnlocked ? '' : '&acik=1' }}" class="flex items-center gap-2 px-4 py-2 text-gray-200 hover:bg-white/5">
-                <span class="flex h-4 w-4 items-center justify-center rounded border border-white/30 {{ onlyUnlocked ? 'bg-emerald-500 border-emerald-500' : '' }}">
-                  @if(onlyUnlocked)
-                    @!component('components/icon', { name: 'check', class: 'h-3 w-3 text-(--t-heading)', stroke: 3 })
-                  @end
-                </span>
-                Yalnızca açılanlar
-              </a>
-            @end
-          </div>
-        </div>
-      </div>
-
-      @if(!items.length)
-        <p class="py-12 text-center text-gray-400">{{ onlyUnlocked ? 'Henüz bu türde açtığın bir öğe yok.' : 'Bu türde henüz öğe eklenmemiş.' }}</p>
       @end
+    @end
 
-      <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-        <template x-for="item in items" :key="item.id">
-          <div class="relative flex flex-col items-center rounded-2xl border px-3 pb-4 pt-5 text-center transition hover:-translate-y-0.5"
-               :class="item.equipped ? 'border-emerald-500/60 bg-emerald-500/[0.08]' : 'border-white/10 bg-white/[0.04] hover:border-white/20'">
-            <span x-show="item.featured" class="absolute left-3 top-3 flex h-6 w-7 items-center justify-center rounded bg-sky-500 text-(--t-on-accent)" title="Öne çıkan">
-              <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3l5 5-3 1-4 4 1 5-2 2-4-5-5 5-1-1 5-5-5-4 2-2 5 1 4-4z"/></svg>
-            </span>
-            <span x-show="!item.unlocked" class="absolute right-3 top-3 text-gray-400" title="Kilitli">
-              @!component('components/icon', { name: 'lock', class: 'h-4 w-4' })
-            </span>
-            <h2 class="w-full truncate px-6 text-sm font-bold text-(--t-heading)" x-text="item.name"></h2>
+    <div class="cos-kinds">
+      @!component('components/ui/tabs', { mode: 'links', tabs: kindTabs, active: kind, label: 'Kozmetik türleri' })
+    </div>
 
-            {{-- Preview --}}
-            <div class="my-4 flex h-24 w-full items-center justify-center" :class="!item.unlocked && 'opacity-70'">
-              @if(kind === 'sticker')
-                <img :src="item.visual.img" :alt="item.name" class="max-h-24 max-w-[7rem] object-contain" loading="lazy">
-              @elseif(kind === 'frame')
-                <span class="relative inline-flex h-16 w-16">
-                  <span class="h-full w-full overflow-hidden rounded-full bg-gradient-to-br from-slate-500 to-slate-700">
-                    <template x-if="me && me.avatar"><img :src="me.avatar" alt="" class="h-full w-full object-cover"></template>
-                  </span>
-                  <template x-if="item.visual.img"><img :src="item.visual.img" alt="" class="avatar-frame-img"></template>
-                  <template x-if="!item.visual.img"><span class="avatar-frame" :class="item.visual.cls"></span></template>
-                </span>
-              @elseif(kind === 'effect')
-                <span class="max-w-full truncate px-1 text-xl font-extrabold sm:text-2xl" :class="item.visual.cls" :style="item.visual.css || ''" x-text="me ? me.name : 'Okur'"></span>
-              @else
-                <span class="wall h-full w-full rounded-xl border border-white/10" :class="item.visual.cls" :style="imageStyle(item.visual)"></span>
-              @end
-            </div>
-
-            <p class="text-sm font-bold" :class="item.unlocked ? 'text-emerald-300' : 'text-gray-300'" x-text="item.unlocked ? 'Açıldı' : item.lockText"></p>
-            <p class="mt-0.5 text-xs text-gray-400"><span x-text="item.users"></span> {{ kind === 'sticker' ? 'kez kullanıldı' : 'kişi kullanıyor' }}</p>
-
-            @if(kind !== 'sticker')
-              <button type="button" @click="item.unlocked ? equip(item) : null" :disabled="busy || !item.unlocked"
-                      class="btn-soft mt-3 w-full max-w-[10rem]" :class="item.equipped && 'btn-green'"
-                      x-text="!item.unlocked ? 'Kilitli' : item.equipped ? 'Kuşanıldı' : 'Kuşan'"></button>
-            @else
-              <span class="btn-soft mt-3 w-full max-w-[10rem] pointer-events-none" :class="item.unlocked && 'btn-green'" x-text="item.unlocked ? 'Kullanılabilir' : 'Kilitli'"></span>
+    <div class="cos-toolbar">
+      <p class="cos-toolbar__count">
+        <strong class="t-num">{{ items.length }}</strong> {{ nouns[kind] }}
+        @if(me && !onlyUnlocked)
+          <span aria-hidden="true">·</span>
+          <strong class="t-num">{{ unlockedCount }}</strong> açık
+        @end
+      </p>
+      <div class="cos-toolbar__filters">
+        <span class="t-caption max-sm:hidden" aria-hidden="true">Sırala</span>
+        @!component('components/ui/pill_group', { label: 'Sıralama', items: sortChips })
+        @if(me)
+          <a href="{{ withQuery(request, { acik: onlyUnlocked ? null : '1' }) }}" class="chip cos-only {{ onlyUnlocked ? 'chip--active' : '' }}"
+            @if(onlyUnlocked)
+            aria-current="true"
             @end
-            <button type="button" @click="tryOn(item)" class="mt-2 text-xs font-bold uppercase tracking-wide text-gray-200 hover:text-emerald-300">Dene</button>
-          </div>
-        </template>
+            >
+            <span class="cos-only__box" aria-hidden="true">
+              @if(onlyUnlocked)
+                @!component('components/icon', { name: 'check', stroke: 3 })
+              @end
+            </span>
+            Yalnızca açılanlar
+          </a>
+        @end
       </div>
     </div>
 
-    {{-- Try-on preview: your own comment card with the item applied --}}
-    <div x-cloak x-show="trying" x-transition.opacity class="fixed inset-0 z-[85] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" @click.self="trying = null" @keydown.escape.window="trying = null">
-      <div role="dialog" aria-modal="true" aria-label="Önizleme" class="glass-strong relative w-full max-w-lg rounded-3xl border border-white/10 p-5 shadow-2xl sm:p-6">
-        <button type="button" @click="trying = null" class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-white/10 hover:text-(--t-heading)" aria-label="Kapat">
-          @!component('components/icon', { name: 'x', class: 'h-5 w-5' })
-        </button>
-        <h2 class="text-lg font-bold text-(--t-heading)">Önizleme: <span x-text="trying && trying.name"></span></h2>
-        <p class="mb-4 text-sm text-gray-400" x-text="trying && (trying.unlocked ? 'Bu öğe açık; kuşanınca yorumlarında böyle görünür.' : 'Kilidi açmak için: ' + trying.lockText)"></p>
+    @if(!items.length)
+      @if(onlyUnlocked)
+        @component('components/ui/empty_state', { icon: 'sparkles', title: 'Bu türde henüz açtığın bir öğe yok', description: 'Okudukça, yorum yaptıkça ve rozet kazandıkça yeni öğelerin kilidi açılır.' })
+          <a href="{{ withQuery(request, { acik: null }) }}" class="btn btn--secondary btn--md">Tümünü göster</a>
+        @end
+      @else
+        @!component('components/ui/empty_state', { icon: 'sparkles', title: 'Bu türde henüz öğe yok', description: 'Yeni öğeler eklendiğinde burada görünecek.' })
+      @end
+    @else
+      <noscript>
+        <p class="alert mb-4" data-tone="warning">Koleksiyonu görmek ve öğeleri kuşanmak için tarayıcında JavaScript'i etkinleştir.</p>
+      </noscript>
 
-        <template x-if="trying">
-          <article class="c-card" x-data="{ get look() { return previewLook() } }">
-            <template x-if="look.wallpaper"><div class="c-wall wall" :class="look.wallpaper.cls" :style="imageStyle(look.wallpaper)"></div></template>
-            <div class="c-veil"></div>
-            <div class="p-4">
-              <div class="flex items-center gap-3">
-                <span class="relative inline-flex h-12 w-12 shrink-0">
-                  <span class="flex h-full w-full items-center justify-center overflow-hidden rounded-full text-lg font-bold text-(--t-heading)" :style="`background: linear-gradient(135deg, hsl(${me ? me.hue : 150} 70% 45%), hsl(${((me ? me.hue : 150) + 50) % 360} 70% 35%))`">
-                    <template x-if="me && me.avatar"><img :src="me.avatar" alt="" class="h-full w-full object-cover"></template>
-                    <span x-show="!me || !me.avatar" x-text="(me ? me.name : 'O').charAt(0).toUpperCase()"></span>
-                  </span>
-                  <template x-if="look.frame && look.frame.img"><img :src="look.frame.img" alt="" class="avatar-frame-img"></template>
-                  <template x-if="look.frame && !look.frame.img"><span class="avatar-frame" :class="look.frame.cls"></span></template>
+      <ul class="cos-grid" role="list">
+        <template x-for="item in items" :key="item.id">
+          <li class="cos-item" :class="item.equipped && 'is-equipped'">
+            <div class="cos-item__preview" @click="tryOn(item)">
+              @if(kind === 'sticker')
+                <img :src="item.visual.img" alt="" class="cos-sticker" loading="lazy" decoding="async">
+              @elseif(kind === 'frame')
+                @!component('partials/cosmetics/avatar', { size: 'h-16 w-16', text: 'text-xl', frame: 'item.visual' })
+              @elseif(kind === 'effect')
+                <span class="cos-name" :class="item.visual.cls" :style="item.visual.css || ''" x-text="displayName()"></span>
+              @else
+                <span class="wall absolute inset-0" :class="item.visual.cls" :style="imageStyle(item.visual)"></span>
+              @end
+              <span x-show="item.featured" class="cos-flag">
+                @!component('components/icon', { name: 'star' })
+                Öne çıkan
+              </span>
+              <span x-show="item.equipped" class="cos-flag cos-flag--end" data-tone="accent">
+                @!component('components/icon', { name: 'check', stroke: 2.5 })
+                Kuşanıldı
+              </span>
+            </div>
+
+            <div class="cos-item__body">
+              <h2 class="cos-item__name" x-text="item.name"></h2>
+              <p class="cos-item__status" :data-state="item.unlocked ? 'open' : 'locked'">
+                <span x-show="item.unlocked" class="contents">
+                  @!component('components/icon', { name: 'check-circle' })
                 </span>
+                <span x-show="!item.unlocked" class="contents">
+                  @!component('components/icon', { name: 'lock' })
+                </span>
+                <span class="truncate" x-text="statusText(item)"></span>
+              </p>
+              <p class="cos-item__users t-num" x-text="usersText(item)"></p>
+
+              <div class="cos-item__actions">
+                <button type="button" class="btn btn--ghost btn--sm cos-try {{ kind === 'sticker' ? 'cos-try--wide' : '' }}" @click="tryOn(item)" :aria-label="'Dene: ' + item.name">
+                  @!component('components/icon', { name: 'eye', class: 'btn__icon' })
+                  <span class="cos-try__text">Dene</span>
+                </button>
+                @if(kind !== 'sticker')
+                  <button type="button" class="btn btn--secondary btn--sm cos-equip" @click="equip(item)"
+                          :disabled="busy || (me && !item.unlocked)" :aria-pressed="item.equipped.toString()"
+                          :aria-busy="busyId === item.id">
+                    <span x-show="me && !item.unlocked" class="contents">
+                      @!component('components/icon', { name: 'lock', class: 'btn__icon' })
+                    </span>
+                    <span x-text="equipLabel(item)"></span>
+                  </button>
+                @end
+              </div>
+            </div>
+          </li>
+        </template>
+      </ul>
+    @end
+
+    {{-- "Dene": the visitor's own profile card and comment with the item applied. --}}
+    @component('components/ui/modal', { id: 'cosmetic-try', title: 'Önizleme', titleExpr: "trying ? trying.name : 'Önizleme'", size: 'md', open: 'tryOpen', close: 'closeTry()' })
+      <template x-if="trying">
+        <div x-data="{ get look() { return previewLook() } }" class="space-y-5">
+          <div class="alert" :data-tone="hintTone()">
+            <span x-show="me && !trying.unlocked" class="cos-hint__icon">
+              @!component('components/icon', { name: 'lock' })
+            </span>
+            <span x-show="!me || trying.unlocked" class="cos-hint__icon">
+              @!component('components/icon', { name: 'info' })
+            </span>
+            <p x-text="tryHint()"></p>
+          </div>
+
+          @if(kind !== 'sticker')
+            <section aria-labelledby="cosmetic-try-profile">
+              <h3 id="cosmetic-try-profile" class="t-overline mb-2">Profilinde</h3>
+              <div class="cos-profile">
+                <template x-if="look.wallpaper">
+                  <div class="wall absolute inset-0 -z-20" :class="look.wallpaper.cls" :style="imageStyle(look.wallpaper)"></div>
+                </template>
+                <div x-show="look.wallpaper" class="wall-veil absolute inset-0 -z-10"></div>
+                @!component('partials/cosmetics/avatar', { size: 'h-16 w-16', text: 'text-2xl', frame: 'look.frame' })
                 <div class="min-w-0">
-                  <div class="flex items-center gap-1.5">
-                    <span class="presence" data-online="1"></span>
-                    <span class="truncate font-bold text-(--t-heading)" :class="look.effect && look.effect.cls" :style="look.effect && look.effect.css" x-text="me ? me.name : 'Okur'"></span>
-                    <span class="lv-badge" :data-tier="tierOf(me ? me.level : 1)" x-text="'Lv.' + (me ? me.level : 1)"></span>
-                  </div>
-                  <span class="text-xs text-gray-400">şimdi</span>
+                  <p class="flex min-w-0 items-center gap-2">
+                    <span class="presence" data-online="1" title="Çevrimiçi"></span>
+                    <span class="truncate text-lg font-extrabold text-ink" :class="look.effect && look.effect.cls" :style="look.effect ? (look.effect.css || '') : ''" x-text="displayName()"></span>
+                    <span class="lv-badge" :data-tier="tierOf(level())" x-text="'Lv.' + level()"></span>
+                  </p>
+                  <p class="truncate t-caption" x-text="handle()"></p>
                 </div>
               </div>
-              <p class="mt-3 text-[15px] text-gray-100" x-show="kind !== 'sticker'">Bu bölüm efsaneydi, bir sonrakini bekliyorum!</p>
-              <template x-if="kind === 'sticker'"><img :src="trying.visual.img" alt="" class="mt-3 h-32 w-32 object-contain"></template>
-              <div class="mt-3 flex justify-end gap-3 text-sm text-gray-300"><span>▲ 12</span><span>▼ 0</span></div>
-            </div>
-          </article>
-        </template>
+            </section>
+          @end
 
-        <div class="mt-5 flex justify-end gap-2" x-show="trying && kind !== 'sticker'">
-          <button type="button" @click="trying = null" class="btn-soft">Kapat</button>
-          <button type="button" x-show="trying && trying.unlocked && !trying.equipped" @click="equip(trying); trying = null" class="btn-soft btn-green">Kuşan</button>
+          <section aria-labelledby="cosmetic-try-comment">
+            <h3 id="cosmetic-try-comment" class="t-overline mb-2">Yorumlarında</h3>
+            <article class="c-card">
+              <template x-if="look.wallpaper">
+                <div class="c-wall wall" :class="look.wallpaper.cls" :style="imageStyle(look.wallpaper)"></div>
+              </template>
+              <div class="c-veil"></div>
+              <div class="p-4">
+                <div class="flex items-center gap-3">
+                  @!component('partials/cosmetics/avatar', { size: 'h-10 w-10', text: 'text-base', frame: 'look.frame' })
+                  <div class="min-w-0">
+                    <p class="flex min-w-0 items-center gap-1.5 text-sm font-bold">
+                      <span class="truncate text-ink" :class="look.effect && look.effect.cls" :style="look.effect ? (look.effect.css || '') : ''" x-text="displayName()"></span>
+                      <span class="lv-badge" :data-tier="tierOf(level())" x-text="'Lv.' + level()"></span>
+                    </p>
+                    <p class="t-caption">şimdi</p>
+                  </div>
+                </div>
+                @if(kind === 'sticker')
+                  <img :src="trying.visual.img" :alt="trying.name" class="mt-3 h-28 w-28 object-contain" decoding="async">
+                @else
+                  <p class="mt-3 text-body">Bu bölüm efsaneydi, bir sonrakini bekliyorum!</p>
+                @end
+                <div class="mt-3 flex items-center gap-4 t-caption" aria-hidden="true">
+                  <span class="inline-flex items-center gap-1">
+                    @!component('components/icon', { name: 'up', class: 'h-4 w-4' })
+                    12
+                  </span>
+                  <span class="inline-flex items-center gap-1">
+                    @!component('components/icon', { name: 'down', class: 'h-4 w-4' })
+                    0
+                  </span>
+                  <span class="inline-flex items-center gap-1">
+                    @!component('components/icon', { name: 'reply', class: 'h-4 w-4' })
+                    Yanıtla
+                  </span>
+                </div>
+              </div>
+            </article>
+          </section>
         </div>
-      </div>
-    </div>
+      </template>
+      @slot('footer')
+        <button type="button" class="btn btn--secondary btn--md" @click="closeTry()">Kapat</button>
+        @if(kind !== 'sticker')
+          <button type="button" class="btn btn--md" :class="trying && trying.equipped ? 'btn--secondary' : 'btn--primary'"
+                  x-show="trying && (!me || trying.unlocked)" @click="equipTried()" :disabled="busy" :aria-busy="busy">
+            <span x-text="trying && trying.equipped ? 'Çıkar' : 'Kuşan'">Kuşan</span>
+          </button>
+        @else
+          <button type="button" class="btn btn--primary btn--md" x-show="!me" @click="closeTry(); $dispatch('open-auth', 'login')">Giriş yap</button>
+        @end
+      @end
+    @end
   </div>
 @end
 

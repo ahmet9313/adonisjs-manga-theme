@@ -1,0 +1,63 @@
+{{--
+  "Seri bilgileri": people and facts that are not in the header. Each author and artist links to
+  the filtered catalog exactly once on the page; type, status and age are not repeated as labels
+  the header already shows.
+--}}
+@if(ui('series_sidebar'))
+<aside class="series-layout__info panel panel--tight" aria-labelledby="series-info-title">
+  <h2 id="series-info-title" class="series-aside__title">
+    @!component('components/icon', { name: 'info', class: 'h-4 w-4' })
+    Seri bilgileri
+  </h2>
+  <dl class="series-facts">
+    @if(series.authors.length)
+    <div>
+      <dt>Yazar</dt>
+      <dd>
+        @each((person, index) in series.authors)
+        <a href="/seriler?author={{ encodeURIComponent(person.slug) }}" class="link-person" title="{{ person.name }} serileri">{{ person.name }}</a>{{ index < series.authors.length - 1 ? ', ' : '' }}
+        @end
+      </dd>
+    </div>
+    @end
+    @if(series.artists.length)
+    <div>
+      <dt>Çizer</dt>
+      <dd>
+        @each((person, index) in series.artists)
+        <a href="/seriler?artist={{ encodeURIComponent(person.slug) }}" class="link-person" title="{{ person.name }} serileri">{{ person.name }}</a>{{ index < series.artists.length - 1 ? ', ' : '' }}
+        @end
+      </dd>
+    </div>
+    @end
+    <div>
+      <dt>İçerik türü</dt>
+      <dd>
+        <a href="/seriler?type={{ encodeURIComponent(series.type) }}" class="link-person">{{ typeLabel }}</a>
+      </dd>
+    </div>
+    @if(series.status)
+    <div>
+      <dt>Durum</dt>
+      <dd>{{ series.status }}</dd>
+    </div>
+    @end
+    @if(series.translationStatus)
+    <div>
+      <dt>Çeviri durumu</dt>
+      <dd>{{ series.translationStatus }}</dd>
+    </div>
+    @end
+    @if(series.publicationYear)
+    <div>
+      <dt>Yayın Yılı</dt>
+      <dd class="t-num">{{ series.publicationYear }}</dd>
+    </div>
+    @end
+    <div>
+      <dt>Bölüm sayısı</dt>
+      <dd class="t-num">{{ chapters.length }}</dd>
+    </div>
+  </dl>
+</aside>
+@end

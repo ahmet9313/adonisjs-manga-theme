@@ -21,6 +21,8 @@ export default class UserController {
     const search = searchText(request.input('search'))
     const roleInput = request.input('role')
     const role = isRole(roleInput) ? roleInput : ''
+    const statusInput = request.input('status')
+    const status = statusInput === 'active' || statusInput === 'banned' ? statusInput : ''
 
     const query = User.query().orderBy('id', 'desc')
     if (search) {
@@ -30,9 +32,14 @@ export default class UserController {
       )
     }
     if (role) query.where('role', role)
+    if (status === 'active') query.whereNull('banned_at')
+    if (status === 'banned') query.whereNotNull('banned_at')
     const users = await query.paginate(page, perPage)
     users.baseUrl('/admin/kullanicilar')
-    users.queryString({ per_page: perPage, search, role })
+    users.queryString({ per_page: perPage, search, role, status })
+    const [counts] = await db
+      .from('users')
+      .select(db.raw('count(*) as total'), db.raw('count(banned_at) as banned'))
     return view.render('pages/admin/users/index', {
       title: 'Kullanıcılar',
       users,
@@ -40,6 +47,10 @@ export default class UserController {
       perPage,
       search,
       role,
+      status,
+      filtered: Boolean(search || role || status),
+      accountTotal: Number(counts.total),
+      bannedTotal: Number(counts.banned),
       roleList: settings.allRoles(),
     })
   }
@@ -49,6 +60,7 @@ export default class UserController {
     return view.render('pages/admin/users/form', {
       title: 'Kullanıcıyı Düzenle',
       member,
+      roleList: settings.allRoles(),
       roleLabels: Object.fromEntries(settings.allRoles().map((role) => [role.key, role.label])),
     })
   }

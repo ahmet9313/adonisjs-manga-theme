@@ -1,0 +1,38 @@
+{{--
+  Chapter content. Images: the first two load eagerly with high priority, the rest lazily; each
+  page keeps a placeholder height until its image has loaded (reader.js sets data-state) and
+  offers a retry when it fails. Novel text: paragraphs in a readable column (.reader-prose).
+--}}
+@if(pageCount)
+<div class="reader-pages">
+  @each((page, index) in chapter.pages)
+  <figure class="reader-page" data-page data-state="loading">
+    <img src="{{ page }}" alt="{{ series.title }}, Bölüm {{ chapter.number }}, sayfa {{ index + 1 }} / {{ pageCount }}" decoding="async"
+      @if(index < 2)
+      loading="eager" fetchpriority="high"
+      @else
+      loading="lazy"
+      @end
+      >
+    <div class="reader-page__error">
+      @!component('components/icon', { name: 'photo', class: 'h-6 w-6' })
+      <p>Sayfa {{ index + 1 }} yüklenemedi.</p>
+      <button type="button" class="btn btn--secondary btn--sm" @click="retry($el.closest('[data-page]'))">
+        @!component('components/icon', { name: 'refresh', class: 'btn__icon' })
+        <span>Tekrar dene</span>
+      </button>
+    </div>
+  </figure>
+  @end
+</div>
+@elseif(isNovel)
+<article class="reader-prose" aria-label="Bölüm metni" :style="'--reader-font:' + fontSize">
+  @each(paragraph in chapter.textContent.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean))
+  <p>{{ paragraph }}</p>
+  @end
+</article>
+@else
+<div class="reader-empty">
+  @!component('components/ui/empty_state', { icon: 'document', title: 'Bu bölümde içerik yok', description: 'Bölümün sayfaları henüz yüklenmemiş olabilir. Seri sayfasından başka bir bölüm seçebilirsin.' })
+</div>
+@end

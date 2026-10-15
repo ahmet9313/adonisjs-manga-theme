@@ -1,191 +1,153 @@
+{{--
+  Site header. Desktop (≥ lg): logo, main links, search, scheme switch, inbox and account.
+  Below lg the links, search and scheme switch move into #mobile-navigation (hamburger).
+  Contracts (scripts/check-mobile-nav.mjs, tests): the desktop links sit in `nav .lg:flex`, the
+  hamburger is the first [aria-controls="mobile-navigation"], the panel toggles `display` and holds
+  #mobile-series-search with its results, and every element follows the Göster/Gizle switches.
+--}}
 @if(ui('header'))
-<nav
-  class="site-header glass-strong sticky top-0 z-50 border-b border-white/10"
-  x-data="{ mobileOpen: false }"
-  @click.outside="mobileOpen = false"
-  @keydown.escape.window="mobileOpen = false"
-  @resize.window="if (window.innerWidth >= 1024) mobileOpen = false"
->
-  <div class="mx-auto max-w-(--t-container) px-4">
-    <div class="flex min-h-16 items-center justify-between gap-4 py-2">
-      {{-- Logo --}}
-      <a href="/" class="flex shrink-0 items-center gap-2" aria-label="{{ site.name }} ana sayfa">
-        @if(site.logo)
-        <img src="{{ site.logo }}" alt="" class="h-10">
-        @end
-        @if(ui('logo_text'))
-        <span class="bg-gradient-to-r from-(--t-logo-1) via-(--t-logo-2) to-(--t-logo-3) bg-clip-text text-xl font-bold text-transparent">
-          {{ site.name }}
-        </span>
-        @end
-      </a>
+@let(path = request.url())
+@let(links = [
+  { key: 'nav_home', href: '/', label: 'Ana Sayfa', icon: 'home', active: path === '/' },
+  { key: 'nav_series', href: '/seriler', label: 'Seri Listesi', icon: 'grid', active: path.startsWith('/seriler') },
+  { key: 'nav_recommend', href: '/oneriler', label: 'Öneriler', icon: 'bulb', active: path.startsWith('/oneriler') },
+  { key: 'nav_bookmarks', href: '/kaydedilenler', label: 'Kaydedilenler', icon: 'bookmark', active: path.startsWith('/kaydedilenler') },
+].filter((link) => ui(link.key)))
+<header class="site-header sticky top-0 z-40 border-b border-(--t-border)"
+        x-data="{ mobileOpen: false }"
+        @click.outside="mobileOpen = false"
+        @keydown.escape.window="mobileOpen = false"
+        @resize.window="if (window.innerWidth >= 1024) mobileOpen = false">
+  <div class="mx-auto flex h-16 max-w-(--t-container) items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
+    <button type="button" class="btn btn--ghost btn--md btn--icon -ml-2 lg:hidden"
+            @click="mobileOpen = !mobileOpen" aria-expanded="false" :aria-expanded="mobileOpen.toString()"
+            aria-controls="mobile-navigation" aria-label="Menü">
+      <span x-show="!mobileOpen">
+        @!component('components/icon', { name: 'menu', class: 'btn__icon' })
+      </span>
+      <span x-cloak x-show="mobileOpen">
+        @!component('components/icon', { name: 'x', class: 'btn__icon' })
+      </span>
+    </button>
 
-      {{-- Desktop Nav --}}
-      <div class="hidden items-center gap-6 lg:flex">
-        @if(ui('nav_home'))
-        <a href="/" class="text-gray-300 transition-colors hover:text-(--t-heading)">Ana Sayfa</a>
-        @end
-        @if(ui('nav_series'))
-        <a href="/seriler" class="text-gray-300 transition-colors hover:text-(--t-heading)">Seri Listesi</a>
+    <a href="/" class="logo">
+      @if(site.logo)
+      <img src="{{ site.logo }}" alt="" class="logo__img">
+      @else
+      <span class="logo__mark" aria-hidden="true">{{ site.name.charAt(0).toUpperCase() }}</span>
+      @end
+      @if(ui('logo_text'))
+      <span class="logo__text">{{ site.name }}</span>
+      @else
+      <span class="sr-only">{{ site.name }}</span>
+      @end
+      <span class="sr-only">ana sayfa</span>
+    </a>
+
+    <nav aria-label="Ana menü" class="ml-4 min-w-0">
+      <ul class="hidden items-center gap-1 lg:flex">
+        @each(link in links)
+        <li><a href="{{ link.href }}" class="nav-link" {{ link.active ? 'aria-current=page' : '' }}>{{ link.label }}</a></li>
         @end
         @if(site.recruitmentUrl)
-        <a href="{{ site.recruitmentUrl }}" class="text-gray-300 transition-colors hover:text-(--t-heading)">Ekip Alım</a>
+        <li><a href="{{ site.recruitmentUrl }}" class="nav-link">Ekip Alım</a></li>
         @end
-        @if(ui('nav_recommend'))
-        <a href="/oneriler" class="text-gray-300 transition-colors hover:text-(--t-heading)">Öneriler</a>
-        @end
-        @if(ui('nav_bookmarks'))
-        <a href="/kaydedilenler" class="text-gray-300 transition-colors hover:text-(--t-heading)">Kaydedilenler</a>
-        @end
-      </div>
+      </ul>
+    </nav>
 
-      <div class="flex items-center gap-3">
-        {{-- Desktop Search --}}
-        @if(ui('search'))
-        <div class="relative hidden lg:block" x-data="navSearch()">
-          <label for="desktop-series-search" class="sr-only">Seri ara</label>
-          <div class="relative">
-            <input
-              id="desktop-series-search"
-              type="search"
-              x-model="query"
-              @input.debounce.300ms="search()"
-              @focus="if(results.length) showResults = true"
-              @click.away="showResults = false"
-              placeholder="Seri ara..."
-              autocomplete="off"
-              class="w-64 rounded-lg border border-white/10 bg-(--t-field) px-4 py-1.5 pr-10 text-sm text-gray-300 placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
-            >
-            <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          </div>
-
-          {{-- Results Dropdown --}}
-          <div
-            x-cloak
-            x-show="showResults"
-            x-transition
-            class="absolute right-0 top-full z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-lg border border-white/10 glass shadow-2xl"
-          >
-            <template x-if="loading">
-              <div class="px-4 py-3 text-sm text-gray-500">Aranıyor...</div>
-            </template>
-            <template x-if="!loading && results.length === 0 && query.length >= 2">
-              <div class="px-4 py-3 text-sm text-gray-500">Sonuç bulunamadı</div>
-            </template>
-            <template x-for="item in results" :key="item.type + item.slug">
-              <a :href="'/series/' + item.type + '/' + item.slug" class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/5">
-                <img :src="item.coverImage" :alt="item.title" class="h-14 w-10 rounded object-cover" onerror="this.onerror=null;this.style.display='none'">
-                <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium text-(--t-heading)" x-text="item.title"></div>
-                  <div class="text-xs text-gray-500" x-text="item.type.charAt(0).toUpperCase() + item.type.slice(1)"></div>
-                </div>
-              </a>
-            </template>
-          </div>
-        </div>
-
-        @end
-
-        {{-- Inbox --}}
-        @if(ui('bell') && auth && auth.user)
-        <button type="button" @click="$dispatch('open-inbox')" class="relative flex h-11 w-11 items-center justify-center rounded-full text-gray-300 transition hover:bg-white/10 hover:text-(--t-heading)" aria-label="Gelen kutusu">
-          @!component('components/icon', { name: 'bell', class: 'h-6 w-6' })
-          <span x-cloak x-show="$store.account.unread" class="absolute right-1 top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold leading-[1.1rem] text-(--t-on-accent) ring-2 ring-(--t-field)" x-text="$store.account.unread > 99 ? '99+' : $store.account.unread"></span>
-        </button>
-        @end
-
-        {{-- Account --}}
-        @include('partials/account_menu')
-
-        {{-- Mobile Hamburger --}}
-        <button
-          type="button"
-          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/10 text-gray-300 hover:border-emerald-500 hover:text-(--t-heading) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 lg:hidden"
-          @click="mobileOpen = !mobileOpen"
-          :aria-expanded="mobileOpen.toString()"
-          aria-controls="mobile-navigation"
-          aria-label="Menüyü aç veya kapat"
-        >
-          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path x-show="!mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-            <path x-cloak x-show="mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    {{-- Mobile Menu --}}
-    <div
-      id="mobile-navigation"
-      x-cloak
-      x-show="mobileOpen"
-      x-transition.origin.top
-      class="pb-4 lg:hidden"
-    >
-      <div class="border-t border-white/5 pt-2">
-        @if(ui('nav_home'))
-        <a href="/" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Ana Sayfa</a>
-        @end
-        @if(ui('nav_series'))
-        <a href="/seriler" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Seri Listesi</a>
-        @end
-        @if(site.recruitmentUrl)
-        <a href="{{ site.recruitmentUrl }}" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Ekip Alım</a>
-        @end
-        @if(ui('nav_recommend'))
-        <a href="/oneriler" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Sana Özel Öneriler</a>
-        @end
-        @if(ui('nav_bookmarks'))
-        <a href="/kaydedilenler" @click="mobileOpen = false" class="block rounded-lg px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-(--t-heading)">Kaydedilenler</a>
-        @end
-        @if(!(auth && auth.user))
-        <button type="button" @click="mobileOpen = false; $dispatch('open-auth', 'login')" class="block w-full rounded-lg px-3 py-3 text-left text-emerald-300 hover:bg-white/5">Giriş Yap / Kayıt Ol</button>
-        @end
-      </div>
-
-      {{-- Mobile Search --}}
+    <div class="ml-auto flex items-center gap-1.5 sm:gap-2">
       @if(ui('search'))
-      <div class="relative mt-2 border-t border-white/5 pt-4" x-data="navSearch()">
-        <label for="mobile-series-search" class="sr-only">Seri ara</label>
-        <div class="relative">
-          <input
-            id="mobile-series-search"
-            type="search"
-            x-model="query"
-            @input.debounce.300ms="search()"
-            @focus="if(results.length) showResults = true"
-            placeholder="Seri ara..."
-            autocomplete="off"
-            class="w-full rounded-lg border border-white/10 bg-(--t-field) px-4 py-3 pr-11 text-base text-gray-300 placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
-          >
-          <svg class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <div class="relative hidden lg:block" x-data="navSearch('desktop')" @click.outside="close()">
+        <label for="desktop-series-search" class="sr-only">Seri ara</label>
+        <div class="control control--icon h-10 w-56 xl:w-72">
+          @!component('components/icon', { name: 'search' })
+          <input id="desktop-series-search" type="search" role="combobox" aria-autocomplete="list" aria-controls="desktop-search-results"
+                 aria-expanded="false" :aria-expanded="open.toString()" :aria-activedescendant="activeId()"
+                 x-ref="input" x-model="query" @input.debounce.250ms="search()" @keydown="onKeydown($event)" @focus="reopen()"
+                 placeholder="Seri ara…" autocomplete="off" enterkeyhint="search">
+          <kbd class="kbd hidden xl:inline-flex" aria-hidden="true">/</kbd>
         </div>
+        <div id="desktop-search-results" role="listbox" aria-label="Arama sonuçları" x-cloak x-show="open"
+             x-transition.origin.top.duration.120ms class="menu absolute right-0 top-full mt-2 max-h-[28rem] w-[24rem] overflow-y-auto">
+          @include('partials/search_results')
+        </div>
+      </div>
+      @end
 
-        <div
-          x-cloak
-          x-show="showResults"
-          x-transition
-          class="mt-2 max-h-72 w-full overflow-y-auto rounded-lg border border-white/10 bg-(--t-field) shadow-2xl"
-        >
-          <template x-if="loading">
-            <div class="px-4 py-3 text-sm text-gray-500">Aranıyor...</div>
-          </template>
-          <template x-if="!loading && results.length === 0 && query.length >= 2">
-            <div class="px-4 py-3 text-sm text-gray-500">Sonuç bulunamadı</div>
-          </template>
-          <template x-for="item in results" :key="item.type + item.slug">
-            <a :href="'/series/' + item.type + '/' + item.slug" class="flex items-center gap-3 border-t border-white/5 px-4 py-3 first:border-0 hover:bg-white/5">
-              <img :src="item.coverImage" :alt="item.title" class="h-14 w-10 rounded object-cover" onerror="this.onerror=null;this.style.display='none'">
-              <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium text-(--t-heading)" x-text="item.title"></div>
-                <div class="text-xs text-gray-500" x-text="item.type.charAt(0).toUpperCase() + item.type.slice(1)"></div>
-              </div>
-            </a>
-          </template>
+      @if(ui('scheme_switch'))
+      <div class="hidden lg:block">
+        @!component('components/ui/theme_switch')
+      </div>
+      @end
+
+      @if(ui('bell') && auth && auth.user)
+      <button type="button" @click="$dispatch('open-inbox')" class="btn btn--ghost btn--md btn--icon relative"
+              aria-label="Gelen kutusu" :aria-label="'Gelen kutusu' + ($store.account.unread ? ', ' + $store.account.unread + ' okunmamış' : '')">
+        @!component('components/icon', { name: 'bell', class: 'btn__icon' })
+        <span x-cloak x-show="$store.account.unread" class="count absolute right-0.5 top-0.5 ring-2 ring-(--t-header-bg)" x-text="$store.account.unread > 99 ? '99+' : $store.account.unread" aria-hidden="true"></span>
+      </button>
+      @end
+
+      @include('partials/account_menu')
+    </div>
+  </div>
+
+  <div id="mobile-navigation" x-cloak x-show="mobileOpen" x-transition.opacity.duration.150ms
+       class="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-(--t-border) bg-(--t-header-bg) lg:hidden">
+    <div class="mx-auto max-w-(--t-container) space-y-4 px-4 py-4 sm:px-6">
+      @if(ui('search'))
+      <div x-data="navSearch('mobile')">
+        <label for="mobile-series-search" class="sr-only">Seri ara</label>
+        <div class="control control--icon h-11">
+          @!component('components/icon', { name: 'search' })
+          <input id="mobile-series-search" type="search" role="combobox" aria-autocomplete="list" aria-controls="mobile-search-results"
+                 aria-expanded="false" :aria-expanded="open.toString()" :aria-activedescendant="activeId()"
+                 x-ref="input" x-model="query" @input.debounce.250ms="search()" @keydown="onKeydown($event)" @focus="reopen()"
+                 placeholder="Seri ara…" autocomplete="off" enterkeyhint="search" class="text-base">
         </div>
+        <div id="mobile-search-results" role="listbox" aria-label="Arama sonuçları" x-cloak x-show="open" class="menu mt-2 max-h-80 overflow-y-auto">
+          @include('partials/search_results')
+        </div>
+      </div>
+      @end
+
+      @if(links.length || site.recruitmentUrl)
+      <nav aria-label="Mobil menü">
+        <ul class="grid gap-1">
+          @each(link in links)
+          <li>
+            <a href="{{ link.href }}" class="mobile-link" {{ link.active ? 'aria-current=page' : '' }} @click="mobileOpen = false">
+              @!component('components/icon', { name: link.icon })
+              {{ link.label }}
+            </a>
+          </li>
+          @end
+          @if(site.recruitmentUrl)
+          <li>
+            <a href="{{ site.recruitmentUrl }}" class="mobile-link">
+              @!component('components/icon', { name: 'users' })
+              Ekip Alım
+            </a>
+          </li>
+          @end
+        </ul>
+      </nav>
+      @end
+
+      @if(!(auth && auth.user))
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" class="btn btn--secondary btn--md" @click="mobileOpen = false; $dispatch('open-auth', 'login')">Giriş yap</button>
+        <button type="button" class="btn btn--primary btn--md" @click="mobileOpen = false; $dispatch('open-auth', 'register')">Kayıt ol</button>
+      </div>
+      @end
+
+      @if(ui('scheme_switch'))
+      <div class="flex items-center justify-between gap-3 border-t border-(--t-border) pt-4">
+        <span class="text-sm font-semibold text-(--t-text-2)">Görünüm</span>
+        @!component('components/ui/theme_switch', { labels: true })
       </div>
       @end
     </div>
   </div>
-</nav>
+</header>
 @end

@@ -1,0 +1,37 @@
+{{--
+  Section heading row: <h2> (or `level`) with optional icon and description, a "Tümünü gör"
+  link and extra actions.
+  Props: title, id (heading id, for aria-labelledby on the section), description, icon,
+         href, linkLabel ('Tümünü gör'), level (h2), class. Slot: actions.
+--}}
+@let(level = $props.get('level', 'h2'))
+<div class="section-head {{ $props.get('class', '') }}">
+  <div class="min-w-0">
+    <{{ level }} class="section-head__title"
+      @if($props.get('id'))
+      id="{{ $props.get('id') }}"
+      @end
+      >
+      @if($props.get('icon'))
+      @!component('components/icon', { name: $props.get('icon') })
+      @end
+      {{ $props.get('title', '') }}
+    </{{ level }}>
+    @if($props.get('description'))
+    <p class="section-head__desc">{{ $props.get('description') }}</p>
+    @end
+  </div>
+  @if($slots.actions || $props.get('href'))
+  <div class="flex flex-wrap items-center gap-2">
+    @if($slots.actions)
+    {{{ await $slots.actions() }}}
+    @end
+    @if($props.get('href'))
+    <a href="{{ $props.get('href') }}" class="section-head__link">
+      {{ $props.get('linkLabel', 'Tümünü gör') }}
+      @!component('components/icon', { name: 'arrow-right', class: 'h-4 w-4' })
+    </a>
+    @end
+  </div>
+  @end
+</div>

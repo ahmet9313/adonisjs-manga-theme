@@ -1,5 +1,5 @@
 import { invalidField } from '#services/upload_service'
-import { now, slugify, pageNumber, pageSize } from '#services/input_service'
+import { now, slugify, pageNumber, pageSize, searchText } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
 import Genre from '#models/genre'
 import vine from '@vinejs/vine'
@@ -10,23 +10,51 @@ const genreValidator = vine.compile(
   })
 )
 
+/** Labels of the shared dictionary pages (pages/admin/dictionary/*). */
+const dictionary = {
+  label: 'Türler',
+  singular: 'Tür',
+  base: '/admin/turler',
+  description: 'Serileri sınıflandıran türler. Seri sayfalarında ve katalog filtresinde görünür.',
+  nameLabel: 'Tür adı',
+  placeholder: 'ör. Aksiyon',
+  maxLength: 100,
+  addLabel: 'Tür ekle',
+  slugNote: 'Adres (slug) addan oluşturulur; ad değişince yenilenir.',
+  catalogParam: 'genre',
+  catalogField: 'name',
+  emptyTitle: 'Henüz tür eklenmemiş',
+  emptyText: 'İlk türü yukarıdaki formdan ekleyin; seri formunda hemen seçilebilir.',
+  deleteTitle: 'Tür silinsin mi?',
+  deleteUsed: 'türü silinecek ve {n} seriden kaldırılacak. Seriler silinmez.',
+  deleteUnused: 'türü silinecek. Hiçbir seride kullanılmıyor.',
+  restrictDelete: false,
+}
+
 export default class GenreController {
   async index({ view, request }: HttpContext) {
     const page = pageNumber(request.input('page'))
     const perPage = pageSize(request.input('per_page'))
-    const genres = await Genre.query().orderBy('name', 'asc').paginate(page, perPage)
+    const search = searchText(request.input('q'))
+    const genres = await Genre.query()
+      .withCount('series')
+      .if(search, (query) => query.where('name', 'like', `%${search}%`))
+      .orderBy('name', 'asc')
+      .paginate(page, perPage)
     genres.baseUrl('/admin/turler')
-    genres.queryString({ per_page: perPage })
-    return view.render('pages/admin/genres/index', {
+    genres.queryString({ per_page: perPage, ...(search ? { q: search } : {}) })
+    return view.render('pages/admin/dictionary/index', {
       title: 'Türler',
-      genres,
+      dictionary,
+      items: genres,
       paginator: genres,
       perPage,
+      search,
     })
   }
 
   async create({ view }: HttpContext) {
-    return view.render('pages/admin/genres/form', { title: 'Yeni Tür Ekle' })
+    return view.render('pages/admin/dictionary/form', { title: 'Yeni Tür Ekle', dictionary })
   }
 
   async store({ request, session, response }: HttpContext) {
@@ -39,6 +67,7 @@ export default class GenreController {
       .orWhere('slug', slugify(data.name))
       .first()
     if (existing) {
+      session.flashExcept(['_csrf', '_method'])
       session.flash('error', 'Bu tür zaten mevcut')
       return response.redirect('/admin/turler/ekle')
     }
@@ -50,8 +79,13 @@ export default class GenreController {
   }
 
   async edit({ view, params }: HttpContext) {
-    const genre = await Genre.findOrFail(params.id)
-    return view.render('pages/admin/genres/form', { title: 'Tür Düzenle', genre })
+    const genre = await Genre.query().where('id', params.id).withCount('series').firstOrFail()
+    return view.render('pages/admin/dictionary/form', {
+      title: 'Tür Düzenle',
+      dictionary,
+      item: genre,
+      usage: Number(genre.$extras.series_count || 0),
+    })
   }
 
   async update({ request, params, session, response }: HttpContext) {
@@ -65,6 +99,7 @@ export default class GenreController {
       .whereNot('id', genre.id)
       .first()
     if (existing) {
+      session.flashExcept(['_csrf', '_method'])
       session.flash('error', 'Bu isimde başka bir tür zaten mevcut')
       return response.redirect(`/admin/turler/${genre.id}/duzenle`)
     }

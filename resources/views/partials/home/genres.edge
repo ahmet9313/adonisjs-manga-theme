@@ -1,0 +1,24 @@
+{{--
+  "Türlere Göre Keşfet" (switch home_genres): every genre that has series, the largest first, as
+  chips that open the catalog filtered by that genre (/seriler?genre=<ad>).
+--}}
+<section class="section" aria-labelledby="home-genres-title">
+  @!component('components/ui/section_head', {
+    title: 'Türlere Göre Keşfet',
+    id: 'home-genres-title',
+    icon: 'tag',
+    description: 'Bir tür seç, katalog o türdeki serilerle açılsın',
+    href: '/seriler',
+    linkLabel: 'Kataloğu aç'
+  })
+  <ul class="home-genres">
+    @each(genre in genres)
+    <li>
+      <a href="/seriler?genre={{ encodeURIComponent(genre.name) }}" class="chip">
+        {{ genre.name }}
+        <span class="chip__count">{{ genre.total }}<span class="sr-only"> seri</span></span>
+      </a>
+    </li>
+    @end
+  </ul>
+</section>

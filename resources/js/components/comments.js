@@ -1,5 +1,5 @@
 import { csrfToken } from './library.js'
-import { tierOf } from './community.js'
+import { tierOf, toast } from './shared.js'
 
 const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const maxBytes = 8 * 1024 * 1024
@@ -22,12 +22,36 @@ export function shortTime(iso) {
   })
 }
 
-/** Absolute stamp shown under names: 08/12/2025, 11:20. */
+/** Relative time under author names: "az önce", "5 dk önce", "3 gün önce", then the date. */
+export function timeAgo(iso) {
+  const date = new Date(iso)
+  const seconds = Math.max(0, (Date.now() - date.getTime()) / 1000)
+  if (!Number.isFinite(seconds)) return ''
+  if (seconds < 90) return 'az önce'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} dk önce`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} sa önce`
+  if (seconds < 7 * 86400) return `${Math.floor(seconds / 86400)} gün önce`
+  if (seconds < 30 * 86400) return `${Math.floor(seconds / (7 * 86400))} hafta önce`
+  return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/** Absolute stamp (title of the time): 08/12/2025, 11:20. */
 export function stamp(iso) {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
   const pad = (value) => String(value).padStart(2, '0')
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+/** Scrolls to an element (optional) and flashes its outline (class c-flash). */
+export function flash(element, scroll = true) {
+  if (!element) return
+  if (scroll) element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  element.classList.remove('c-flash')
+  // Restart the animation when the same target is flashed twice.
+  void element.offsetWidth
+  element.classList.add('c-flash')
+  setTimeout(() => element.classList.remove('c-flash'), 2000)
 }
 
 const emptyComposer = () => ({
@@ -42,8 +66,9 @@ const emptyComposer = () => ({
 })
 
 /**
- * Threaded comments. The tree is kept as a node map and rendered as a flat list with depth,
- * because Alpine has no recursive templates. Replies load lazily per comment.
+ * Threaded comments (partials/comments/section.edge). The tree is kept as a node map and
+ * rendered as a flat list with depth, because Alpine has no recursive templates. Replies load
+ * lazily per comment. With data-lazy the first page loads when the section comes into view.
  */
 export default function commentSection() {
   return {
@@ -58,6 +83,8 @@ export default function commentSection() {
     page: 1,
     hasMore: false,
     loading: false,
+    /** True once the first page answered (or failed); before that the skeleton shows. */
+    ready: false,
     loadError: '',
     replyingTo: null,
     composers: { root: emptyComposer() },
@@ -69,7 +96,24 @@ export default function commentSection() {
     init() {
       const config = JSON.parse(this.$el.dataset.config)
       Object.assign(this, { seriesId: config.seriesId, chapterId: config.chapterId, me: config.me })
+      if (this.$el.dataset.lazy && 'IntersectionObserver' in window) {
+        this.observer = new IntersectionObserver(
+          (entries) => {
+            if (!entries.some((entry) => entry.isIntersecting)) return
+            this.observer.disconnect()
+            this.observer = null
+            this.load(true)
+          },
+          { rootMargin: '600px 0px' }
+        )
+        this.observer.observe(this.$el)
+        return
+      }
       this.load(true)
+    },
+
+    destroy() {
+      this.observer?.disconnect()
     },
 
     url(path, params = {}) {
@@ -109,9 +153,10 @@ export default function commentSection() {
         this.total = data.total
         this.counts = { roots: data.roots ?? data.total, replies: data.replies ?? 0 }
       } catch {
-        this.loadError = 'Yorumlar yüklenemedi.'
+        this.loadError = 'Yorumlar yüklenemedi. Bağlantını kontrol edip tekrar dene.'
       }
       this.loading = false
+      this.ready = true
     },
 
     changeSort(sort) {
@@ -159,17 +204,10 @@ export default function commentSection() {
 
     /** Scrolls to the comment a reply answers and flashes it. */
     jumpTo(id) {
-      const element = document.getElementById(`yorum-${id}`)
-      if (!element) return
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      element.classList.remove('c-flash')
-      // Restart the animation when the same target is clicked twice.
-      void element.offsetWidth
-      element.classList.add('c-flash')
-      setTimeout(() => element.classList.remove('c-flash'), 2000)
+      flash(document.getElementById(`yorum-${id}`))
     },
 
-    /** "Yanıtları görüntüle": shows the preview (or fetches the first page) and hides it again. */
+    /** "N yanıt": shows the preview (or fetches the first page) and hides it again. */
     toggleReplies(id) {
       const node = this.nodes[id]
       if (!node) return
@@ -199,7 +237,7 @@ export default function commentSection() {
         node.hasMore = data.hasMore
         if (!data.hasMore) node.replyCount = node.children.length
       } catch {
-        this.loadError = 'Yanıtlar yüklenemedi.'
+        toast('Yanıtlar yüklenemedi. Lütfen tekrar dene.', 'error')
       }
       node.loadingReplies = false
     },
@@ -267,8 +305,10 @@ export default function commentSection() {
 
     canSend(key) {
       const state = this.composer(key)
-      return (
-        !state.busy && (state.text.trim() || state.file || state.sticker) && state.text.length <= maxLength
+      return Boolean(
+        !state.busy &&
+        (state.text.trim() || state.file || state.sticker) &&
+        state.text.length <= maxLength
       )
     },
 
@@ -334,6 +374,10 @@ export default function commentSection() {
         else this.counts.replies++
         this.clearImage(key)
         Object.assign(state, { text: '', sticker: null, spoiler: false, busy: false })
+        const textarea = document.getElementById('comment-root')
+        if (key === 'root' && textarea) textarea.style.height = ''
+        // Point at the new comment once it is rendered.
+        this.$nextTick(() => flash(document.getElementById(`yorum-${data.id}`), key !== 'root'))
       } catch {
         state.error = 'Sunucuya ulaşılamadı.'
         state.busy = false
@@ -356,6 +400,7 @@ export default function commentSection() {
     async vote(id, value) {
       if (!this.me) return this.$dispatch('open-auth', 'login')
       const node = this.nodes[id]
+      if (!node) return
       const before = { vote: node.vote, likeCount: node.likeCount, dislikeCount: node.dislikeCount }
       const next = node.vote === value ? 0 : value
       if (node.vote === 1) node.likeCount--
@@ -383,23 +428,21 @@ export default function commentSection() {
         })
       } catch {
         Object.assign(node, before)
+        toast('Oy kaydedilemedi. Lütfen tekrar dene.', 'error')
       }
     },
 
-    confirmingDelete: null,
-
+    /** Deletes a comment; the confirmation dialog (form data-confirm) has already asked. */
     async remove(id) {
-      if (this.confirmingDelete !== id) {
-        this.confirmingDelete = id
-        return
-      }
-      this.confirmingDelete = null
       const node = this.nodes[id]
+      if (!node) return
       try {
         const { deleted } = await this.post(`/yorumlar/${id}/sil`)
         this.total = Math.max(0, this.total - 1)
         if (node.parentId) this.counts.replies = Math.max(0, this.counts.replies - 1)
         else this.counts.roots = Math.max(0, this.counts.roots - 1)
+        if (this.replyingTo === id) this.replyingTo = null
+        toast('Yorum silindi.', 'success')
         if (deleted === 'soft') {
           Object.assign(node, {
             deleted: true,
@@ -419,9 +462,10 @@ export default function commentSection() {
         } else {
           this.roots = this.roots.filter((root) => root !== id)
         }
-        delete this.nodes[id]
+        // Drop the node after its row has left the list.
+        this.$nextTick(() => delete this.nodes[id])
       } catch {
-        this.loadError = 'Yorum silinemedi.'
+        toast('Yorum silinemedi. Lütfen tekrar dene.', 'error')
       }
     },
 
@@ -430,7 +474,11 @@ export default function commentSection() {
     },
 
     time: shortTime,
+    ago: timeAgo,
     stamp,
     tierOf,
   }
 }
+
+/** Alpine components of this module, registered by resources/js/app.js. */
+export const components = { commentSection }

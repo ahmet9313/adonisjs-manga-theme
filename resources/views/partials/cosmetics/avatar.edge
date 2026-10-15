@@ -1,0 +1,27 @@
+{{--
+  The visitor's avatar inside the cosmetics store, drawn by Alpine (`me` and the helpers come from
+  cosmeticStore): the photo, the coloured initial when there is no photo, or a neutral silhouette
+  for guests, with a frame on top (same markup as components/avatar).
+  Props: size (Tailwind size classes), text (initial font size), frame (Alpine expression of a
+         visual { cls?, img? } or null; a fixed expression from the template, never user data).
+--}}
+@let(frame = $props.get('frame', 'null'))
+<span class="relative inline-flex shrink-0 {{ $props.get('size', 'h-12 w-12') }}">
+  <span class="relative inline-flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-(--t-border-strong)">
+    <template x-if="me && me.avatar">
+      <img :src="me.avatar" alt="" class="absolute inset-0 h-full w-full object-cover" decoding="async">
+    </template>
+    <template x-if="me && !me.avatar">
+      <span class="absolute inset-0 flex items-center justify-center font-bold text-on-image {{ $props.get('text', 'text-base') }}" :style="avatarStyle()" x-text="initial()"></span>
+    </template>
+    <span x-show="!me" class="cos-guest" aria-hidden="true">
+      @!component('components/icon', { name: 'user' })
+    </span>
+  </span>
+  <template x-if="({{ frame }}) && ({{ frame }}).img">
+    <img :src="({{ frame }}).img" alt="" class="avatar-frame-img" decoding="async">
+  </template>
+  <template x-if="({{ frame }}) && !({{ frame }}).img && ({{ frame }}).cls">
+    <span class="avatar-frame" :class="({{ frame }}).cls" aria-hidden="true"></span>
+  </template>
+</span>

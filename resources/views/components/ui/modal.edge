@@ -1,0 +1,57 @@
+{{--
+  Dialog or drawer (class `modal`, see components.css). Put it INSIDE the element that owns the
+  Alpine state; the dialog is teleported to <body> and keeps that scope.
+  Props: id (required; title id = id + '-title'), title, description, size sm|md|lg|xl|drawer (md),
+         open (Alpine expression, 'open'), close (Alpine statement, 'open = false'),
+         titleExpr (Alpine expression for a dynamic title), class (panel).
+  Slots: main (body), footer (buttons), head (extra content next to the title).
+  Escape closes only the top dialog ($layers), focus stays inside (x-trap) and returns afterwards.
+    <div x-data="inbox" @open-inbox.window="show()">
+      @component('components/ui/modal', { id: 'inbox', title: 'Gelen Kutusu', size: 'drawer', close: 'close()' })
+        …
+      @end
+    </div>
+--}}
+@let(id = $props.get('id'))
+@let(openExpr = $props.get('open', 'open'))
+@let(closeExpr = $props.get('close', 'open = false'))
+<template x-teleport="body">
+  <div x-cloak x-show="{{ openExpr }}" x-transition.opacity.duration.150ms
+       x-effect="$layers.sync('{{ id }}', {{ openExpr }})"
+       @keydown.escape.window="if ({{ openExpr }} && $layers.isTop('{{ id }}')) { {{ closeExpr }} }"
+       @click.self="{{ closeExpr }}"
+       class="modal modal--{{ $props.get('size', 'md') }}">
+    <div role="dialog" aria-modal="true" aria-labelledby="{{ id }}-title"
+         @if($props.get('description'))
+         aria-describedby="{{ id }}-desc"
+         @end
+         x-trap.inert.noscroll="{{ openExpr }}" class="modal__panel {{ $props.get('class', '') }}">
+      <div class="modal__head">
+        <div class="min-w-0">
+          <h2 id="{{ id }}-title" class="modal__title"
+            @if($props.get('titleExpr'))
+            x-text="{{ $props.get('titleExpr') }}"
+            @end
+            >{{ $props.get('title', '') }}</h2>
+          @if($props.get('description'))
+          <p id="{{ id }}-desc" class="modal__desc">{{ $props.get('description') }}</p>
+          @end
+          @if($slots.head)
+          {{{ await $slots.head() }}}
+          @end
+        </div>
+        <button type="button" class="btn btn--ghost btn--sm btn--icon modal__close" @click="{{ closeExpr }}" aria-label="Kapat">
+          @!component('components/icon', { name: 'x', class: 'btn__icon' })
+        </button>
+      </div>
+      <div class="modal__body">
+        {{{ await $slots.main() }}}
+      </div>
+      @if($slots.footer)
+      <div class="modal__footer">
+        {{{ await $slots.footer() }}}
+      </div>
+      @end
+    </div>
+  </div>
+</template>

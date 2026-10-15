@@ -1,0 +1,37 @@
+{{--
+  Chapter navigation row: previous, chapter picker, next. `navId` ('top' when the toolbar is
+  switched off, 'bottom' after the end card) keeps the ids unique. Disabled buttons keep the
+  layout when there is no previous or next chapter.
+--}}
+<nav class="reader-nav" aria-label="{{ navId === 'top' ? 'Bölüm gezintisi' : 'Bölüm gezintisi (alt)' }}">
+  @if(prevChapter)
+  <a href="{{ chapterUrl(prevChapter.number) }}" rel="prev" class="btn btn--secondary btn--md reader-nav__prev">
+    @!component('components/icon', { name: 'chevron-left', class: 'btn__icon' })
+    <span>Önceki bölüm</span>
+  </a>
+  @else
+  <button type="button" class="btn btn--secondary btn--md reader-nav__prev" disabled>
+    @!component('components/icon', { name: 'chevron-left', class: 'btn__icon' })
+    <span>Önceki bölüm</span>
+  </button>
+  @end
+
+  <label for="reader-chapter-{{ navId }}" class="sr-only">Bölüm seç</label>
+  <select id="reader-chapter-{{ navId }}" class="control reader-nav__select" @change="pick($event)" @keydown="pickKey($event)" @blur="pickBlur()">
+    @each(item in allChapters)
+    <option value="{{ item.number }}" {{ item.number === chapter.number ? 'selected' : '' }}>Bölüm {{ item.number }}{{ item.title ? ': ' + item.title : '' }}</option>
+    @end
+  </select>
+
+  @if(nextChapter)
+  <a href="{{ chapterUrl(nextChapter.number) }}" rel="next" class="btn btn--secondary btn--md reader-nav__next">
+    <span>Sonraki bölüm</span>
+    @!component('components/icon', { name: 'chevron-right', class: 'btn__icon' })
+  </a>
+  @else
+  <button type="button" class="btn btn--secondary btn--md reader-nav__next" disabled>
+    <span>Sonraki bölüm</span>
+    @!component('components/icon', { name: 'chevron-right', class: 'btn__icon' })
+  </button>
+  @end
+</nav>

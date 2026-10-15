@@ -1,0 +1,48 @@
+{{--
+  Button or link styled as a button (class `btn`, see components.css).
+  Props: variant primary|secondary|ghost|danger|danger-solid|link (default secondary),
+         size sm|md|lg (md), href (renders <a>), type (button), icon, iconRight,
+         label (icon-only buttons: becomes aria-label), block, loading, class.
+  Every other prop is forwarded as an attribute ('@click', ':disabled', 'aria-pressed', name …).
+  Edge tags must start a line:
+    @component('components/ui/button', { variant: 'primary', href: '/seriler', iconRight: 'arrow-right' })
+      Serilere göz at
+    @end
+    @!component('components/ui/button', { variant: 'ghost', icon: 'x', label: 'Kapat', '@click': 'open = false' })
+--}}
+@let(body = (await $slots.main()).trim())
+@let(variant = $props.get('variant', 'secondary'))
+@let(label = $props.get('label', ''))
+@let(href = $props.get('href', ''))
+@let(classes = ['btn', 'btn--' + variant, 'btn--' + $props.get('size', 'md'), $props.get('block') ? 'btn--block' : '', label && !body ? 'btn--icon' : '', $props.get('class', '')].filter(Boolean).join(' '))
+@let(rest = $props.except(['variant', 'size', 'href', 'type', 'icon', 'iconRight', 'label', 'block', 'loading', 'class']))
+@if(href)
+<a href="{{ href }}" class="{{ classes }}"
+  @if(label)
+  aria-label="{{ label }}"
+  @end
+  {{{ attrs(rest.all()) }}}>
+@else
+<button type="{{ $props.get('type', 'button') }}" class="{{ classes }}"
+  @if(label)
+  aria-label="{{ label }}"
+  @end
+  @if($props.get('loading'))
+  aria-busy="true" disabled
+  @end
+  {{{ attrs(rest.all()) }}}>
+@end
+  @if($props.get('icon'))
+  @!component('components/icon', { name: $props.get('icon'), class: 'btn__icon' })
+  @end
+  @if(body)
+  <span>{{{ body }}}</span>
+  @end
+  @if($props.get('iconRight'))
+  @!component('components/icon', { name: $props.get('iconRight'), class: 'btn__icon' })
+  @end
+@if(href)
+</a>
+@else
+</button>
+@end

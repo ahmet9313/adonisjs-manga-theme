@@ -1,6 +1,6 @@
 import { csrfToken } from './library.js'
-import { tierOf } from './community.js'
-import { shortTime, stamp } from './comments.js'
+import { tierOf, toast } from './shared.js'
+import { shortTime, stamp, timeAgo } from './comments.js'
 
 const emptyForm = () => ({
   rating: 0,
@@ -13,9 +13,13 @@ const emptyForm = () => ({
   open: false,
 })
 
+/** Keys of the 1–10 radiogroup: step, or jump to an end. */
+const ratingKeys = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }
+
 /**
- * Series page: rating summary, the reader's own rating/review form and the list of reviews.
- * Everything is loaded from /incelemeler; the first summary comes with the page.
+ * Series page: rating summary, the reader's own rating/review form and the list of reviews
+ * (partials/reviews/section.edge). The list is loaded from /incelemeler; the first summary
+ * comes with the page.
  */
 export default function reviewSection() {
   return {
@@ -28,13 +32,14 @@ export default function reviewSection() {
     page: 1,
     hasMore: false,
     loading: false,
+    /** True once the first page answered (or failed); before that the skeleton shows. */
+    ready: false,
     loadError: '',
     sort: 'helpful',
     withText: true,
     form: emptyForm(),
     expanded: {},
     revealed: {},
-    confirmingDelete: null,
 
     init() {
       const config = JSON.parse(this.$el.dataset.config)
@@ -86,9 +91,10 @@ export default function reviewSection() {
         if (data.summary) this.summary = data.summary
         if (page === 1 && 'mine' in data) this.setMine(data.mine)
       } catch {
-        this.loadError = 'İncelemeler yüklenemedi.'
+        this.loadError = 'İncelemeler yüklenemedi. Bağlantını kontrol edip tekrar dene.'
       }
       this.loading = false
+      this.ready = true
     },
 
     changeSort(sort) {
@@ -119,11 +125,45 @@ export default function reviewSection() {
     openForm() {
       if (!this.me) return this.$dispatch('open-auth', 'login')
       this.form.open = true
-      this.$nextTick(() => document.getElementById('review-body')?.focus())
+      this.$nextTick(() => {
+        document
+          .getElementById('inceleme-formu')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        const target = this.form.rating
+          ? document.getElementById('review-body')
+          : this.$el.querySelector('[role="radio"][tabindex="0"]')
+        target?.focus({ preventScroll: true })
+      })
+    },
+
+    /** "Vazgeç": closes the form and drops unsaved changes (back to the saved rating, if any). */
+    closeForm() {
+      Object.assign(this.form, { ...emptyForm(), open: false })
+      if (this.mine) this.setMine(this.mine)
     },
 
     label(rating) {
       return rating ? `${rating} · ${this.labels[rating - 1]}` : 'Puan seç'
+    },
+
+    pick(score) {
+      this.form.rating = score
+      this.form.error = ''
+    },
+
+    /** Radiogroup keys: arrows move and select (wrapping), Home/End jump to 1/10. */
+    onRatingKey(event) {
+      const step = ratingKeys[event.key]
+      let next = null
+      if (step) next = (((this.form.rating || (step > 0 ? 0 : 11)) + step - 1 + 10) % 10) + 1
+      else if (event.key === 'Home') next = 1
+      else if (event.key === 'End') next = 10
+      if (next === null) return
+      event.preventDefault()
+      this.pick(next)
+      // currentTarget is reset after dispatch; keep the group for the next tick (roving tabindex).
+      const group = event.currentTarget
+      this.$nextTick(() => group?.querySelector(`[data-score="${next}"]`)?.focus())
     },
 
     canSend() {
@@ -132,11 +172,16 @@ export default function reviewSection() {
 
     async submit() {
       if (!this.me) return this.$dispatch('open-auth', 'login')
-      if (!this.canSend()) return
       const form = this.form
+      if (form.rating < 1) {
+        form.error = 'Önce 1 ile 10 arasında bir puan seç.'
+        return
+      }
+      if (!this.canSend()) return
       const body = form.body.trim()
       if (body && body.length < 10) {
-        form.error = 'İnceleme en az 10 karakter olmalı. Yalnızca puan vermek için boş bırakabilirsin.'
+        form.error =
+          'İnceleme en az 10 karakter olmalı. Yalnızca puan vermek için boş bırakabilirsin.'
         return
       }
       form.busy = true
@@ -163,10 +208,12 @@ export default function reviewSection() {
           form.busy = false
           return
         }
+        const updated = Boolean(this.mine)
         this.summary = data.summary
         this.setMine(data.mine)
         form.open = false
         form.busy = false
+        toast(updated ? 'Puanın güncellendi.' : 'Puanın kaydedildi. Teşekkürler!', 'success')
         this.load(true)
       } catch {
         form.error = 'Sunucuya ulaşılamadı.'
@@ -174,12 +221,8 @@ export default function reviewSection() {
       }
     },
 
+    /** Deletes a review; the confirmation dialog (form data-confirm) has already asked. */
     async remove(item) {
-      if (this.confirmingDelete !== item.id) {
-        this.confirmingDelete = item.id
-        return
-      }
-      this.confirmingDelete = null
       try {
         const response = await fetch(`/incelemeler/${item.id}/sil`, {
           method: 'POST',
@@ -194,8 +237,9 @@ export default function reviewSection() {
           this.mine = null
           Object.assign(this.form, emptyForm())
         }
+        toast('İnceleme silindi.', 'success')
       } catch {
-        this.loadError = 'İnceleme silinemedi.'
+        toast('İnceleme silinemedi. Lütfen tekrar dene.', 'error')
       }
     },
 
@@ -215,6 +259,7 @@ export default function reviewSection() {
         Object.assign(item, await response.json())
       } catch {
         Object.assign(item, before)
+        toast('Oy kaydedilemedi. Lütfen tekrar dene.', 'error')
       }
     },
 
@@ -227,7 +272,11 @@ export default function reviewSection() {
     },
 
     time: shortTime,
+    ago: timeAgo,
     stamp,
     tierOf,
   }
 }
+
+/** Alpine components of this module, registered by resources/js/app.js. */
+export const components = { reviewSection }

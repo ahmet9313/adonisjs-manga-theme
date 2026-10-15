@@ -1,148 +1,233 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin chapter form (create and edit), driven by `chapterForm` (resources/js/components/
+  chapter_form.js): series combobox, page manager for image series (drop zone, drag or buttons
+  to reorder, refused files) or a large text area for novels, upload progress in the save bar.
+  Posted fields are unchanged: series_id, number, title, pages (files), page_order (JSON), text_content.
+--}}
+@let(isEdit = Boolean(chapter))
+@let(oldSeries = flashMessages.get('series_id'))
+@let(initialSeries = oldSeries ? Number(oldSeries) : (isEdit ? chapter.seriesId : (preSelectedSeriesId || '')))
+@let(seriesOptions = seriesList.map((s) => ({ id: s.id, title: s.title, typeName: s.contentType ? s.contentType.name.charAt(0).toLocaleUpperCase('tr') + s.contentType.name.slice(1) : '-', type: s.contentType ? s.contentType.slug : '', cover: s.coverImage || '/images/no-cover.svg' })))
+@let(formConfig = { seriesId: initialSeries, contentTypes: seriesContentTypeMap, series: seriesOptions, pages: isEdit && chapter.content.type === 'images' ? chapter.content.pages : [] })
+@let(action = isEdit ? '/admin/bolumler/' + chapter.id + '/duzenle' : '/admin/bolumler/ekle')
+@let(listUrl = '/admin/bolumler' + (initialSeries ? '?series_id=' + initialSeries : ''))
+@let(readerUrl = isEdit && chapter.series && chapter.series.contentType ? '/series/' + chapter.series.contentType.slug + '/' + chapter.series.slug + '/' + chapter.number : '')
+@let(seriesError = flashMessages.has('inputErrorsBag.series_id') ? flashMessages.get('inputErrorsBag.series_id')[0] : '')
+@let(pagesError = flashMessages.has('inputErrorsBag.pages') ? flashMessages.get('inputErrorsBag.pages')[0] : (flashMessages.has('inputErrorsBag.page_order') ? flashMessages.get('inputErrorsBag.page_order')[0] : ''))
+@component('components/layout/admin', {
+  title: isEdit ? (chapter.series ? chapter.series.title + ' · ' : '') + 'Bölüm ' + chapter.number : title,
+  description: isEdit ? 'Bölüm bilgilerini, sayfalarını veya metnini düzenleyin.' : 'Seriyi seçin; içerik alanı serinin türüne göre görsel sayfalar ya da metin olarak açılır.',
+  crumbs: [{ label: 'Bölümler', href: '/admin/bolumler' }, { label: isEdit ? 'Düzenle' : 'Yeni bölüm' }]
+})
+  @slot('actions')
+    @if(readerUrl)
+    @component('components/ui/button', { href: readerUrl, iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Okuyucuda aç
+    @end
+    @end
+  @end
 
-@slot('main')
-  <div class="max-w-5xl">
-    <div class="mb-4">
-      <a href="/admin/bolumler" class="text-gray-400 hover:text-gray-200 text-sm transition">← Bölümlere Dön</a>
-    </div>
+  @slot('main')
+    <form id="chapter-form" action="{{ action }}" method="POST" enctype="multipart/form-data" data-submit-once
+          x-data="chapterForm" data-form="{{ JSON.stringify(formConfig) }}" x-ref="chapterFormEl" @submit="prepareSubmit($event)">
+      {{ csrfField() }}
+      <input type="hidden" name="series_id" :value="seriesId" value="{{ initialSeries }}">
+      <p class="sr-only" aria-live="polite" x-text="announcement"></p>
 
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl p-6">
-      <h3 class="text-lg font-semibold text-gray-200 mb-6">{{ chapter ? 'Bölüm Düzenle' : 'Yeni Bölüm Ekle' }}</h3>
+      <div x-show="errors.length" x-cloak x-ref="errorBox" tabindex="-1" class="alert mb-6" data-tone="danger" role="alert">
+        @!component('components/icon', { name: 'exclamation' })
+        <div class="min-w-0 flex-1">
+          <p class="alert__title">Bölüm kaydedilemedi</p>
+          <ul class="mt-1 list-disc space-y-1 pl-5">
+            <template x-for="(message, index) in errors" :key="index">
+              <li x-text="message"></li>
+            </template>
+          </ul>
+        </div>
+      </div>
 
-      <form action="{{ chapter ? '/admin/bolumler/' + chapter.id + '/duzenle' : '/admin/bolumler/ekle' }}" method="POST" enctype="multipart/form-data" class="space-y-5"
-            x-data="chapterForm" data-form="{{ JSON.stringify({ seriesId: chapter ? chapter.seriesId : (preSelectedSeriesId || ''), contentTypes: seriesContentTypeMap, series: seriesList.map(s => ({ id: s.id, title: s.title, typeName: s.contentType?.name || '-' })), pages: chapter && chapter.content.type === 'images' ? chapter.content.pages : [] }) }}" x-ref="chapterFormEl" @submit="prepareSubmit($event)">
-        {{ csrfField() }}
-
-        {{-- Searchable Series Select --}}
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Seri</label>
-          <input type="hidden" name="series_id" :value="seriesId" required>
-          <div class="relative" @click.away="dropdownOpen = false">
-            <input type="text"
-                   x-model="searchQuery"
-                   @focus="dropdownOpen = true"
-                   @input="dropdownOpen = true"
-                   :placeholder="selectedSeriesName || 'Seri ara...'"
-                   class="w-full bg-(--t-field) border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none transition">
-            <div x-show="dropdownOpen" x-transition
-                 class="absolute z-50 mt-1 w-full bg-(--t-surface) border border-gray-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
-              <template x-for="s in filteredSeries" :key="s.id">
-                <div @click="selectSeries(s)"
-                     class="px-4 py-2.5 cursor-pointer hover:bg-gray-700/50 text-sm transition"
-                     :class="seriesId == s.id ? 'text-emerald-400 bg-emerald-900/20' : 'text-gray-300'">
-                  <span x-text="s.title"></span>
-                  <span class="text-gray-500 text-xs ml-1" x-text="'(' + s.typeName + ')'"></span>
-                </div>
-              </template>
-              <div x-show="filteredSeries.length === 0" class="px-4 py-3 text-sm text-gray-500">
-                Sonuç bulunamadı
+      <div class="admin-form">
+        @component('components/ui/panel', { title: 'Bölüm bilgileri', id: 'chapter-info' })
+          <div class="admin-fields">
+            <div class="field {{ seriesError ? 'field--invalid' : '' }}">
+              <label for="f-series" class="field__label">
+                Seri
+                <span class="field__req" aria-hidden="true">*</span>
+              </label>
+              <div class="admin-combo" @click.outside="if (dropdownOpen) closeList()">
+                <label class="control control--icon">
+                  @!component('components/icon', { name: 'search' })
+                  <input type="text" id="f-series" x-ref="seriesInput" x-model="searchQuery" autocomplete="off" spellcheck="false" placeholder="Seri adı yazın"
+                         role="combobox" aria-autocomplete="list" aria-controls="series-listbox" aria-describedby="f-series-hint f-series-error" aria-required="true"
+                         :aria-expanded="dropdownOpen.toString()" :aria-activedescendant="activeOptionId" :aria-invalid="seriesError ? 'true' : null"
+                         @click="openList()" @input="onSeriesInput()" @keydown="onSeriesKeydown($event)" @focus="$el.select()">
+                  @!component('components/icon', { name: 'chevron-down', class: 'admin-picker__caret' })
+                </label>
+                <ul id="series-listbox" role="listbox" aria-label="Seriler" class="menu admin-combo__list" x-show="dropdownOpen" x-cloak x-transition.opacity.duration.100ms>
+                  <template x-for="(s, index) in filteredSeries" :key="s.id">
+                    <li role="option" :id="'series-option-' + s.id" class="menu__item admin-option" :class="{ 'is-active': index === activeIndex, 'is-chosen': String(seriesId) === String(s.id) }"
+                        :aria-selected="(String(seriesId) === String(s.id)).toString()" @mousedown.prevent @click="selectSeries(s)" @mousemove="activeIndex = index">
+                      <img :src="s.cover" alt="" class="admin-thumb" width="28" height="37" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+                      <span class="min-w-0 flex-1 truncate" x-text="s.title"></span>
+                      <span class="badge badge--sm" :data-tone="['manga', 'manhwa', 'manhua', 'novel', 'webtoon'].includes(s.type) ? s.type : 'neutral'" x-text="s.typeName"></span>
+                    </li>
+                  </template>
+                  <li role="presentation" class="px-3 py-4 text-center text-sm text-muted" x-show="filteredSeries.length === 0">Bu adla bir seri yok.</li>
+                </ul>
               </div>
+              <p id="f-series-hint" class="field__hint">
+                <span x-show="!selectedSeries">Yazarak arayın; ok tuşlarıyla gezinip Enter ile seçin.</span>
+                <span x-show="selectedSeries" x-cloak>
+                  Seçili:
+                  <strong class="text-ink" x-text="selectedSeries ? selectedSeries.title : ''"></strong>
+                  ·
+                  <span x-text="contentType === 'novel' ? 'novel: metin bölümü' : 'görsel sayfalı bölüm'"></span>
+                </span>
+              </p>
+              <p id="f-series-error" class="field__error" role="alert" x-show="seriesError" x-text="seriesError" x-cloak></p>
+              @if(seriesError)
+              <p class="field__error" role="alert" x-show="!seriesError">{{ seriesError }}</p>
+              @end
+            </div>
+
+            <div class="admin-fields admin-fields--number">
+              @!component('components/ui/field', { name: 'number', label: 'Bölüm numarası', type: 'number', required: true, min: 0, step: 1, inputmode: 'numeric', value: isEdit ? chapter.number : '' })
+              @!component('components/ui/field', { name: 'title', label: 'Başlık', value: isEdit ? (chapter.title || '') : '', maxlength: 255, placeholder: 'ör. İlk Savaş', hint: 'İsteğe bağlı. Okuyucuda “Bölüm N” yanında görünür.' })
             </div>
           </div>
+        @end
+
+        <div x-show="!contentType" x-cloak>
+          @!component('components/ui/empty_state', { icon: 'book-open', title: 'Önce bir seri seçin', description: 'İçerik alanı serinin türüne göre açılır: manga, manhwa ve webtoon için sayfa görselleri, novel için bölüm metni.' })
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {{-- Chapter Number --}}
-          <div>
-            <label for="number" class="block text-sm font-medium text-gray-300 mb-1">Bölüm Numarası</label>
-            <input type="number" id="number" name="number" required min="0"
-                   value="{{ chapter ? chapter.number : '' }}"
-                   class="w-full bg-(--t-field) border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none transition">
+        <section class="panel" aria-labelledby="pages-title" x-show="contentType && contentType !== 'novel'" x-cloak>
+          <div class="panel__head">
+            <div class="min-w-0">
+              <h2 id="pages-title" class="panel__title">Sayfalar</h2>
+              <p class="panel__desc">Okuyucuda bu sırayla gösterilir. Sürükleyerek veya düğmelerle sıralayın.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2" x-show="allPages.length > 0">
+              <span class="badge" data-tone="neutral" x-text="allPages.length + ' sayfa'"></span>
+              <span class="badge" data-tone="accent" x-show="newCount > 0" x-text="newCount + ' yeni'"></span>
+            </div>
           </div>
 
-          {{-- Title (optional) --}}
-          <div>
-            <label for="title" class="block text-sm font-medium text-gray-300 mb-1">Başlık <span class="text-gray-500">(opsiyonel)</span></label>
-            <input type="text" id="title" name="title"
-                   value="{{ chapter ? (chapter.title || '') : '' }}"
-                   placeholder="Sadece açıklayıcı başlık (ör: İlk Savaş)"
-                   class="w-full bg-(--t-field) border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none transition">
-          </div>
-        </div>
-
-        {{-- Content type indicator --}}
-        <div x-show="contentType" x-transition>
-          <div class="px-4 py-2 rounded-lg text-sm" :class="contentType === 'novel' ? 'bg-purple-900/30 text-purple-300 border border-purple-800' : 'bg-emerald-900/30 text-emerald-300 border border-emerald-800'">
-            <span x-text="contentType === 'novel' ? 'Bu seri novel türünde — metin editörü kullanılacak' : 'Bu seri görsel türünde — sayfa resimleri yükleyiniz'"></span>
-          </div>
-        </div>
-
-        {{-- Image upload with drag-drop and reorder (non-novel) --}}
-        <div x-show="contentType && contentType !== 'novel'" x-transition>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Sayfa Resimleri</label>
-
-          <input type="file" name="pages" multiple accept="image/jpeg,image/png,image/webp" x-ref="pagesInput" class="hidden"
-                 @change="handleFileSelect($event)">
-
-          {{-- Hidden inputs for page order --}}
           <input type="hidden" name="page_order" :value="getPageOrderJSON()">
+          <label for="f-pages" class="dropzone" :class="{ 'is-over': imageDragging }"
+                 @dragover.prevent="imageDragging = true" @dragleave="if (!$el.contains($event.relatedTarget)) imageDragging = false"
+                 @drop.prevent="imageDragging = false; addFiles($event.dataTransfer.files)">
+            <input type="file" id="f-pages" name="pages" multiple accept="image/jpeg,image/png,image/webp" x-ref="pagesInput" class="sr-only"
+                   aria-describedby="f-pages-hint" @change="handleFileSelect($event)">
+            @!component('components/icon', { name: 'upload', class: 'h-7 w-7 text-accent' })
+            <span class="text-sm font-bold text-ink">Sayfa görsellerini seçin veya buraya sürükleyin</span>
+            <span id="f-pages-hint">JPG, PNG veya WebP · her biri en fazla 10 MB · birden çok dosya seçebilirsiniz</span>
+          </label>
+          @if(pagesError)
+          <p class="field__error mt-2" role="alert">{{ pagesError }}</p>
+          @end
 
-          {{-- Drop zone --}}
-          <div @click="$refs.pagesInput.click()"
-               @dragover.prevent="imageDragging = true"
-               @dragleave.prevent="imageDragging = false"
-               @drop.prevent="
-                 imageDragging = false;
-                 addFiles($event.dataTransfer.files);
-               "
-               :class="imageDragging ? 'border-emerald-500 bg-emerald-500/10' : 'border-gray-600 hover:border-gray-500'"
-               class="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all mb-4">
-            <svg class="mx-auto h-10 w-10 text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p class="text-sm text-gray-400">Resimleri sürükle & bırak veya <span class="text-emerald-400">tıklayarak seç</span></p>
-            <p class="text-xs text-gray-500 mt-1">JPG, PNG, WebP - Birden fazla resim seçebilirsiniz</p>
-          </div>
-
-          {{-- Unified preview grid with reorder --}}
-          <div x-show="allPages.length > 0" class="mb-3">
-            <p class="text-sm text-gray-400 mb-2">
-              <span x-text="allPages.length"></span> sayfa — sıralamak için sürükleyin
-            </p>
-            <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
-              <template x-for="(page, index) in allPages" :key="page.id">
-                <div class="relative group"
-                     draggable="true"
-                     @dragstart="dragStart(index, $event)"
-                     @dragover.prevent="dragOverIndex = index"
-                     @drop.prevent="reorderPages(index)"
-                     @dragend="dragStartIndex = null; dragOverIndex = null"
-                     :class="dragOverIndex === index ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-(--t-surface)' : ''">
-                  <div class="w-full aspect-[2/3] bg-gray-800 rounded-lg border border-gray-700 overflow-hidden relative">
-                    <img :src="page.preview" class="w-full h-full object-cover" x-show="page.preview">
-                    <div x-show="!page.preview" class="w-full h-full flex items-center justify-center text-gray-500 text-xs p-1 text-center" x-text="page.name"></div>
-                    {{-- Order number --}}
-                    <div class="absolute top-1 left-1 bg-black/70 text-(--t-heading) text-xs w-5 h-5 rounded flex items-center justify-center font-medium" x-text="index + 1"></div>
-                    {{-- Type badge --}}
-                    <div x-show="page.type === 'existing'" class="absolute bottom-1 left-1 bg-green-600/80 text-(--t-heading) text-[10px] px-1 rounded">mevcut</div>
-                    {{-- Remove button --}}
-                    <button type="button" @click.stop="removePage(index)"
-                            class="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-(--t-on-accent) w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                  </div>
-                </div>
-              </template>
+          <div x-show="rejected.length" x-cloak class="alert mt-4" data-tone="warning" role="alert">
+            @!component('components/icon', { name: 'exclamation' })
+            <div class="min-w-0 flex-1">
+              <p class="alert__title" x-text="rejected.length + ' dosya eklenmedi'"></p>
+              <ul class="mt-1 space-y-0.5 text-sm">
+                <template x-for="(file, index) in rejected" :key="index">
+                  <li class="truncate"><span class="font-semibold" x-text="file.name"></span>: <span x-text="file.reason"></span></li>
+                </template>
+              </ul>
             </div>
+            @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'x', label: 'Uyarıyı kapat', class: '-my-1', '@click': 'rejected = []' })
           </div>
-        </div>
 
-        {{-- Text content (novel) --}}
-        <div x-show="contentType === 'novel'" x-transition>
-          <label for="text_content" class="block text-sm font-medium text-gray-300 mb-1">Bölüm Metni</label>
-          <textarea id="text_content" name="text_content" rows="20"
-                    class="w-full bg-(--t-field) border border-gray-600 rounded-lg px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none transition font-mono text-sm leading-relaxed">{{ chapter && chapter.content && chapter.content.type === 'text' ? chapter.content.text : '' }}</textarea>
-        </div>
+          <ol class="admin-pages mt-5" x-show="allPages.length > 0" aria-label="Sayfa sırası" @dragover.prevent @drop.prevent="dropOnList($event)">
+            <template x-for="(page, index) in allPages" :key="page.id">
+              <li class="admin-page" :data-page-id="page.id" draggable="true"
+                  :class="{ 'is-dragging': dragStartIndex === index, 'is-target': dragOverIndex === index && dragStartIndex !== null && dragStartIndex !== index }"
+                  @dragstart="dragStart(index, $event)" @dragover.prevent="dragOverIndex = index" @drop.prevent.stop="dragStartIndex === null ? dropOnList($event) : reorderPages(index)"
+                  @dragend="dragStartIndex = null; dragOverIndex = null">
+                <div class="admin-page__thumb">
+                  <img :src="page.preview" alt="" x-show="page.preview" decoding="async" draggable="false">
+                  <span class="admin-page__num" x-text="index + 1"></span>
+                  <span class="admin-page__flag badge badge--sm badge--solid" data-tone="accent" x-show="page.type === 'new'">Yeni</span>
+                  <span class="admin-page__grip" aria-hidden="true">
+                    @!component('components/icon', { name: 'drag' })
+                  </span>
+                </div>
+                <p class="admin-page__name" x-text="page.type === 'new' ? page.name : 'Kayıtlı'" :title="page.type === 'new' ? page.name : 'Kayıtlı sayfa'"></p>
+                <div class="admin-page__tools">
+                  <button type="button" class="btn btn--ghost btn--sm btn--icon" data-tool="up" @click="movePage(index, -1)" :disabled="index === 0"
+                          :aria-label="'Sayfa ' + (index + 1) + ': bir öne al'" title="Öne al">
+                    @!component('components/icon', { name: 'arrow-left', class: 'btn__icon' })
+                  </button>
+                  <button type="button" class="btn btn--ghost btn--sm btn--icon" data-tool="down" @click="movePage(index, 1)" :disabled="index === allPages.length - 1"
+                          :aria-label="'Sayfa ' + (index + 1) + ': bir sonraya al'" title="Sonraya al">
+                    @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+                  </button>
+                  <button type="button" class="btn btn--ghost btn--sm btn--icon admin-danger" data-tool="remove" @click="removePage(index)"
+                          :aria-label="'Sayfa ' + (index + 1) + ': kaldır'" title="Kaldır">
+                    @!component('components/icon', { name: 'trash', class: 'btn__icon' })
+                  </button>
+                </div>
+              </li>
+            </template>
+          </ol>
+          <p class="mt-4 text-sm text-muted" x-show="allPages.length === 0">Henüz sayfa yok. Görseller dosya adına göre değil, seçtiğiniz sırayla eklenir.</p>
+        </section>
 
-        <button type="submit"
-                class="bg-gradient-to-r from-emerald-500 to-teal-600 text-(--t-on-accent) font-semibold px-6 py-2.5 rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all">
-          {{ chapter ? 'Güncelle' : 'Ekle' }}
-        </button>
+        <section class="panel" aria-labelledby="text-title" x-show="contentType === 'novel'" x-cloak>
+          <div class="panel__head">
+            <div class="min-w-0">
+              <h2 id="text-title" class="panel__title">Bölüm metni</h2>
+              <p class="panel__desc">Paragrafları boş satırla ayırın; okuyucuda aynen gösterilir.</p>
+            </div>
+            <span class="badge" data-tone="neutral" x-text="words.toLocaleString('tr-TR') + ' kelime'"></span>
+          </div>
+          @!component('components/ui/field', { name: 'text_content', label: 'Metin', type: 'textarea', rows: 22, value: isEdit && chapter.content && chapter.content.type === 'text' ? chapter.content.text : '', controlClass: 'admin-novel', '@input': 'countWords($event.target.value)' })
+        </section>
+      </div>
+
+      <div class="savebar">
+        <div class="admin-savebar__status" aria-live="polite">
+          <template x-if="uploading">
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+              <div class="min-w-40 flex-1" x-ref="progress" x-effect="paintProgress(progress)">
+                @!component('components/ui/progress', { label: 'Yükleme ilerlemesi', value: 0 })
+              </div>
+              <span class="t-num whitespace-nowrap text-xs font-semibold text-body" x-text="progressText"></span>
+              <button type="button" class="btn btn--ghost btn--sm" x-show="phase === 'upload'" @click="cancelUpload()">İptal</button>
+            </div>
+          </template>
+          <span x-show="!uploading && contentType && contentType !== 'novel'" x-text="allPages.length ? allPages.length + ' sayfa' + (newCount ? ' · ' + newCount + ' yeni yüklenecek' : ' · yeni yükleme yok') : 'Sayfa eklenmedi'"></span>
+          <span x-show="!uploading && contentType === 'novel'" x-cloak x-text="words.toLocaleString('tr-TR') + ' kelime'"></span>
+          <span x-show="!uploading && !contentType" x-cloak>Seri seçilmedi</span>
+        </div>
+        <div class="form-actions">
+          @component('components/ui/button', { variant: 'ghost', href: listUrl })
+            Vazgeç
+          @end
+          @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check', ':disabled': 'uploading', ':aria-busy': "uploading ? 'true' : null" })
+            {{ isEdit ? 'Değişiklikleri kaydet' : 'Bölümü ekle' }}
+          @end
+        </div>
+      </div>
+    </form>
+
+    @if(isEdit)
+    <section class="panel admin-danger-zone mt-6 flex flex-wrap items-center justify-between gap-4" aria-labelledby="danger-title">
+      <div class="min-w-0">
+        <h2 id="danger-title" class="panel__title">Bölümü sil</h2>
+        <p class="panel__desc">Bölüm ve ona yazılan yorumlar kalıcı olarak silinir. Geri alınamaz.</p>
+      </div>
+      <form action="/admin/bolumler/{{ chapter.id }}/sil" method="POST" data-submit-once
+            data-confirm="{{ chapter.series ? chapter.series.title + ' · ' : '' }}Bölüm {{ chapter.number }} ve bu bölüme yazılan yorumlar kalıcı olarak silinecek. Bu işlem geri alınamaz."
+            data-confirm-title="Bölüm silinsin mi?" data-confirm-label="Bölümü sil">
+        {{ csrfField() }}
+        @component('components/ui/button', { type: 'submit', variant: 'danger', icon: 'trash' })
+          Bölümü sil
+        @end
       </form>
-    </div>
-  </div>
-
-
-@end
-
+    </section>
+    @end
+  @end
 @end

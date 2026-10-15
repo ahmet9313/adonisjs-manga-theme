@@ -1,36 +1,103 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin → Tema → Duyuru Çubuğu: announcement_enabled ('on'), announcement_text (≤160),
+  announcement_url (/yol or http(s)://). The preview mirrors partials/announcement.edge and is
+  updated as you type (the values are read from the fields, never written into scripts).
+--}}
+@let(enabled = flashMessages.has('announcement_text') ? flashMessages.has('announcement_enabled') : Boolean(values.announcement_enabled))
+@let(text = flashMessages.get('announcement_text') ?? values.announcement_text)
+@let(url = flashMessages.get('announcement_url') ?? values.announcement_url)
+@let(live = Boolean(values.announcement_enabled && values.announcement_text))
+@component('components/layout/admin', {
+  title,
+  description: 'Sitenin her sayfasında, menünün üstünde tek satırlık bir duyuru gösterin.',
+  crumbs: [{ label: 'Tema', href: '/admin/tema/genel' }, { label: 'Duyuru Çubuğu' }]
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/', iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Siteyi aç<span class="sr-only"> (yeni sekmede)</span>
+    @end
+  @end
 
-@slot('main')
-  <div class="max-w-2xl rounded-xl border border-gray-700 bg-(--t-surface) p-6">
-    <h3 class="mb-1 text-lg font-semibold text-gray-200">Duyuru Çubuğu</h3>
-    <p class="mb-6 text-sm text-gray-500">Sitenin her sayfasında menünün üstünde tek satırlık bir duyuru gösterir.</p>
+  @slot('main')
+    @include('partials/admin/theme_nav')
 
-    <form action="/admin/tema/duyuru" method="POST" class="space-y-5">
-      {{ csrfField() }}
-      <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-700 bg-(--t-field) p-4">
-        <input type="checkbox" name="announcement_enabled" value="on" {{ values.announcement_enabled ? 'checked' : '' }} class="mt-1 h-4 w-4 accent-emerald-500">
-        <span>
-          <span class="block text-sm font-medium text-gray-200">Duyuru çubuğunu göster</span>
-          <span class="block text-xs text-gray-500">Kapalıyken metin saklanır ama sitede görünmez.</span>
-        </span>
-      </label>
-      <div>
-        <label for="announcement_text" class="mb-1 block text-sm font-medium text-gray-300">Metin</label>
-        <input id="announcement_text" name="announcement_text" type="text" maxlength="160"
-               value="{{ flashMessages.get('announcement_text') || values.announcement_text }}"
-               class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-        @!component('components/field_error', { field: 'announcement_text' })
-      </div>
-      <div>
-        <label for="announcement_url" class="mb-1 block text-sm font-medium text-gray-300">Bağlantı <span class="font-normal text-gray-500">(isteğe bağlı)</span></label>
-        <input id="announcement_url" name="announcement_url" type="text" maxlength="300" placeholder="/seriler veya https://…"
-               value="{{ flashMessages.get('announcement_url') || values.announcement_url }}"
-               class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-        @!component('components/field_error', { field: 'announcement_url' })
-      </div>
-      <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
-    </form>
-  </div>
-@end
+    <div class="te-page"
+         x-data="{ on: false, text: '', url: '' }"
+         x-init="on = $el.querySelector('#f-announcement_enabled').checked; text = $el.querySelector('#f-announcement_text').value; url = $el.querySelector('#f-announcement_url').value.trim()">
+      <section class="panel" aria-labelledby="announce-preview-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="announce-preview-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'eye' })
+              Önizleme
+            </h2>
+            <p class="panel__desc">Ziyaretçilerin göreceği hâli; siz yazdıkça güncellenir.</p>
+          </div>
+          @if(live)
+          <span class="badge" data-tone="success">Şu an sitede yayında</span>
+          @else
+          <span class="badge" data-tone="neutral">Şu an sitede görünmüyor</span>
+          @end
+        </div>
+        <div class="te-browser" aria-hidden="true">
+          <div class="te-browser__chrome">
+            <span class="te-browser__dots"><span></span><span></span><span></span></span>
+            <span class="te-browser__address">
+              @!component('components/icon', { name: 'lock' })
+              {{ request.host() }}
+            </span>
+          </div>
+          <div class="te-announce" :class="on && text.trim() ? '' : 'is-off'">
+            @!component('components/icon', { name: 'megaphone' })
+            <span x-show="on && text.trim()" :class="url ? 'is-link' : ''" x-text="text">{{ text }}</span>
+            <span x-show="!on" x-cloak>Duyuru çubuğu kapalı</span>
+            <span x-show="on && !text.trim()" x-cloak>Metin boşken çubuk gösterilmez</span>
+          </div>
+          <div class="te-mini-header">
+            <span class="logo">
+              <span class="logo__mark">{{ site.name.charAt(0).toUpperCase() }}</span>
+              <span class="logo__text">{{ site.name }}</span>
+            </span>
+            <span class="te-mini-nav">
+              <span class="is-active">Ana Sayfa</span>
+              <span>Seri Listesi</span>
+              <span>Öneriler</span>
+            </span>
+          </div>
+          <div class="te-browser__page">
+            <span class="te-skel te-skel--title"></span>
+            <span class="te-skel w-11/12"></span>
+            <span class="te-skel w-3/4"></span>
+          </div>
+        </div>
+      </section>
 
+      <section class="panel" aria-labelledby="announce-form-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="announce-form-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'megaphone' })
+              Duyuru
+            </h2>
+            <p class="panel__desc">Kapalıyken metin saklanır ama sitede görünmez.</p>
+          </div>
+        </div>
+        <form action="/admin/tema/duyuru" method="POST" class="grid gap-5" data-submit-once>
+          {{ csrfField() }}
+          @!component('components/ui/field', { name: 'announcement_enabled', label: 'Duyuru çubuğunu göster', type: 'toggle', value: enabled, 'x-on:change': 'on = $event.target.checked' })
+          <div class="te-counted">
+            @!component('components/ui/field', { name: 'announcement_text', label: 'Metin', value: text, maxlength: 160, autocomplete: 'off', placeholder: 'Örn: Yeni sezon başladı! Haftalık bölümler cuma günleri.', hint: 'Tek satır; en fazla 160 karakter.', 'x-on:input': 'text = $event.target.value' })
+            <span class="te-counter" aria-hidden="true"><span x-text="text.length">{{ (text || '').length }}</span> / 160</span>
+          </div>
+          @!component('components/ui/field', { name: 'announcement_url', label: 'Bağlantı (isteğe bağlı)', value: url, maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '/seriler veya https://…', hint: 'Site içi bir yol (/seriler) ya da http(s):// ile başlayan bir adres. Doluysa duyuru metni bağlantı olur.', 'x-on:input': 'url = $event.target.value.trim()' })
+          <div class="te-form-foot">
+            <p>Kaydettiğinizde tüm sayfalarda hemen güncellenir.</p>
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+              Kaydet
+            @end
+          </div>
+        </form>
+      </section>
+    </div>
+  @end
 @end

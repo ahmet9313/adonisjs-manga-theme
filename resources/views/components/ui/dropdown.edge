@@ -1,0 +1,36 @@
+{{--
+  Disclosure menu: a button that opens a panel of links/buttons (Alpine `dropdown`, ui.js).
+  Escape closes it and returns focus, arrow keys move through the items, clicks outside close it.
+  Props: id (panel id, required), label (button text; aria-label when iconOnly), icon,
+         iconOnly, align left|right (left), width (Tailwind width class, w-56),
+         buttonClass ('btn btn--secondary btn--md'), class (wrapper).
+  Slots: main (items: <a class="menu__item">, <button class="menu__item">, <div class="menu__sep">),
+         trigger (custom button content instead of icon + label).
+--}}
+@let(id = $props.get('id'))
+@let(label = $props.get('label', ''))
+@let(iconOnly = $props.get('iconOnly', false))
+<div x-data="dropdown" class="relative {{ $props.get('class', '') }}" @keydown="onKeydown($event)" @click.outside="close()">
+  <button type="button" x-ref="button" class="{{ $props.get('buttonClass', 'btn btn--secondary btn--md') }}"
+          @click="toggle()" aria-expanded="false" :aria-expanded="open.toString()" aria-controls="{{ id }}"
+          @if(iconOnly)
+          aria-label="{{ label }}"
+          @end
+          >
+    @if($slots.trigger)
+    {{{ await $slots.trigger() }}}
+    @else
+    @if($props.get('icon'))
+    @!component('components/icon', { name: $props.get('icon'), class: 'btn__icon' })
+    @end
+    @if(!iconOnly)
+    <span>{{ label }}</span>
+    @!component('components/icon', { name: 'chevron-down', class: 'h-4 w-4 opacity-70' })
+    @end
+    @end
+  </button>
+  <div id="{{ id }}" x-ref="panel" x-cloak x-show="open" x-transition.origin.top.duration.120ms
+       class="menu absolute top-full mt-2 {{ $props.get('align', 'left') === 'right' ? 'right-0' : 'left-0' }} {{ $props.get('width', 'w-56') }}">
+    {{{ await $slots.main() }}}
+  </div>
+</div>

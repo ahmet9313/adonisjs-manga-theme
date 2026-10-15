@@ -1,52 +1,105 @@
-@component('components/layout/admin', { title })
-
-@slot('main')
-  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h3 class="text-lg font-semibold text-gray-200">Kartlar</h3>
-      <p class="text-sm text-gray-500">Okurlar yeni bölüm okurken ve 7 günlük giriş serisinde kart kazanır.</p>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      @if(missingSeries)
-        <form action="/admin/kartlar/seri-kapaklari" method="POST" onsubmit="return confirm('Kartı olmayan her seri için kapağından bir kart oluşturulsun mu?')">
-          {{ csrfField() }}
-          <button type="submit" class="rounded-lg border border-emerald-700 px-4 py-2 text-sm font-semibold text-emerald-300 hover:border-emerald-500">Seri kapaklarından oluştur ({{ missingSeries }})</button>
-        </form>
+{{--
+  Admin → Topluluk → Kartlar: rarity filter (F Sıradan … R Kalıntı, with counts), the collectible
+  card grid (.tcg, cosmetics.css — the look is content and stays unchanged), the series of each
+  card and edit / delete actions. "Seri kapaklarından oluştur" makes one card per series that has
+  a cover and no card yet (POST /admin/kartlar/seri-kapaklari).
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(current = rarity ? rarities.find((entry) => entry.rarity === rarity) : null)
+@let(first = items.total ? (items.currentPage - 1) * items.perPage + 1 : 0)
+@let(last = Math.min(items.currentPage * items.perPage, items.total))
+@component('components/layout/admin', { title, description: 'Okurlar yeni bölüm okurken ve 7 günlük giriş serisinde kart kazanır; kopyalar parçalanıp yeni kartlara dönüşür.' })
+  @slot('actions')
+    @if(missingSeries)
+    <form action="/admin/kartlar/seri-kapaklari" method="POST" data-submit-once
+          data-confirm="Kartı olmayan {{ number(missingSeries) }} serinin kapağından birer kart oluşturulacak. Nadirlikler düşme oranlarına göre rastgele seçilir; kapağı olmayan seriler atlanır."
+          data-confirm-title="Seri kapaklarından kart oluşturulsun mu?" data-confirm-label="Kartları oluştur" data-confirm-tone="accent">
+      {{ csrfField() }}
+      @component('components/ui/button', { type: 'submit', icon: 'stack' })
+        Seri kapaklarından oluştur ({{ number(missingSeries) }})
       @end
-      <a href="/admin/kartlar/ekle" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-(--t-on-accent) hover:bg-emerald-500">+ Yeni Kart</a>
-    </div>
-  </div>
-
-  <div class="mb-4 flex flex-wrap gap-2">
-    <a href="/admin/kartlar" class="pill {{ rarity ? '' : 'pill-active' }}">Tümü</a>
-    @each(entry in rarities)
-      <a href="/admin/kartlar?nadirlik={{ entry }}" class="pill {{ rarity === entry ? 'pill-active' : '' }}">{{ entry }}</a>
+    </form>
     @end
-  </div>
-
-  @if(items.total === 0)
-    <p class="rounded-xl border border-gray-700 bg-(--t-surface) px-5 py-10 text-center text-gray-500">Henüz kart yok.</p>
+    @component('components/ui/button', { variant: 'primary', href: '/admin/kartlar/ekle', icon: 'plus' })
+      Yeni kart
+    @end
   @end
-  <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
-    @each(card in items)
-      <div class="{{ card.active ? '' : 'opacity-50' }}">
-        <a href="/admin/kartlar/{{ card.id }}/duzenle" class="tcg block" data-rarity="{{ card.rarity }}">
-          <img src="{{ card.image }}" alt="" loading="lazy">
-          <span class="tcg-letter">{{ card.rarity }}</span>
-        </a>
-        <p class="mt-2 truncate text-sm font-semibold text-gray-200">{{ card.name }}</p>
-        <p class="truncate text-xs text-gray-500">{{ card.series ? card.series.title : 'Seriden bağımsız' }}</p>
-        <div class="mt-1 flex gap-2 text-xs">
-          <a href="/admin/kartlar/{{ card.id }}/duzenle" class="text-emerald-400 hover:underline">Düzenle</a>
-          <form action="/admin/kartlar/{{ card.id }}/sil" method="POST" onsubmit="return confirm('Kart silinsin mi? Sahip olan okurların koleksiyonundan da çıkar.')">
-            {{ csrfField() }}
-            <button type="submit" class="text-red-400 hover:underline">Sil</button>
-          </form>
-        </div>
-      </div>
-    @end
-  </div>
-  @include('partials/admin/pagination')
-@end
 
+  @slot('main')
+    <div class="ac-page">
+      <nav class="ac-rarities" aria-label="Nadirliğe göre filtrele">
+        <a href="/admin/kartlar" class="chip" {{ rarity ? '' : 'aria-current=page' }}>
+          Tümü
+          <span class="chip__count">{{ number(total) }}</span>
+        </a>
+        @each(entry in rarities)
+        <a href="/admin/kartlar?nadirlik={{ entry.rarity }}" class="chip" {{ rarity === entry.rarity ? 'aria-current=page' : '' }}>
+          <span class="tcg ac-gem" data-rarity="{{ entry.rarity }}" aria-hidden="true"></span>
+          <span><strong class="ac-rarity-letter">{{ entry.rarity }}</strong> {{ entry.label }}</span>
+          <span class="chip__count">{{ number(counts[entry.rarity]) }}</span>
+        </a>
+        @end
+      </nav>
+
+      @if(items.total)
+      <p class="ac-summary">
+        <span><strong>{{ number(items.total) }}</strong> {{ current ? current.label.toLocaleLowerCase('tr') + ' kart' : 'kart' }}</span>
+        <span aria-hidden="true">·</span>
+        <span>en yeni önce</span>
+      </p>
+
+      <ul class="ac-cards" aria-label="{{ current ? current.label + ' kartlar' : 'Kartlar' }}">
+        @each(card in items)
+        @let(editUrl = '/admin/kartlar/' + card.id + '/duzenle')
+        @let(rarityLabel = (rarities.find((entry) => entry.rarity === card.rarity) || { label: '' }).label)
+        <li class="ac-card {{ card.active ? '' : 'is-off' }}">
+          <a href="{{ editUrl }}" class="tcg block" data-rarity="{{ card.rarity }}" tabindex="-1" aria-hidden="true">
+            <img src="{{ card.image }}" alt="" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+            <span class="tcg-letter">{{ card.rarity }}</span>
+          </a>
+          <div class="ac-card__body">
+            <a href="{{ editUrl }}" class="ac-item__name">{{ card.name }}</a>
+            @if(card.series)
+            <a href="/admin/seriler/{{ card.series.id }}/duzenle" class="ac-card__series" title="Seriyi düzenle">{{ card.series.title }}</a>
+            @else
+            <span class="ac-card__series">Seriden bağımsız</span>
+            @end
+            <p class="ac-item__badges">
+              @!component('components/ui/badge', { kind: 'neutral', text: card.rarity + ' · ' + rarityLabel, size: 'sm' })
+              @if(!card.active)
+              @!component('components/ui/badge', { kind: 'warning', text: 'Pasif', size: 'sm', title: 'Düşmez ve üretilemez' })
+              @end
+            </p>
+          </div>
+          <div class="ac-actions ac-card__actions">
+            @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: editUrl, label: 'Düzenle: ' + card.name, title: 'Düzenle' })
+            <form action="/admin/kartlar/{{ card.id }}/sil" method="POST" data-submit-once
+                  data-confirm="“{{ card.name }}” kartı kalıcı olarak silinecek ve sahip olan okurların koleksiyonundan çıkar. Okurların parçaları korunur. Bu işlem geri alınamaz."
+                  data-confirm-title="Kart silinsin mi?" data-confirm-label="Kartı sil">
+              {{ csrfField() }}
+              @!component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'trash', label: 'Sil: ' + card.name, title: 'Sil', class: 'ac-danger' })
+            </form>
+          </div>
+        </li>
+        @end
+      </ul>
+
+      <div class="ac-listfoot">
+        <p class="ac-listfoot__info">{{ number(first) }}–{{ number(last) }} / {{ number(items.total) }} kart</p>
+        @!component('components/ui/pagination', { current: items.currentPage, total: items.lastPage, label: 'Kart sayfaları' })
+      </div>
+      @else
+      @component('components/ui/empty_state', { icon: 'cards', title: current ? current.label + ' nadirlikte kart yok' : 'Henüz kart yok', description: current ? 'Başka bir nadirlik seçin ya da bu nadirlikte yeni bir kart ekleyin.' : 'Kart ekleyin ya da kartı olmayan serilerin kapaklarından toplu oluşturun.', class: 'mt-6' })
+        @component('components/ui/button', { variant: 'primary', href: '/admin/kartlar/ekle', icon: 'plus' })
+          Yeni kart
+        @end
+        @if(current)
+        @component('components/ui/button', { href: '/admin/kartlar', icon: 'x' })
+          Filtreyi kaldır
+        @end
+        @end
+      @end
+      @end
+    </div>
+  @end
 @end

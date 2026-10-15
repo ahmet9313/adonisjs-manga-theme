@@ -1,0 +1,44 @@
+{{--
+  Surface with optional heading (class `panel`, see components.css).
+  Props: title, description, id (heading id prefix), tag (section), level (h2), padding
+         normal|tight|flush, class. Slots: main, actions (next to the title).
+    @component('components/ui/panel', { title: 'Seri Bilgileri', id: 'info', tag: 'aside' })
+      …
+    @end
+--}}
+@let(tag = $props.get('tag', 'section'))
+@let(title = $props.get('title', ''))
+@let(id = $props.get('id', ''))
+@let(level = $props.get('level', 'h2'))
+@let(padding = $props.get('padding', 'normal'))
+<{{ tag }} class="panel {{ padding === 'normal' ? '' : 'panel--' + padding }} {{ $props.get('class', '') }}"
+  @if(title && id)
+  aria-labelledby="{{ id }}-title"
+  @end
+  @if(id && !title)
+  id="{{ id }}"
+  @end
+  >
+  @if(title || $slots.actions)
+  <div class="panel__head">
+    <div class="min-w-0">
+      @if(title)
+      <{{ level }} class="panel__title"
+        @if(id)
+        id="{{ id }}-title"
+        @end
+        >{{ title }}</{{ level }}>
+      @end
+      @if($props.get('description'))
+      <p class="panel__desc">{{ $props.get('description') }}</p>
+      @end
+    </div>
+    @if($slots.actions)
+    <div class="flex flex-wrap items-center gap-2">
+      {{{ await $slots.actions() }}}
+    </div>
+    @end
+  </div>
+  @end
+  {{{ await $slots.main() }}}
+</{{ tag }}>

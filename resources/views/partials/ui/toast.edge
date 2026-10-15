@@ -1,0 +1,54 @@
+{{--
+  The single notification system. Server messages (session.flash 'success' | 'error' | 'info')
+  are rendered here, so they show without JavaScript; scripts add more with
+  $dispatch('toast', { text, tone: 'success' | 'error' | 'info' | 'reward', image? }).
+  Errors stay until closed, the others fade out (toasts.js).
+--}}
+@let(flashTones = [['success', 'success', 'check-circle'], ['error', 'error', 'exclamation'], ['info', 'info', 'info']].filter((entry) => flashMessages.has(entry[0])))
+<div x-data="toasts" @toast.window="push($event.detail)" class="toast-stack" role="region" aria-label="Bildirimler" aria-live="polite">
+  @each(entry in flashTones)
+  <div class="toast" data-tone="{{ entry[1] }}" data-server-toast role="{{ entry[1] === 'error' ? 'alert' : 'status' }}">
+    @!component('components/icon', { name: entry[2], class: 'toast__icon' })
+    <p class="toast__text">{{ flashMessages.get(entry[0]) }}</p>
+    <button type="button" class="btn btn--ghost btn--sm btn--icon -my-1" @click="$el.closest('.toast').remove()" aria-label="Bildirimi kapat">
+      @!component('components/icon', { name: 'x', class: 'btn__icon' })
+    </button>
+  </div>
+  @end
+  @if(flashMessages.has('inputErrorsBag') && !flashMessages.has('error'))
+  <div class="toast" data-tone="error" data-server-toast role="alert">
+    @!component('components/icon', { name: 'exclamation', class: 'toast__icon' })
+    <p class="toast__text">Formda düzeltilmesi gereken alanlar var. Ayrıntılar alanların altında.</p>
+    <button type="button" class="btn btn--ghost btn--sm btn--icon -my-1" @click="$el.closest('.toast').remove()" aria-label="Bildirimi kapat">
+      @!component('components/icon', { name: 'x', class: 'btn__icon' })
+    </button>
+  </div>
+  @end
+  <template x-for="toast in items" :key="toast.id">
+    <div class="toast" :data-tone="toast.tone === 'reward' ? 'accent' : toast.tone" :role="toast.tone === 'error' ? 'alert' : 'status'">
+      <template x-if="toast.image">
+        <img :src="toast.image" alt="" class="toast__img">
+      </template>
+      <template x-if="!toast.image">
+        <span class="toast__icon">
+          <span x-show="toast.tone === 'success'">
+            @!component('components/icon', { name: 'check-circle', class: 'h-5 w-5' })
+          </span>
+          <span x-show="toast.tone === 'error'">
+            @!component('components/icon', { name: 'exclamation', class: 'h-5 w-5' })
+          </span>
+          <span x-show="toast.tone === 'info'">
+            @!component('components/icon', { name: 'info', class: 'h-5 w-5' })
+          </span>
+          <span x-show="toast.tone === 'reward'">
+            @!component('components/icon', { name: 'sparkles', class: 'h-5 w-5' })
+          </span>
+        </span>
+      </template>
+      <p class="toast__text" x-text="toast.text"></p>
+      <button type="button" class="btn btn--ghost btn--sm btn--icon -my-1" @click="dismiss(toast.id)" aria-label="Bildirimi kapat">
+        @!component('components/icon', { name: 'x', class: 'btn__icon' })
+      </button>
+    </div>
+  </template>
+</div>

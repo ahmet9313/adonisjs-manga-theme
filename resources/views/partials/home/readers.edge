@@ -1,0 +1,26 @@
+{{--
+  "Ayın Okurları" (switch home_readers): members who read the most chapters in the last 30 days
+  (community_stats_service.topReaders). Each card wears the reader's wallpaper like a comment
+  card; the rank number is decorative, the <ol> carries the order.
+--}}
+<section class="section" aria-labelledby="home-readers-title">
+  @!component('components/ui/section_head', {
+    title: 'Ayın Okurları',
+    id: 'home-readers-title',
+    icon: 'trophy',
+    description: 'Son 30 günde en çok bölüm okuyan üyeler'
+  })
+  <ol class="home-readers">
+    @each((entry, index) in readers)
+    @let(look = lookOf(entry.user))
+    <li class="c-card home-reader" data-rank="{{ index + 1 }}">
+      @if(look.wallpaper)
+      <div class="c-wall wall {{ look.wallpaper.cls || '' }}" style="{{ visualStyle(look.wallpaper) }}"></div>
+      @end
+      <div class="c-veil"></div>
+      <span class="home-reader__rank" aria-hidden="true">{{ index + 1 }}</span>
+      @!component('components/ui/user_chip', { user: entry.user, look, meta: entry.chapters + ' bölüm · ' + entry.series + ' seri', class: 'min-w-0 flex-1' })
+    </li>
+    @end
+  </ol>
+</section>

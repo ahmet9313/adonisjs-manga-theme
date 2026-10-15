@@ -1,0 +1,81 @@
+{{--
+  Chip list for short texts (Alpine `tagInput`, tag_input.js): Enter or a comma adds the typed
+  text, Backspace in an empty box removes the last chip, pasted comma separated lists are split,
+  ArrowUp/ArrowDown pick a suggestion. The value is posted as one comma separated field
+  (`a, b, c`), exactly what the controller splits; without JavaScript a plain text field
+  (<noscript>) posts the same format.
+  Props: name (required), label, value (array of strings), suggestions (array of strings, e.g.
+         popular keywords), popularLabel ('Sık kullanılanlar'), placeholder, hint,
+         id ('f-' + name), class.
+  The previous input wins over `value`; the error comes from inputErrorsBag.<name>.
+--}}
+@let(name = $props.get('name'))
+@let(id = $props.get('id', 'f-' + name))
+@let(flashed = flashMessages.has(name))
+@let(tags = flashed ? String(flashMessages.get(name) || '').split(',').map((part) => part.trim()).filter(Boolean) : ($props.get('value') || []))
+@let(suggestions = $props.get('suggestions', []) || [])
+@let(error = flashMessages.has('inputErrorsBag.' + name) ? flashMessages.get('inputErrorsBag.' + name)[0] : '')
+@let(hint = $props.get('hint', ''))
+@let(describedBy = [error ? id + '-error' : '', hint ? id + '-hint' : ''].filter(Boolean).join(' '))
+<div class="field {{ error ? 'field--invalid' : '' }} {{ $props.get('class', '') }}" x-data="tagInput" data-id="{{ id }}" data-config="{{ JSON.stringify({ tags, suggestions }) }}">
+  <label for="{{ id }}" id="{{ id }}-label" class="field__label">{{ $props.get('label', '') }}</label>
+  <input type="hidden" data-name="{{ name }}" :name="$el.dataset.name" :value="serialized">
+  <noscript>
+    <input type="text" name="{{ name }}" value="{{ tags.join(', ') }}" class="control" aria-labelledby="{{ id }}-label"
+      @if(describedBy)
+      aria-describedby="{{ describedBy }}"
+      @end
+      >
+  </noscript>
+  <div class="admin-combo" x-cloak @click.outside="open = false; active = -1">
+    <div class="control tag-input" @click.self="$refs.entry.focus()">
+      <template x-for="(tag, index) in tags" :key="tag">
+        <span class="tag">
+          <span x-text="tag"></span>
+          <button type="button" @click="remove(index)" :aria-label="'Kaldır: ' + tag">
+            @!component('components/icon', { name: 'x', class: 'h-3 w-3' })
+          </button>
+        </span>
+      </template>
+      <input type="text" id="{{ id }}" x-ref="entry" x-model="draft" autocomplete="off" spellcheck="false"
+             placeholder="{{ $props.get('placeholder', 'Yazıp Enter’a basın') }}"
+             role="combobox" aria-autocomplete="list" aria-controls="{{ id }}-list"
+             :aria-expanded="(open && matches.length > 0).toString()" :aria-activedescendant="activeId"
+             @input.stop="onInput()" @keydown="onKeydown($event)" @paste="onPaste($event)" @blur="commit()"
+        @if(describedBy)
+        aria-describedby="{{ describedBy }}"
+        @end
+        @if(error)
+        aria-invalid="true"
+        @end
+        >
+    </div>
+    <ul id="{{ id }}-list" role="listbox" aria-label="Öneriler" class="menu admin-combo__list" x-show="open && matches.length > 0" x-transition.opacity.duration.100ms>
+      <template x-for="(item, index) in matches" :key="item">
+        <li role="option" :id="optionId(index)" class="menu__item admin-option" :class="{ 'is-active': index === active }"
+            :aria-selected="(index === active).toString()" @mousedown.prevent @click="add(item)" @mousemove="active = index">
+          @!component('components/icon', { name: 'plus' })
+          <span class="min-w-0 flex-1 truncate" x-text="item"></span>
+        </li>
+      </template>
+    </ul>
+  </div>
+  @if(suggestions.length)
+  <div class="admin-popular" x-show="popular.length > 0" x-cloak>
+    <span class="t-caption">{{ $props.get('popularLabel', 'Sık kullanılanlar') }}:</span>
+    <template x-for="item in popular" :key="item">
+      <button type="button" class="link-chip" @click="add(item)" :aria-label="'Ekle: ' + item">
+        @!component('components/icon', { name: 'plus', class: 'h-3 w-3' })
+        <span x-text="item"></span>
+      </button>
+    </template>
+  </div>
+  @end
+  <p class="sr-only" aria-live="polite" x-text="announcement"></p>
+  @if(hint)
+  <p id="{{ id }}-hint" class="field__hint">{{ hint }}</p>
+  @end
+  @if(error)
+  <p id="{{ id }}-error" class="field__error" role="alert">{{ error }}</p>
+  @end
+</div>

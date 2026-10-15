@@ -1,68 +1,226 @@
 @component('components/layout/main', { title })
 
 @slot('main')
-  @!component('components/breadcrumb', { items: [{ label: 'Kartlar' }] })
+  @let(total = collection.cards.length)
+  @let(owned = collection.cards.filter((card) => card.count > 0).length)
+  @let(duplicates = collection.cards.filter((card) => card.count > 1).length)
+  @let(percent = total ? Math.round((owned / total) * 100) : 0)
   <div x-data="cardCollection" data-config="{{ JSON.stringify({ cards: collection.cards, shards: collection.shards, rules }) }}">
-    <h1 class="section-title">Kartlar</h1>
-    <p class="mt-2 text-sm text-gray-300">Serileri okurken karakter kartları topla. Yeni bir bölüm okuduğunda kart düşebilir; 7 günlük giriş serisi bir kart garantiler.</p>
+    @component('components/ui/page_header', {
+      title: 'Kartlar',
+      eyebrow: 'Koleksiyon',
+      description: 'Serileri okurken karakter kartları topla. Yeni bir bölüm okuduğunda kart düşebilir; 7 günlük giriş serisi bir kart garantiler.',
+      breadcrumb: [{ label: 'Kartlar' }],
+    })
+      @slot('actions')
+        <div class="tcg-tally">
+          <div class="flex items-baseline justify-between gap-3">
+            <p class="t-overline">Toplanan kart</p>
+            <p class="t-caption t-num" x-text="'%' + percentOwned()">%{{ percent }}</p>
+          </div>
+          <p class="tcg-tally__value t-num">
+            <span x-text="ownedCount()">{{ owned }}</span>
+            <span class="tcg-tally__total">/ {{ total }}</span>
+          </p>
+          <div class="progress progress--sm" role="progressbar" aria-label="Toplanan kartlar" aria-valuemin="0" aria-valuemax="{{ total }}"
+               aria-valuenow="{{ owned }}" :aria-valuenow="ownedCount()">
+            <div class="progress__bar" style="width: {{ percent }}%" :style="'width:' + percentOwned() + '%'"></div>
+          </div>
+        </div>
+      @end
+    @end
 
     {{-- Shards and crafting --}}
-    <section class="glass mt-6 rounded-3xl border border-white/10 p-5 sm:p-6">
-      <h2 class="section-title">Kart parçaları ve üretim</h2>
-      <p class="mt-2 text-sm text-gray-400">Fazladan kopyaları parçalayarak aynı nadirlikte parça elde et, sonra parçaları o nadirlikte rastgele bir karta dönüştür (eksik kartlar önceliklidir).</p>
-      <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        <template x-for="rule in rules" :key="rule.rarity">
-          <div class="tcg-shard flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-3 text-center">
-            <span class="font-serif text-xl font-black text-(--t-heading)" x-text="rule.rarity"></span>
-            <span class="text-[11px] text-gray-400" x-text="rule.label"></span>
-            <span class="text-sm text-gray-200"><span x-text="shards[rule.rarity] || 0"></span> Parça</span>
-            <button type="button" @click="craft(rule.rarity)" :disabled="busy || (shards[rule.rarity] || 0) < rule.craft" class="btn-soft mt-1 !px-3 !py-1" x-text="'Üret (' + rule.craft + ')'"></button>
-          </div>
-        </template>
+    <section class="panel" aria-labelledby="shards-title">
+      <div class="panel__head">
+        <div class="min-w-0">
+          <h2 id="shards-title" class="panel__title" tabindex="-1">Kart parçaları ve üretim</h2>
+          <p class="panel__desc">Fazladan kopyaları parçalayarak aynı nadirlikte parça kazan, parçalarla o nadirlikte rastgele bir kart üret. Eksik kartların önceliği vardır.</p>
+        </div>
       </div>
+      <ul class="tcg-shards" role="list" tabindex="0" aria-label="Nadirliğe göre parçalar">
+        <template x-for="rule in rules" :key="rule.rarity">
+          <li class="tcg-shard tcg-tint" :data-rarity="rule.rarity" :data-ready="canCraft(rule) ? '1' : '0'">
+            <span class="tcg-gem" aria-hidden="true" x-text="rule.rarity"></span>
+            <p class="tcg-shard__label">
+              <span x-text="rule.label"></span>
+              <span class="sr-only" x-text="'(' + rule.rarity + ')'"></span>
+            </p>
+            <p class="tcg-shard__count">
+              <span class="t-num" x-text="count(rule)"></span>
+              <span class="tcg-shard__unit">parça</span>
+            </p>
+            <div class="progress progress--sm w-full" aria-hidden="true">
+              <div class="progress__bar" :style="'width:' + progressOf(rule) + '%'"></div>
+            </div>
+            <p class="t-caption t-num" x-text="'1 kart = ' + rule.craft + ' parça'"></p>
+            <button type="button" class="btn btn--secondary btn--sm btn--block" @click="craft(rule.rarity)"
+                    :disabled="busy || !canCraft(rule)" :aria-busy="crafting === rule.rarity"
+                    :aria-label="'Üret: ' + rule.label + ', ' + rule.craft + ' parça'">
+              @!component('components/icon', { name: 'craft', class: 'btn__icon' })
+              <span>Üret</span>
+            </button>
+          </li>
+        </template>
+      </ul>
     </section>
 
-    {{-- Tabs --}}
-    <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex gap-1.5" role="tablist">
-        <button type="button" role="tab" @click="tab = 'all'" :aria-selected="(tab === 'all').toString()" class="pill" :class="tab === 'all' && '!bg-white !text-gray-900'">Tümü <span class="opacity-60" x-text="cards.length"></span></button>
-        <button type="button" role="tab" @click="tab = 'owned'" :aria-selected="(tab === 'owned').toString()" class="pill" :class="tab === 'owned' && '!bg-white !text-gray-900'">Sahip olunan <span class="opacity-60" x-text="ownedCount()"></span></button>
-        <button type="button" role="tab" @click="tab = 'missing'" :aria-selected="(tab === 'missing').toString()" class="pill" :class="tab === 'missing' && '!bg-white !text-gray-900'">Eksik <span class="opacity-60" x-text="cards.length - ownedCount()"></span></button>
-      </div>
-    </div>
-
-    <p x-show="!visible().length" x-cloak class="py-12 text-center text-gray-400" x-text="cards.length ? 'Bu sekmede kart yok.' : 'Henüz kart eklenmemiş.'"></p>
-
-    <div class="mt-5 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-      <template x-for="card in visible()" :key="card.id">
-        <div class="flex flex-col">
-          <button type="button" class="tcg block w-full text-left" :data-rarity="card.rarity" :data-locked="card.count ? '0' : '1'" @click="card.count && (selected = card)" :aria-label="card.count ? card.name : 'Bilinmeyen kart'">
-            <img :src="card.image" alt="" loading="lazy">
-            <span class="tcg-letter" x-text="card.rarity"></span>
-            <span x-show="card.count > 1" class="absolute right-1.5 top-1.5 rounded-md bg-black/80 px-1.5 text-xs font-bold text-(--t-heading)" x-text="'x' + card.count"></span>
+    {{-- Collection --}}
+    <section class="section" aria-labelledby="collection-title">
+      <div class="section-head">
+        <div class="min-w-0">
+          <h2 id="collection-title" class="section-head__title">Koleksiyon</h2>
+          <p class="section-head__desc">Ayrıntılar için bir karta dokun; kopyaları parçalayarak parça kazan.</p>
+        </div>
+        <div class="tcg-filters" role="group" aria-label="Kartları süz">
+          <button type="button" class="chip" aria-pressed="true" :aria-pressed="(tab === 'all').toString()" @click="tab = 'all'">
+            Tümü
+            <span class="chip__count t-num" x-text="cards.length">{{ total }}</span>
           </button>
-          <p class="mt-2 truncate text-sm font-bold text-(--t-heading)" x-text="card.count ? card.name : '???'"></p>
-          <a x-show="card.series" :href="card.series && card.series.url" class="truncate text-xs text-gray-400 hover:text-emerald-300" x-text="card.series && card.series.title"></a>
-          <button type="button" x-show="card.count > 1" @click="disassemble(card)" :disabled="busy" class="mt-1 self-start text-xs font-semibold text-amber-300 hover:underline" x-text="'Parçala (+' + ((card.count - 1) * rules.find(r => r.rarity === card.rarity).shards) + ')'"></button>
+          <button type="button" class="chip" aria-pressed="false" :aria-pressed="(tab === 'owned').toString()" @click="tab = 'owned'">
+            Sahip olunan
+            <span class="chip__count t-num" x-text="ownedCount()">{{ owned }}</span>
+          </button>
+          <button type="button" class="chip" aria-pressed="false" :aria-pressed="(tab === 'missing').toString()" @click="tab = 'missing'">
+            Eksik
+            <span class="chip__count t-num" x-text="cards.length - ownedCount()">{{ total - owned }}</span>
+          </button>
+          <button type="button" class="chip" aria-pressed="false" :aria-pressed="(tab === 'duplicates').toString()" @click="tab = 'duplicates'">
+            Kopyalar
+            <span class="chip__count t-num" x-text="duplicateCount()">{{ duplicates }}</span>
+          </button>
         </div>
-      </template>
-    </div>
+      </div>
 
-    {{-- Card detail / craft reveal --}}
-    <div x-cloak x-show="reveal || selected" x-transition.opacity class="fixed inset-0 z-[85] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" @click.self="reveal = null; selected = null" @keydown.escape.window="reveal = null; selected = null">
-      <template x-if="reveal || selected">
-        <div class="w-full max-w-xs text-center" x-data="{ get card() { return reveal || selected } }">
-          <p x-show="reveal" class="mb-3 text-sm font-bold uppercase tracking-widest text-amber-300">Yeni kart üretildi!</p>
-          <div class="tcg mx-auto w-60" :data-rarity="card.rarity">
-            <img :src="card.image" alt="">
-            <span class="tcg-letter" x-text="card.rarity"></span>
+      <noscript>
+        <p class="alert mb-4" data-tone="warning">Koleksiyonu görmek, kart parçalamak ve üretmek için tarayıcında JavaScript'i etkinleştir.</p>
+      </noscript>
+
+      <div x-show="!cards.length" x-cloak>
+        @!component('components/ui/empty_state', { icon: 'cards', title: 'Henüz kart eklenmemiş', description: 'Yeni kartlar eklendiğinde burada görünecek.' })
+      </div>
+      <div x-show="cards.length && tab === 'owned' && !visible().length" x-cloak>
+        @component('components/ui/empty_state', { icon: 'cards', title: 'Henüz kartın yok', description: 'Yeni bir bölüm okuduğunda kart düşebilir; 7 günlük giriş serisi bir kart garantiler.' })
+          <a href="/seriler" class="btn btn--primary btn--md">Serilere göz at</a>
+          <a href="/oduller" class="btn btn--secondary btn--md">Günlük giriş</a>
+        @end
+      </div>
+      <div x-show="cards.length && tab === 'missing' && !visible().length" x-cloak>
+        @!component('components/ui/empty_state', { icon: 'trophy', title: 'Koleksiyon tamam!', description: 'Bütün kartları topladın. Yeni kartlar eklendiğinde burada görünecek.' })
+      </div>
+      <div x-show="cards.length && tab === 'duplicates' && !visible().length" x-cloak>
+        @!component('components/ui/empty_state', { icon: 'stack', title: 'Kopya kartın yok', description: 'Aynı karttan birden fazla düştüğünde burada görünür; fazlasını parçalayıp parça kazanabilirsin.' })
+      </div>
+
+      <template x-for="group in groups()" :key="group.rule.rarity">
+        <section class="tcg-group" :aria-labelledby="'tcg-group-' + group.rule.rarity">
+          <h3 class="tcg-group__title" :id="'tcg-group-' + group.rule.rarity">
+            <span class="tcg-gem tcg-gem--sm tcg-tint" :data-rarity="group.rule.rarity" aria-hidden="true" x-text="group.rule.rarity"></span>
+            <span x-text="group.rule.label"></span>
+            <span class="sr-only" x-text="'(' + group.rule.rarity + '),'"></span>
+            <span class="tcg-group__rule" aria-hidden="true"></span>
+            <span class="tcg-group__meta t-num">
+              <span x-text="ownedOf(group.rule.rarity) + ' / ' + totalOf(group.rule.rarity)"></span>
+              <span class="sr-only">kart toplandı</span>
+            </span>
+          </h3>
+          <ul class="tcg-grid" role="list">
+            <template x-for="card in group.cards" :key="card.id">
+              <li class="tcg-item">
+                <button type="button" class="tcg" :id="'card-' + card.id" :data-rarity="card.rarity" :data-locked="card.count ? '0' : '1'"
+                        @click="open(card)" aria-haspopup="dialog">
+                  <span class="sr-only" x-text="cardLabel(card)"></span>
+                  <img :src="card.image" alt="" loading="lazy" decoding="async">
+                  <span class="tcg-letter" aria-hidden="true" x-text="card.rarity"></span>
+                  <span x-show="card.count > 1" class="tcg-count" aria-hidden="true" x-text="'×' + card.count"></span>
+                  <span x-show="!card.count" class="tcg-lock" aria-hidden="true">
+                    <span>
+                      @!component('components/icon', { name: 'lock' })
+                    </span>
+                  </span>
+                </button>
+                <p class="tcg-item__name" :data-locked="card.count ? '0' : '1'" x-text="card.count ? card.name : '???'"></p>
+                <template x-if="card.series">
+                  <a :href="card.series.url" class="tcg-item__series" x-text="card.series.title"></a>
+                </template>
+                <button x-show="card.count > 1" type="button" class="btn btn--ghost btn--sm tcg-item__break" @click="openBreak(card)" :disabled="busy">
+                  @!component('components/icon', { name: 'craft', class: 'btn__icon' })
+                  <span x-text="'Parçala · +' + gain(card)"></span>
+                </button>
+              </li>
+            </template>
+          </ul>
+        </section>
+      </template>
+    </section>
+
+    {{-- One dialog: card details, the reveal after crafting and the break confirmation. --}}
+    @component('components/ui/modal', { id: 'card-dialog', title: 'Kart', titleExpr: 'dialogTitle()', size: 'sm', open: 'viewing', close: 'close()' })
+      <template x-if="selected">
+        <div>
+          <div class="tcg-stage tcg-tint" :data-rarity="selected.rarity" :data-mode="mode">
+            <template x-if="mode === 'reveal'">
+              <span class="tcg-burst" aria-hidden="true"></span>
+            </template>
+            <div class="tcg tcg-stage__card" :class="mode === 'reveal' && 'tcg-reveal'" :data-rarity="selected.rarity" :data-locked="selected.count ? '0' : '1'">
+              <img :src="selected.image" :alt="selected.count ? selected.name : 'Bilinmeyen kart'" decoding="async">
+              <span class="tcg-letter" aria-hidden="true" x-text="selected.rarity"></span>
+              <template x-if="mode === 'reveal'">
+                <span class="tcg-sheen" aria-hidden="true"></span>
+              </template>
+              <span x-show="!selected.count" class="tcg-lock" aria-hidden="true">
+                <span>
+                  @!component('components/icon', { name: 'lock' })
+                </span>
+              </span>
+            </div>
           </div>
-          <p class="mt-4 text-lg font-bold text-(--t-heading)" x-text="card.name"></p>
-          <p class="text-sm text-gray-400" x-text="rules.find(r => r.rarity === card.rarity).label + ' · ' + card.rarity"></p>
-          <button type="button" @click="reveal = null; selected = null" class="btn-soft mt-4">Kapat</button>
+
+          <div class="mt-5 text-center">
+            <p x-show="mode !== 'detail'" class="t-h3" x-text="selected.name"></p>
+            <div class="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+              <span class="badge badge--lg" data-tone="neutral" x-text="rule(selected.rarity).label + ' · ' + selected.rarity"></span>
+              <span x-show="mode === 'reveal' && fresh" class="badge badge--lg" data-tone="success">Yeni</span>
+              <span x-show="selected.count > 1" class="badge badge--lg" data-tone="accent" x-text="'×' + selected.count + ' kopya'"></span>
+            </div>
+            <p class="mx-auto mt-3 max-w-[22rem] t-small text-muted" x-text="dialogText()"></p>
+            <p x-show="mode === 'break'" class="tcg-gain t-num" x-text="'+' + gain(selected) + ' ' + selected.rarity + ' parçası'"></p>
+            <template x-if="selected.series && mode !== 'break'">
+              <a :href="selected.series.url" class="link mt-3 inline-flex items-center gap-1 text-sm">
+                <span x-text="selected.series.title"></span>
+                @!component('components/icon', { name: 'arrow-right', class: 'h-4 w-4' })
+              </a>
+            </template>
+          </div>
         </div>
       </template>
-    </div>
+      @slot('footer')
+        {{-- Details of an owned card --}}
+        <button type="button" class="btn btn--secondary btn--md" x-show="selected && mode === 'detail' && selected.count > 1" @click="askBreak()" :disabled="busy">
+          @!component('components/icon', { name: 'craft', class: 'btn__icon' })
+          <span x-text="selected ? 'Parçala · +' + gain(selected) : 'Parçala'">Parçala</span>
+        </button>
+        <button type="button" class="btn btn--primary btn--md" x-show="selected && mode === 'detail' && selected.count" @click="close()" data-autofocus>Tamam</button>
+        {{-- A card the reader does not own yet --}}
+        <button type="button" class="btn btn--secondary btn--md" x-show="selected && mode === 'detail' && !selected.count" @click="close()" data-autofocus>Kapat</button>
+        <a class="btn btn--primary btn--md" x-show="selected && mode === 'detail' && !selected.count && selected.series" :href="selected && selected.series ? selected.series.url : '/seriler'">
+          @!component('components/icon', { name: 'book-open', class: 'btn__icon' })
+          <span>Seriyi oku</span>
+        </a>
+        {{-- Reveal after crafting --}}
+        <button type="button" class="btn btn--secondary btn--md" x-show="selected && mode === 'reveal' && canCraft(rule(selected.rarity))" @click="craft(selected.rarity)" :disabled="busy" :aria-busy="busy">
+          @!component('components/icon', { name: 'craft', class: 'btn__icon' })
+          <span>Bir tane daha</span>
+        </button>
+        <button type="button" class="btn btn--primary btn--md" x-show="selected && mode === 'reveal'" @click="close()" data-autofocus>Harika!</button>
+        {{-- Break confirmation --}}
+        <button type="button" class="btn btn--secondary btn--md" x-show="selected && mode === 'break'" @click="cancelBreak()" data-autofocus>Vazgeç</button>
+        <button type="button" class="btn btn--primary btn--md" x-show="selected && mode === 'break'" @click="disassemble()" :disabled="busy" :aria-busy="busy">
+          @!component('components/icon', { name: 'craft', class: 'btn__icon' })
+          <span>Parçala</span>
+        </button>
+      @end
+    @end
   </div>
 @end
 

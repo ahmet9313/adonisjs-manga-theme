@@ -1,187 +1,36 @@
+{{--
+  Series page: banner art, header (cover, title, metadata, actions), information column,
+  chapter list, ratings/reviews, comments and similar series. Every block follows the
+  Admin → Tema → Göster/Gizle switches (ui('series_*')).
+--}}
+@let(seriesUrl = '/series/' + series.type + '/' + series.slug)
+@let(typeLabel = series.type.charAt(0).toUpperCase() + series.type.slice(1))
+@let(hasKeywords = ui('series_keywords') && series.keywords && series.keywords.length > 0)
+@let(hasAside = ui('series_sidebar') || hasKeywords)
 @component('components/layout/main', { title, description })
 
 @slot('banner')
-  {{-- Full-width Banner behind content --}}
-  <div class="relative w-full h-72 sm:h-96">
-    <img
-      src="{{ series.bannerImage || series.coverImage }}"
-      alt="{{ series.title }} Banner"
-      class="w-full h-full object-cover"
-      onerror="this.onerror=null;this.src='{{ series.coverImage }}';this.style.objectPosition='center 20%'"
-    >
-    {{-- Dark gradient from bottom so content merges smoothly --}}
-    <div class="absolute inset-0 bg-gradient-to-t from-(--t-field) via-(--t-field)/70 to-(--t-field)/20"></div>
+  <div class="series-banner" data-art="{{ series.bannerImage ? 'banner' : 'cover' }}" aria-hidden="true">
+    <img src="{{ series.bannerImage || series.coverImage }}" alt="" decoding="async" fetchpriority="high" data-fallback="{{ series.bannerImage ? series.coverImage : '' }}">
   </div>
 @end
 
 @slot('main')
-  {{-- Pull content UP over the banner --}}
-  <div class="lg:flex lg:gap-8 -mt-52 sm:-mt-64 relative z-10">
-    {{-- Left Column: Cover + Main Info --}}
-    <div class="lg:flex-1 min-w-0">
-      <div class="flex flex-col sm:flex-row gap-6">
-        {{-- Cover --}}
-        <div class="shrink-0">
-          <img
-            src="{{ series.coverImage }}"
-            alt="{{ series.title }}"
-            class="w-48 h-auto rounded-lg shadow-lg mx-auto sm:mx-0"
-            onerror="this.onerror=null;this.style.display='none'"
-          >
-        </div>
+  <noscript>
+    <style>
+      .chapter-list > li[x-cloak] { display: block !important; }
+      .chapters-panel__foot { display: none !important; }
+      .series-desc__text.is-clamped { display: block; -webkit-line-clamp: unset; }
+    </style>
+  </noscript>
 
-        {{-- Info --}}
-        <div class="flex-1 min-w-0 break-words [text-shadow:0_1px_4px_rgb(0_0_0/0.85)]">
-          <h1 class="text-2xl font-bold text-(--t-heading)">{{ series.title }}</h1>
+  @include('partials/series/hero')
 
-          @if(series.alternativeTitles && series.alternativeTitles.length)
-          <p class="text-sm text-gray-500 mt-1"><span class="sr-only">Alternatif başlıklar: </span>{{ series.alternativeTitles.join(' · ') }}</p>
-          @end
+  <div class="series-layout {{ hasAside ? '' : 'series-layout--single' }}">
+    @include('partials/series/info')
 
-          @if(ui('series_reviews'))
-          <a href="#incelemeler" class="mt-2 inline-flex items-center gap-2 text-sm text-gray-300 hover:text-(--t-heading)" title="Puan ve incelemelere git">
-            @if(series.ratingCount)
-              @!component('components/stars', { value: series.ratingAverage, size: 'text-base' })
-              <strong class="text-amber-300">{{ series.ratingAverage.toFixed(1) }}</strong>
-              <span class="text-gray-400">({{ series.ratingCount }} puan · {{ series.reviewCount }} inceleme)</span>
-            @else
-              <span class="text-gray-400">Henüz puan yok — ilk puanı sen ver</span>
-            @end
-          </a>
-          @end
-
-          <div class="flex flex-wrap items-center gap-2 mt-2 text-sm">
-            <a href="/seriler?type={{ encodeURIComponent(series.type) }}" title="Tüm {{ series.type }} serileri" class="px-2 py-0.5 rounded text-(--t-on-accent) text-xs font-bold ring-offset-2 ring-offset-(--t-field) transition hover:ring-2 hover:ring-white/60 hover:brightness-110 active:scale-95
-              @if(series.type === 'manga')
-                bg-blue-600
-              @elseif(series.type === 'manhwa')
-                bg-green-600
-              @elseif(series.type === 'manhua')
-                bg-red-600
-              @elseif(series.type === 'novel')
-                bg-purple-600
-              @else
-                bg-orange-600
-              @end
-            ">{{ series.type.charAt(0).toUpperCase() + series.type.slice(1) }}</a>
-            <span class="text-gray-400">&bull;</span>
-            <span class="{{ series.status === 'Devam Ediyor' ? 'text-green-400' : series.status === 'Bırakıldı' ? 'text-red-400' : 'text-blue-400' }}">{{ series.status }}</span>
-            @if(series.ageRating)
-            <span class="text-gray-400">&bull;</span>
-            <span class="px-2 py-0.5 rounded text-xs font-bold {{ series.ageRating === '18+' ? 'bg-red-600/80 text-(--t-heading)' : 'bg-yellow-600/80 text-(--t-heading)' }}">{{ series.ageRating }}</span>
-            @end
-          </div>
-
-          {{-- Genre Tags: each opens the catalog filtered by that genre --}}
-          @if(series.genres.length)
-          <ul class="flex flex-wrap gap-2 mt-3" aria-label="Türler">
-            @each(genre in series.genres)
-            <li>
-              <a href="/seriler?genre={{ encodeURIComponent(genre) }}" title="{{ genre }} türündeki seriler" class="link-chip">{{ genre }}</a>
-            </li>
-            @end
-          </ul>
-          @end
-
-          {{-- Description --}}
-          @if(ui('series_description'))
-          <p class="text-sm text-gray-400 mt-4 leading-relaxed">{{ series.description }}</p>
-          @end
-
-          {{-- Action Buttons --}}
-          <div class="flex flex-wrap items-center gap-3 mt-4">
-            @if(chapters.length)
-            <div x-data="continueReading" data-config="{{ JSON.stringify({ type: series.type, slug: series.slug, last: reading ? reading.last : null, chapters: chapters.map(c => c.number) }) }}" class="contents">
-              <a x-cloak x-show="last !== null" :href="href" class="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-(--t-on-accent) text-sm font-semibold rounded transition">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                <span>Okumaya Devam Et <span class="font-normal opacity-90" x-text="'— Bölüm ' + last"></span></span>
-              </a>
-              <a href="/series/{{ series.type }}/{{ series.slug }}/{{ chapters[chapters.length - 1].number }}"
-                 :class="last !== null ? 'border border-gray-600 text-gray-300 hover:border-emerald-500 hover:text-(--t-heading)' : 'bg-emerald-600 hover:bg-emerald-500 text-(--t-heading) font-semibold'"
-                 class="px-4 py-2 text-sm rounded transition active:scale-95">
-                <span x-text="last !== null ? 'İlk Bölüm' : 'Okumaya Başla'">Okumaya Başla</span>
-              </a>
-            </div>
-            @end
-            <button
-              type="button"
-              x-data="bookmarkButton" data-bookmark="{{ JSON.stringify({ type: series.type, slug: series.slug, title: series.title, coverImage: series.coverImage }) }}"
-              data-saved="{{ reading && reading.bookmarked ? 'true' : 'false' }}"
-              @click="toggle()" :aria-pressed="saved.toString()" :disabled="busy"
-              :class="saved ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-gray-600 text-gray-300'"
-              class="px-4 py-2 border text-sm rounded hover:border-emerald-500 hover:text-emerald-300 active:scale-95 disabled:opacity-60 transition flex items-center gap-2"
-            >
-              <svg class="w-4 h-4" :fill="saved ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
-              <span x-text="saved ? 'Kaydedildi' : 'Kaydet'">Kaydet</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {{-- Chapter List --}}
-      <section class="mt-8" x-data="chapterList" data-progress="{{ JSON.stringify({ type: series.type, slug: series.slug, read: reading ? reading.read : null }) }}" data-chapters="{{ JSON.stringify(chapters.map(c => ({ number: c.number, title: c.title ? 'Bölüm ' + c.number + ' - ' + c.title : 'Bölüm ' + c.number, timeAgo: c.timeAgo }))) }}">
-        <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-(--t-heading)">Bölümler <span class="text-sm font-normal text-gray-500">({{ chapters.length }})</span></h2>
-          <button
-            @click="toggleSort()"
-            class="flex items-center gap-1 text-sm text-gray-400 hover:text-(--t-heading) transition-colors border border-white/10 rounded px-3 py-1.5"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
-            </svg>
-            <span x-text="ascending ? 'Eskiden Yeniye' : 'Yeniden Eskiye'"></span>
-          </button>
-        </div>
-
-        {{-- Chapter Search --}}
-        <input
-          type="text"
-          x-model="search"
-          @input="if(search) showAll = true"
-          aria-label="Bölüm ara" placeholder="Bölüm ara... (Örn: 25)"
-          class="w-full glass border border-white/10 rounded px-4 py-2 text-sm text-gray-300 placeholder-gray-500 focus:border-emerald-500 focus:outline-none mb-4"
-        >
-
-        <div class="space-y-1">
-          <template x-for="ch in filteredChapters()" :key="ch.number">
-            <a
-              :href="'/series/{{ series.type }}/{{ series.slug }}/' + ch.number"
-              class="flex gap-3 items-center justify-between rounded px-4 py-3 transition-colors border-l-2"
-              :class="isLast(ch) ? 'bg-emerald-500/10 border-emerald-400 hover:bg-emerald-500/20' : 'glass border-transparent hover:bg-white/5'"
-            >
-              <span class="flex min-w-0 items-center gap-2">
-                <svg x-show="isRead(ch)" class="h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                <span class="text-sm font-medium min-w-0 break-words" :class="isRead(ch) && !isLast(ch) ? 'text-gray-500' : 'text-gray-200'" x-text="ch.title"></span>
-                <span x-show="isLast(ch)" class="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">Son okunan</span>
-                <span x-show="isRead(ch) && !isLast(ch)" class="sr-only">(okundu)</span>
-              </span>
-              <span class="text-gray-400 text-xs shrink-0" x-text="ch.timeAgo"></span>
-            </a>
-          </template>
-        </div>
-
-        <p x-cloak x-show="search && filteredChapters().length === 0" role="status" class="text-center text-gray-400 py-6">Aramanıza uygun bölüm bulunamadı.</p>
-
-        {{-- Show More / Less --}}
-        @if(chapters.length > 10)
-        <div class="flex justify-center mt-4">
-          <button
-            @click="showAll = !showAll"
-            x-show="!search"
-            class="px-5 py-2 glass border border-white/10 rounded-lg text-sm text-gray-300 hover:text-(--t-heading) hover:border-emerald-500 transition-colors flex items-center gap-2"
-          >
-            <span x-text="showAll ? 'Daha Az Göster' : 'Tümünü Göster ({{ chapters.length }})'"></span>
-            <svg class="w-4 h-4 transition-transform" :class="showAll ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-          </button>
-        </div>
-        @end
-
-        @if(chapters.length === 0)
-        <div class="text-center text-gray-500 py-8">Henüz bölüm eklenmemiş.</div>
-        @end
-
-
-      </section>
+    <div class="series-layout__main">
+      @include('partials/series/chapters')
 
       @if(ui('series_reviews'))
       @include('partials/reviews/section')
@@ -192,86 +41,27 @@
       @end
     </div>
 
-    {{-- Right Sidebar --}}
-    <aside class="lg:w-72 mt-8 lg:mt-0 space-y-6">
-      {{-- Seri Bilgileri --}}
-      @if(ui('series_sidebar'))
-      <div class="glass rounded-lg p-4">
-        <h3 class="text-sm font-bold text-(--t-heading) mb-3 flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Seri Bilgileri
-        </h3>
-        {{-- Type, status, age rating and genres are already shown in the header. --}}
-        <dl class="space-y-2 text-sm">
-          <div class="flex justify-between gap-3"><dt class="text-gray-500">Çeviri Durumu</dt><dd class="text-green-400 text-right">{{ series.translationStatus }}</dd></div>
-          @if(series.publicationYear)
-          <div class="flex justify-between gap-3"><dt class="text-gray-500">Yayın Yılı</dt><dd class="text-gray-300">{{ series.publicationYear }}</dd></div>
-          @end
-          @if(series.authors.length)
-          <div class="flex justify-between gap-3"><dt class="text-gray-500">Yazar</dt>
-            <dd class="flex flex-wrap justify-end gap-x-2 text-right">
-              @each(person in series.authors)
-              <a href="/seriler?author={{ encodeURIComponent(person.slug) }}" class="link-person">{{ person.name }}</a>
-              @end
-            </dd>
-          </div>
-          @end
-          @if(series.artists.length)
-          <div class="flex justify-between gap-3"><dt class="text-gray-500">Sanatçı</dt>
-            <dd class="flex flex-wrap justify-end gap-x-2 text-right">
-              @each(person in series.artists)
-              <a href="/seriler?artist={{ encodeURIComponent(person.slug) }}" class="link-person">{{ person.name }}</a>
-              @end
-            </dd>
-          </div>
-          @end
-          <div class="flex justify-between gap-3"><dt class="text-gray-500">Bölüm Sayısı</dt><dd class="text-gray-300">{{ chapters.length }}</dd></div>
-        </dl>
-        </div>
-      </div>
-      @end
-
-      {{-- Anahtar Kelimeler --}}
-      @if(ui('series_keywords') && series.keywords && series.keywords.length)
-      <div class="glass rounded-lg p-4">
-        <h3 class="text-sm font-bold text-(--t-heading) mb-2">Anahtar Kelimeler</h3>
-        <p class="text-xs text-gray-500 leading-relaxed">{{ series.keywords.join(', ') }}</p>
-      </div>
-      @end
+    @if(hasKeywords)
+    <aside class="series-layout__extra panel panel--tight" aria-labelledby="series-keywords-title">
+      <h2 id="series-keywords-title" class="series-aside__title">
+        @!component('components/icon', { name: 'tag', class: 'h-4 w-4' })
+        Anahtar kelimeler
+      </h2>
+      <ul class="series-keywords">
+        @each(keyword in series.keywords)
+        <li>{{ keyword }}</li>
+        @end
+      </ul>
     </aside>
+    @end
   </div>
 
-  {{-- Benzer Seriler --}}
   @if(ui('series_similar') && similar.length)
-  <section class="mt-12">
-    <h2 class="text-lg font-bold text-(--t-heading) mb-4">Benzer Seriler</h2>
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+  <section class="section mt-12" aria-labelledby="similar-title">
+    @!component('components/ui/section_head', { title: 'Benzer Seriler', id: 'similar-title', icon: 'sparkles', description: 'Aynı türden ve benzer konulu seriler' })
+    <div class="series-grid">
       @each(item in similar)
-      <a href="/series/{{ item.type }}/{{ item.slug }}" class="group">
-        <div class="relative overflow-hidden rounded-lg aspect-[3/4] glass">
-          <img
-            src="{{ item.coverImage }}"
-            alt="{{ item.title }}"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-            onerror="this.onerror=null;this.style.display='none'"
-          >
-          <span class="absolute top-2 left-2 text-xs font-bold px-2 py-0.5 rounded
-            @if(item.type === 'manga')
-              bg-blue-600
-            @elseif(item.type === 'manhwa')
-              bg-green-600
-            @elseif(item.type === 'manhua')
-              bg-red-600
-            @else
-              bg-purple-600
-            @end
-            text-(--t-on-accent)">
-            {{ item.type.charAt(0).toUpperCase() + item.type.slice(1) }}
-          </span>
-        </div>
-        <h3 class="mt-2 text-xs font-medium text-gray-300 group-hover:text-(--t-heading) transition-colors truncate">{{ item.title }}</h3>
-      </a>
+      @!component('components/series/card', { series: item })
       @end
     </div>
   </section>

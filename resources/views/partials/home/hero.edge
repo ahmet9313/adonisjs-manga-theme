@@ -1,0 +1,127 @@
+{{--
+  Featured series carousel (WAI-ARIA carousel; behaviour in resources/js/components/hero_slider.js).
+  Full width in the layout's banner slot; the text sits on a scrim of the page colour, so it reads
+  in both schemes. The controls come first in the DOM (rotation control first, as the pattern
+  recommends) and are placed at the bottom with CSS.
+  Contracts (scripts/check-mobile-nav.mjs): the [aria-roledescription="carousel"] element is at
+  least 350px tall at 390px; every [data-hero-slide] is position:absolute and only one is
+  displayed (x-show); the FIRST <img> of a slide is its background art and is shown at every
+  width (phones get the cover, wider screens the banner through <picture>); [data-hero-title]
+  holds the title; [data-hero-next] shows the next slide.
+--}}
+<section x-data="heroSlider({{ featured.length }})" class="home-hero" aria-roledescription="carousel" aria-label="Öne çıkan seriler"
+  @mouseenter="pause('hover')"
+  @mouseleave="resume('hover')"
+  @focusin="pause('focus')"
+  @focusout="$el.contains($event.relatedTarget) || resume('focus')"
+  @touchstart.passive="handleTouchStart($event)"
+  @touchend.passive="handleTouchEnd($event)"
+  @keydown.left.prevent="previous()"
+  @keydown.right.prevent="next()">
+  @if(featured.length > 1)
+  <div x-cloak class="home-hero__controls">
+    <div class="home-hero__bar">
+      <div class="home-hero__dots {{ featured.length > 6 ? 'home-hero__dots--many' : '' }}" role="group" aria-label="Slayt seçimi">
+        @each((item, index) in featured)
+        <button type="button" class="home-hero__dot" @click="goTo({{ index }})" aria-label="{{ index + 1 }}. slayt: {{ item.title }}"
+          aria-current="{{ index === 0 ? 'true' : 'false' }}" :aria-current="current === {{ index }} ? 'true' : 'false'"><span></span></button>
+        @end
+      </div>
+      <p class="home-hero__count {{ featured.length > 6 ? 'home-hero__count--many' : '' }}" aria-hidden="true">
+        <span class="home-hero__count-now" x-text="String(current + 1).padStart(2, '0')">01</span>
+        <span>/ {{ String(featured.length).padStart(2, '0') }}</span>
+      </p>
+      <div class="home-hero__buttons">
+        <button type="button" class="btn btn--secondary btn--icon home-hero__btn" @click="toggle()"
+          data-label-pause="Otomatik geçişi durdur" data-label-play="Otomatik geçişi başlat"
+          aria-label="Otomatik geçişi durdur" :aria-label="playing ? $el.dataset.labelPause : $el.dataset.labelPlay">
+          <span x-show="playing" class="contents">
+            @!component('components/icon', { name: 'pause', class: 'btn__icon' })
+          </span>
+          <span x-show="!playing" x-cloak class="contents">
+            @!component('components/icon', { name: 'play', class: 'btn__icon' })
+          </span>
+        </button>
+        <button type="button" class="btn btn--secondary btn--icon home-hero__btn" @click="previous()" aria-label="Önceki seri">
+          @!component('components/icon', { name: 'chevron-left', class: 'btn__icon' })
+        </button>
+        <button type="button" class="btn btn--secondary btn--icon home-hero__btn" @click="next()" aria-label="Sonraki seri" data-hero-next>
+          @!component('components/icon', { name: 'chevron-right', class: 'btn__icon' })
+        </button>
+      </div>
+    </div>
+  </div>
+  @end
+
+  <div class="home-hero__slides" aria-live="off" :aria-live="playing ? 'off' : 'polite'">
+    @each((item, index) in featured)
+    @let(url = '/series/' + item.type + '/' + item.slug)
+    <div class="home-hero__slide" data-hero-slide data-art="{{ item.bannerImage ? 'banner' : 'cover' }}"
+      role="group" aria-roledescription="slide" aria-label="{{ index + 1 }} / {{ featured.length }}"
+      x-show="current === {{ index }}"
+      @if(index !== 0)
+      x-cloak
+      @end
+      x-transition:enter="home-hero-enter"
+      x-transition:enter-start="home-hero-hidden"
+      x-transition:enter-end="home-hero-shown"
+      x-transition:leave="home-hero-leave"
+      x-transition:leave-start="home-hero-shown"
+      x-transition:leave-end="home-hero-hidden">
+      <picture class="home-hero__art">
+        @if(item.bannerImage)
+        <source media="(min-width: 640px)" srcset="{{ encodeURI(item.bannerImage) }}">
+        @end
+        <img src="{{ item.coverImage }}" alt="" decoding="async" data-fallback=""
+          @if(index === 0)
+          fetchpriority="high"
+          @else
+          loading="lazy"
+          @end
+          >
+      </picture>
+      <div class="home-hero__scrim"></div>
+
+      <div class="home-hero__inner">
+        <a href="{{ url }}" class="home-hero__cover" tabindex="-1" aria-hidden="true">
+          <img src="{{ item.coverImage }}" alt="" width="300" height="450" decoding="async" data-fallback="/images/no-cover.svg"
+            @if(index !== 0)
+            loading="lazy"
+            @end
+            >
+        </a>
+        <div class="home-hero__content">
+          <p class="home-hero__meta">
+            @!component('components/ui/badge', { kind: 'type', value: item.type, solid: true, caps: true })
+            @if(item.status)
+            @!component('components/ui/badge', { kind: 'status', value: item.status })
+            @end
+            @if(item.ageRating)
+            @!component('components/ui/badge', { kind: 'age', value: item.ageRating, title: 'Yaş sınırı ' + item.ageRating })
+            @end
+            @if(item.ratingCount)
+            <span class="home-hero__rating" title="{{ item.ratingCount }} puan">★ {{ item.ratingAverage.toFixed(1) }}<span class="home-hero__votes">({{ item.ratingCount }} puan)</span></span>
+            @end
+          </p>
+          <h2 class="home-hero__title" data-hero-title><a href="{{ url }}">{{ item.title }}</a></h2>
+          @if(item.featuredDescription || item.description)
+          <p class="home-hero__desc">{{ item.featuredDescription || item.description }}</p>
+          @end
+          @if(item.genres.length)
+          <ul class="home-hero__genres" aria-label="Türler">
+            @each(genre in item.genres.slice(0, 4))
+            <li><a href="/seriler?genre={{ encodeURIComponent(genre) }}" class="link-chip">{{ genre }}</a></li>
+            @end
+          </ul>
+          @end
+          <div class="home-hero__actions">
+            @component('components/ui/button', { variant: 'primary', size: 'lg', href: url, iconRight: 'arrow-right' })
+              Seriye git<span class="sr-only">: {{ item.title }}</span>
+            @end
+          </div>
+        </div>
+      </div>
+    </div>
+    @end
+  </div>
+</section>

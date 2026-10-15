@@ -1,41 +1,72 @@
 @component('components/layout/main', { title })
 
 @slot('main')
-  @!component('components/breadcrumb', { items: [{ label: 'Rozetler' }] })
-  <div class="glass rounded-3xl border border-white/10 p-5 sm:p-7">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 class="section-title">Rozetler ve Başarımlar</h1>
-        <p class="mt-2 text-sm text-gray-300">Okudukça, yorum yaptıkça ve her gün uğradıkça rozet kazanırsın. Rozetler EXP verir ve bazı kozmetiklerin kilidini açar.</p>
-      </div>
-      <p class="text-sm text-gray-300"><strong class="text-2xl text-(--t-heading)">{{ earned }}</strong> / {{ board.length }} kazanıldı</p>
+  @let(total = board.length)
+  @let(locked = total - earned)
+  @let(won = board.filter((badge) => badge.earnedAt))
+  @let(wonExp = won.reduce((sum, badge) => sum + (badge.exp || 0), 0))
+  @let(latest = won.length ? won.slice().sort((a, b) => String(b.earnedAt).localeCompare(String(a.earnedAt)))[0] : null)
+  @component('components/ui/page_header', { title: 'Rozetler', description: 'Okudukça, yorum yaptıkça ve her gün uğradıkça rozet kazanırsın. Rozetler EXP verir ve bazı kozmetiklerin kilidini açar.', breadcrumb: [{ label: 'Seviye ve Ödüller', href: '/oduller' }, { label: 'Rozetler' }] })
+    @if(latest)
+    <p class="mt-2 text-sm text-muted">
+      Rozetlerden toplam <strong class="t-num text-ink">{{ wonExp.toLocaleString('tr-TR') }} EXP</strong> kazandın · Son rozetin: <strong class="text-ink">{{ latest.name }}</strong> ({{ dateOf(latest.earnedAt) }})
+    </p>
+    @end
+    @slot('actions')
+    <div class="badge-summary">
+      <p class="flex items-baseline gap-2">
+        <span class="badge-summary__count">{{ earned }} <span class="text-muted">/ {{ total }}</span></span>
+        <span class="text-sm text-muted">kazanıldı</span>
+      </p>
+      @!component('components/ui/progress', { value: earned, max: total || 1, label: 'Kazanılan rozetler', valueText: earned + ' / ' + total })
+    </div>
+    @end
+  @end
+
+  <section aria-labelledby="badges-title" x-data="{ filter: 'all' }">
+    <h2 id="badges-title" class="sr-only">Rozet listesi</h2>
+    <div x-cloak class="mb-4 flex flex-wrap gap-2" role="group" aria-label="Rozetleri süz">
+      <button type="button" class="chip" aria-pressed="true" :aria-pressed="(filter === 'all').toString()" @click="filter = 'all'">
+        Tümü
+        <span class="chip__count">{{ total }}</span>
+      </button>
+      <button type="button" class="chip" aria-pressed="false" :aria-pressed="(filter === 'earned').toString()" @click="filter = 'earned'">
+        Kazanılan
+        <span class="chip__count">{{ earned }}</span>
+      </button>
+      <button type="button" class="chip" aria-pressed="false" :aria-pressed="(filter === 'locked').toString()" @click="filter = 'locked'">
+        Kilitli
+        <span class="chip__count">{{ locked }}</span>
+      </button>
     </div>
 
-    <ul class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <ul class="badge-grid" role="list">
       @each(badge in board)
-        <li class="flex gap-4 rounded-2xl border p-4 {{ badge.earnedAt ? 'border-white/15 bg-white/[0.05]' : 'border-white/5 bg-white/[0.02]' }}">
-          <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-2xl shadow-lg {{ badge.tone }} {{ badge.earnedAt ? '' : 'opacity-40 grayscale' }}" aria-hidden="true">{{ badge.icon }}</span>
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-              <h2 class="font-bold {{ badge.earnedAt ? 'text-(--t-heading)' : 'text-gray-300' }}">{{ badge.name }}</h2>
-              @if(badge.exp)
-                <span class="rounded bg-emerald-500/15 px-1.5 text-[11px] font-bold text-emerald-300">+{{ badge.exp }} EXP</span>
-              @end
-            </div>
-            <p class="text-sm text-gray-400">{{ badge.description }}</p>
-            @if(badge.earnedAt)
-              <p class="mt-2 text-xs font-semibold text-emerald-300">✓ {{ new Date(badge.earnedAt.replace(' ', 'T') + 'Z').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: site.timezone }) }}</p>
-            @else
-              <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div class="h-full rounded-full bg-gradient-to-r {{ badge.tone }}" style="width: {{ Math.floor(badge.value / badge.goal * 100) }}%"></div>
-              </div>
-              <p class="mt-1 text-xs text-gray-500">{{ badge.value }} / {{ badge.goal }}</p>
-            @end
-          </div>
-        </li>
+      @if(badge.earnedAt)
+      <li x-show="filter !== 'locked'">
+      @else
+      <li x-show="filter !== 'earned'">
+      @end
+        @!component('components/ui/badge_card', { badge })
+      </li>
       @end
     </ul>
-  </div>
+
+    @if(!earned)
+    <div x-cloak x-show="filter === 'earned'">
+      @component('components/ui/empty_state', { icon: 'trophy', title: 'Henüz rozetin yok', description: 'İlk bölümünü okuyarak “İlk Adım” rozetini kazanabilirsin.' })
+        @component('components/ui/button', { href: '/seriler', variant: 'primary', iconRight: 'arrow-right' })
+          Serilere göz at
+        @end
+      @end
+    </div>
+    @end
+    @if(!locked)
+    <div x-cloak x-show="filter === 'locked'">
+      @!component('components/ui/empty_state', { icon: 'trophy', title: 'Bütün rozetleri kazandın', description: 'Kilitli rozetin kalmadı. Yeni rozetler eklendiğinde burada görünecek.' })
+    </div>
+    @end
+  </section>
 @end
 
 @end

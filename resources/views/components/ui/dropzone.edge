@@ -1,0 +1,64 @@
+{{--
+  Admin image field with drag and drop and a preview (Alpine `imageDrop`, tag_input.js).
+  The file input sits inside the drop zone label: it is focusable, opens the file picker from the
+  keyboard, and a dropped file is put into the same input. Choosing nothing keeps the stored
+  image (the forms have no "remove image" option, so none is offered).
+  Props: name (required), label, current (URL of the stored image), aspect cover|banner (cover),
+         hint, accept ('image/jpeg,image/png,image/webp'), id ('f-' + name), class.
+  The server error comes from inputErrorsBag.<name>; type and size are also checked on choosing.
+    @!component('components/ui/dropzone', { name: 'cover_image', label: 'Kapak görseli', current: series.coverImage })
+--}}
+@let(name = $props.get('name'))
+@let(id = $props.get('id', 'f-' + name))
+@let(current = $props.get('current', '') || '')
+@let(aspect = $props.get('aspect', 'cover'))
+@let(error = flashMessages.has('inputErrorsBag.' + name) ? flashMessages.get('inputErrorsBag.' + name)[0] : '')
+@let(hint = $props.get('hint', ''))
+@let(describedBy = [error ? id + '-error' : '', hint ? id + '-hint' : ''].filter(Boolean).join(' '))
+<div class="field {{ error ? 'field--invalid' : '' }} {{ $props.get('class', '') }}" x-data="imageDrop" data-current="{{ current }}">
+  <span id="{{ id }}-label" class="field__label">{{ $props.get('label', '') }}</span>
+  <label class="dropzone admin-drop admin-drop--{{ aspect }} {{ current ? 'has-image' : '' }}" :class="{ 'is-over': over, 'has-image': Boolean(preview) }"
+         @dragover.prevent="over = true" @dragleave="if (!$el.contains($event.relatedTarget)) over = false" @drop.prevent="drop($event)">
+    <input type="file" id="{{ id }}" name="{{ name }}" accept="{{ $props.get('accept', 'image/jpeg,image/png,image/webp') }}" class="sr-only" x-ref="file"
+           aria-labelledby="{{ id }}-label" @change="pick($event)"
+      @if(describedBy)
+      aria-describedby="{{ describedBy }}"
+      @end
+      @if(error)
+      aria-invalid="true"
+      @end
+      >
+    <img alt="" decoding="async" data-fallback="/images/no-cover.svg" :src="preview || null" :hidden="!preview"
+      @if(current)
+      src="{{ current }}"
+      @else
+      hidden
+      @end
+      >
+    <span class="admin-drop__empty" :hidden="Boolean(preview)"
+      @if(current)
+      hidden
+      @end
+      >
+      @!component('components/icon', { name: 'photo' })
+      <span class="admin-drop__cta">Görsel seçin</span>
+      <span>veya buraya sürükleyip bırakın</span>
+    </span>
+    <span class="admin-drop__overlay" aria-hidden="true">
+      @!component('components/icon', { name: 'upload' })
+      Değiştir
+    </span>
+  </label>
+  <div class="admin-file" x-show="fileName" x-cloak aria-live="polite">
+    @!component('components/icon', { name: 'check-circle' })
+    <span class="min-w-0 flex-1 truncate"><span x-text="fileName"></span> · <span x-text="fileSize"></span></span>
+    <button type="button" class="btn btn--link btn--sm shrink-0" @click="reset()">Geri al</button>
+  </div>
+  <p class="field__error" x-show="error" x-text="error" x-cloak role="alert"></p>
+  @if(hint)
+  <p id="{{ id }}-hint" class="field__hint">{{ hint }}</p>
+  @end
+  @if(error)
+  <p id="{{ id }}-error" class="field__error" role="alert">{{ error }}</p>
+  @end
+</div>

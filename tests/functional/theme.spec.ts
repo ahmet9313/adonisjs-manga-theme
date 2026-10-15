@@ -3,7 +3,7 @@ import User from '#models/user'
 import { clearAttempts } from '#services/throttle'
 import settings from '#services/settings_service'
 import { colorTokens, flags, looks } from '#config/theme'
-import { colorKey, flagKey, lookKey, CUSTOM_CSS_KEY } from '#services/theme_service'
+import { colorKey, flagKey, lightColorKey, lookKey, CUSTOM_CSS_KEY } from '#services/theme_service'
 import site from '#config/site'
 
 const base = 'http://127.0.0.1:3334'
@@ -54,7 +54,10 @@ test.group('Admin navigation, roles and theme settings', (group) => {
   group.each.setup(() => clearAttempts())
   group.teardown(async () => {
     const theme: Record<string, string> = { [CUSTOM_CSS_KEY]: '' }
-    for (const token of colorTokens) theme[colorKey(token.key)] = ''
+    for (const token of colorTokens) {
+      theme[colorKey(token.key)] = ''
+      theme[lightColorKey(token.key)] = ''
+    }
     for (const look of looks) theme[lookKey(look.key)] = ''
     for (const flag of flags) theme[flagKey(flag.key)] = ''
     await settings.save({
@@ -211,9 +214,9 @@ test.group('Admin navigation, roles and theme settings', (group) => {
       {
         c_bg: '#123',
         c_accent: '#8b5cf6',
-        c_text: '#e5e7eb',
+        c_text: colorTokens.find((token) => token.key === 'text')!.default,
         c_header_bg: '#101820cc',
-        l_scheme: 'light',
+        l_default_scheme: 'light',
       },
       '/admin/tema/renkler'
     )
@@ -221,7 +224,7 @@ test.group('Admin navigation, roles and theme settings', (group) => {
     assert.include(themed, '--t-bg:#112233')
     assert.include(themed, '--t-accent:#8b5cf6')
     assert.include(themed, '--t-header-bg:#101820cc')
-    assert.include(themed, 'color-scheme:light')
+    assert.match(themed, /<html[^>]* data-theme="light"/)
     assert.notInclude(themed, '--t-text:')
     assert.match(themed, /<html[^>]* data-accent/)
     assert.notMatch(themed, /<html[^>]* data-accent2/)
@@ -294,6 +297,8 @@ test.group('Admin navigation, roles and theme settings', (group) => {
     const before = await textOf(admin.request('/'))
     for (const text of ['Seri Listesi', 'desktop-series-search', 'Son Güncellenenler', '<footer'])
       assert.include(before, text)
+    const seriesLink = /<a[^>]*href="\/seriler"[^>]*>\s*(?:<[^>]+>\s*)*Seri Listesi/
+    assert.match(before, seriesLink)
 
     await admin.post(
       '/admin/tema/goster',
@@ -311,7 +316,7 @@ test.group('Admin navigation, roles and theme settings', (group) => {
     const hidden = await textOf(admin.request('/'))
     for (const text of ['desktop-series-search', 'Son Güncellenenler', '<footer'])
       assert.notInclude(hidden, text)
-    assert.notInclude(hidden, 'href="/seriler" class="text-gray-300')
+    assert.notMatch(hidden, seriesLink)
     assert.include(hidden, 'href="/oneriler"')
     assert.include(hidden, '.site-header{position:static!important}')
     assert.include(hidden, '--t-glow-1:transparent')

@@ -1,82 +1,170 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin → Kullanıcılar: GET filters (search, role, status; page size kept), a table that turns
+  into compact cards on phones (user chip, e-mail, role badge in the role colour, level, joined,
+  last seen, status), pagination and page size. Administrators cannot edit themselves here.
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(roleOptions = [{ value: '', label: 'Tüm roller' }].concat(roleList.map((entry) => ({ value: entry.key, label: entry.label }))))
+@let(statusOptions = [{ value: '', label: 'Tüm durumlar' }, { value: 'active', label: 'Aktif' }, { value: 'banned', label: 'Askıda (' + number(bannedTotal) + ')' }])
+@let(first = users.total ? (users.currentPage - 1) * users.perPage + 1 : 0)
+@let(last = Math.min(users.currentPage * users.perPage, users.total))
+@let(keepSize = perPage !== 20 ? '?per_page=' + perPage : '')
+@let(me = auth.user)
+@component('components/layout/admin', { title, description: number(accountTotal) + ' kayıtlı hesap. Rol atayın, hesapları askıya alın ya da profillere gidin.' })
+  @slot('actions')
+    @component('components/ui/button', { href: '/admin/roller', icon: 'shield' })
+      Rolleri yönet
+    @end
+  @end
 
-@slot('main')
-  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-    <div class="flex flex-wrap items-center gap-3">
-      <h3 class="text-lg font-semibold text-gray-200">Tüm Kullanıcılar</h3>
-      <a href="/admin/roller" class="text-sm text-emerald-400 hover:underline">Rolleri yönet</a>
-    </div>
-    <form method="GET" action="/admin/kullanicilar" class="flex flex-wrap items-center gap-2">
-      <label for="user-search" class="sr-only">Kullanıcı ara</label>
-      <input id="user-search" type="search" name="search" value="{{ search }}" placeholder="Kullanıcı adı veya e-posta"
-             class="w-56 rounded-lg border border-gray-600 bg-(--t-field) px-3 py-2 text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
-      <label for="user-role" class="sr-only">Rol</label>
-      <select id="user-role" name="role" class="rounded-lg border border-gray-600 bg-(--t-field) px-3 py-2 text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
-        <option value="">Tüm roller</option>
-        @each(item in roleList)
-          <option value="{{ item.key }}" {{ role === item.key ? 'selected' : '' }}>{{ item.label }}</option>
+  @slot('main')
+    <div class="ac-page">
+      <form method="GET" action="/admin/kullanicilar" class="panel panel--tight ac-filters" role="search" aria-label="Kullanıcıları filtrele" x-data>
+        @!component('components/ui/field', { name: 'search', label: 'Ara', type: 'search', value: search, placeholder: 'Kullanıcı adı veya e-posta', autocomplete: 'off' })
+        @!component('components/ui/field', { name: 'role', label: 'Rol', type: 'select', value: role, options: roleOptions, '@change': '$el.form.requestSubmit()' })
+        @!component('components/ui/field', { name: 'status', label: 'Durum', type: 'select', value: status, options: statusOptions, '@change': '$el.form.requestSubmit()' })
+        @if(perPage !== 20)
+        <input type="hidden" name="per_page" value="{{ perPage }}">
         @end
-      </select>
-      <button type="submit" class="rounded-lg border border-emerald-800 px-4 py-2 text-sm text-emerald-400 hover:border-emerald-600">Filtrele</button>
-    </form>
-  </div>
+        <div class="ac-filters__actions">
+          @component('components/ui/button', { type: 'submit', icon: 'filter' })
+            Filtrele
+          @end
+          @if(filtered)
+          @component('components/ui/button', { variant: 'ghost', href: '/admin/kullanicilar' + keepSize, icon: 'x' })
+            Filtreleri temizle
+          @end
+          @end
+        </div>
+      </form>
 
-  @include('partials/admin/pagination')
+      <p class="ac-summary" aria-live="polite">
+        @if(filtered)
+        <span><strong>{{ number(users.total) }}</strong> sonuç</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ number(accountTotal) }} hesap içinde</span>
+        @else
+        <span><strong>{{ number(users.total) }}</strong> kullanıcı, en yeni kayıt önce</span>
+        @end
+      </p>
 
-  <div class="overflow-hidden rounded-xl border border-gray-700 bg-(--t-surface)">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-700 text-left text-gray-400">
-            <th class="px-5 py-3 font-medium">Kullanıcı</th>
-            <th class="px-5 py-3 font-medium">E-posta</th>
-            <th class="px-5 py-3 font-medium">Rol</th>
-            <th class="px-5 py-3 font-medium">Durum</th>
-            <th class="px-5 py-3 text-right font-medium">İşlemler</th>
-          </tr>
-        </thead>
-        <tbody>
-          @each(member in users)
-            <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-3">
-                  @!component('components/avatar', { user: member, size: 'h-9 w-9', text: 'text-sm' })
-                  <div class="min-w-0">
-                    <div class="truncate font-medium text-gray-200">{{ member.fullName }}</div>
-                    <div class="truncate text-xs text-gray-500">&#64;{{ member.username }}</div>
-                  </div>
-                </div>
-              </td>
-              <td class="px-5 py-3 text-gray-400">{{ member.email }}</td>
-              <td class="px-5 py-3">
-                @!component('components/role_badge', { user: member })
-              </td>
-              <td class="px-5 py-3">
-                @if(member.bannedAt)
-                  <span class="rounded-md border border-red-700 bg-red-900/30 px-2 py-0.5 text-xs text-red-300">Askıda</span>
-                @else
-                  <span class="rounded-md border border-green-700 bg-green-900/30 px-2 py-0.5 text-xs text-green-300">Aktif</span>
+      @if(users.total)
+      <div class="table-wrap">
+        <table class="table table--stack ac-table">
+          <caption class="sr-only">Kullanıcılar</caption>
+          <thead>
+            <tr>
+              <th scope="col">Kullanıcı</th>
+              <th scope="col" class="max-xl:hidden">E-posta</th>
+              <th scope="col">Rol</th>
+              <th scope="col">Seviye</th>
+              <th scope="col" class="max-xl:hidden">Katıldı</th>
+              <th scope="col">Son görülme</th>
+              <th scope="col">Durum</th>
+              <th scope="col"><span class="sr-only">İşlemler</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(member in users)
+            @let(isSelf = member.id === me.id)
+            @let(editUrl = '/admin/kullanicilar/' + member.id + '/duzenle')
+            @let(level = levelOf(member).level)
+            <tr>
+              <td class="cell-main">
+                @component('components/ui/user_chip', { user: member, meta: '@' + member.username, showLevel: false, href: isSelf ? '/uye/' + member.username : editUrl })
+                  <p class="ac-table__mobile md:hidden">
+                    @!component('components/role_badge', { user: member })
+                    @!component('components/level_badge', { level })
+                    @if(member.bannedAt)
+                    @!component('components/ui/badge', { kind: 'danger', text: 'Askıda', size: 'sm' })
+                    @end
+                    @if(isSelf)
+                    @!component('components/ui/badge', { kind: 'accent', text: 'Siz', size: 'sm' })
+                    @end
+                  </p>
                 @end
               </td>
-              <td class="px-5 py-3 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <a href="/uye/{{ member.username }}" class="rounded border border-gray-700 px-3 py-1 text-xs text-gray-400 transition hover:border-gray-500">Profil</a>
-                  @if(member.id !== auth.user.id)
-                    <a href="/admin/kullanicilar/{{ member.id }}/duzenle" class="rounded border border-emerald-800 px-3 py-1 text-xs text-emerald-400 transition hover:border-emerald-600 hover:text-emerald-300">Düzenle</a>
+              <td data-label="E-posta" class="max-xl:hidden">
+                <span class="ac-email" title="{{ member.email }}">{{ member.email }}</span>
+              </td>
+              <td data-label="Rol" class="max-md:hidden">
+                @!component('components/role_badge', { user: member })
+              </td>
+              <td data-label="Seviye" class="whitespace-nowrap max-md:hidden">
+                @!component('components/level_badge', { level })
+                <span class="ml-1 text-xs text-muted t-num max-xl:hidden">{{ number(member.exp) }} EXP</span>
+              </td>
+              <td data-label="Katıldı" class="whitespace-nowrap text-muted max-xl:hidden">
+                @if(member.createdAt)
+                <time datetime="{{ member.createdAt }}">{{ dateOf(member.createdAt) }}</time>
+                @else
+                <span aria-label="Bilinmiyor">—</span>
+                @end
+              </td>
+              <td data-label="Son görülme" class="whitespace-nowrap max-md:hidden">
+                @if(member.isOnline)
+                <span class="inline-flex items-center gap-1.5 font-semibold text-success">
+                  <span class="presence" data-online="1" aria-hidden="true"></span>
+                  Çevrimiçi
+                </span>
+                @elseif(member.lastSeenAt)
+                <time class="text-muted" datetime="{{ member.lastSeenAt }}" title="{{ dateOf(member.lastSeenAt) }}">{{ agoOf(member.lastSeenAt) }}</time>
+                @else
+                <span class="text-muted">Hiç</span>
+                @end
+              </td>
+              <td data-label="Durum" class="max-md:hidden">
+                @if(member.bannedAt)
+                @!component('components/ui/badge', { kind: 'danger', text: 'Askıda', title: 'Askıya alındı: ' + dateOf(member.bannedAt) })
+                @elseif(isSelf)
+                @!component('components/ui/badge', { kind: 'accent', text: 'Siz' })
+                @else
+                @!component('components/ui/badge', { kind: 'success', text: 'Aktif' })
+                @end
+              </td>
+              <td class="actions">
+                <div class="ac-actions">
+                  @if(!member.bannedAt)
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'external', href: '/uye/' + member.username, target: '_blank', rel: 'noopener', label: 'Profili aç: ' + member.username, title: 'Profili aç' })
+                  @end
+                  @if(!isSelf)
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: editUrl, label: 'Düzenle: ' + member.username, title: 'Rolü ve durumu düzenle' })
                   @end
                 </div>
               </td>
             </tr>
+            @end
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ac-listfoot">
+        <p class="ac-listfoot__info">{{ number(first) }}–{{ number(last) }} / {{ number(users.total) }} kullanıcı</p>
+        @!component('components/ui/pagination', { current: users.currentPage, total: users.lastPage, label: 'Kullanıcı sayfaları' })
+        <form method="GET" action="/admin/kullanicilar" class="ac-perpage" x-data>
+          @each((value, key) in { search: search, role: role, status: status })
+          @if(value)
+          <input type="hidden" name="{{ key }}" value="{{ value }}">
           @end
-          @if(users.total === 0)
-            <tr><td colspan="5" class="px-5 py-8 text-center text-gray-500">Kullanıcı bulunamadı</td></tr>
           @end
-        </tbody>
-      </table>
+          <label for="per-page">Sayfa başına</label>
+          <select id="per-page" name="per_page" class="control control--sm" @change="$el.form.requestSubmit()">
+            @each(size in site.adminPageSizes)
+            <option value="{{ size }}" {{ perPage === size ? 'selected' : '' }}>{{ size }}</option>
+            @end
+          </select>
+          <noscript>
+            <button type="submit" class="btn btn--secondary btn--sm">Uygula</button>
+          </noscript>
+        </form>
+      </div>
+      @else
+      @component('components/ui/empty_state', { icon: 'search', title: 'Filtrelere uyan kullanıcı yok', description: 'Aramayı kısaltın ya da rol ve durum filtrelerini kaldırın.' })
+        @component('components/ui/button', { href: '/admin/kullanicilar' + keepSize, icon: 'x' })
+          Filtreleri temizle
+        @end
+      @end
+      @end
     </div>
-  </div>
-
-  @include('partials/admin/pagination')
-@end
-
+  @end
 @end

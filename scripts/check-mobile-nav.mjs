@@ -60,6 +60,8 @@ async function main() {
       '--headless=new',
       '--disable-gpu',
       '--no-first-run',
+      // Chromium refuses to start as root (containers, CI) unless sandboxing is disabled.
+      ...(process.getuid?.() === 0 || process.env.BROWSER_NO_SANDBOX ? ['--no-sandbox'] : []),
       `--remote-debugging-port=${debuggingPort}`,
       `--user-data-dir=${profileDirectory}`,
       '--window-size=390,844',

@@ -1,0 +1,488 @@
+/*
+ * Chapter reader: sticky toolbar with reading progress, chapter header, page images, novel text,
+ * end-of-chapter card and navigation. Colours come from tokens only.
+ */
+
+@layer components {
+  /* ---- Toolbar (layout banner slot, sticky under the site header) ------------------------ */
+  .reader-bar {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    border-bottom: 1px solid var(--t-border);
+    background: var(--t-surface);
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  /* The header is 4rem plus its 1px border. */
+  .reader-bar[data-offset='header'] {
+    top: calc(4rem + 1px);
+  }
+
+  /* Slides under the header while reading downwards; the progress line stays visible. */
+  .reader-bar[data-hidden='true'] {
+    transform: translateY(calc(-100% + 2px));
+  }
+
+  .reader-bar__inner {
+    display: flex;
+    height: 3.5rem;
+    max-width: var(--t-container);
+    align-items: center;
+    gap: 0.375rem;
+    margin-inline: auto;
+    padding-inline: 0.75rem;
+  }
+
+  @media (width >= 640px) {
+    .reader-bar__inner {
+      gap: 0.5rem;
+      padding-inline: 1.5rem;
+    }
+  }
+
+  @media (width >= 1024px) {
+    .reader-bar__inner {
+      padding-inline: 2rem;
+    }
+  }
+
+  .reader-bar__back {
+    margin-left: -0.375rem;
+  }
+
+  .reader-bar__title {
+    display: none;
+  }
+
+  @media (width >= 640px) {
+    .reader-bar__title {
+      display: flex;
+      min-width: 0;
+      flex: 1;
+      align-items: baseline;
+      gap: 0.375rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  .reader-bar__series {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 750;
+    color: var(--t-heading);
+  }
+
+  .reader-bar__series:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .reader-bar__chapter {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--t-muted);
+  }
+
+  .reader-bar__nav {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  @media (width >= 640px) {
+    .reader-bar__nav {
+      flex: none;
+    }
+  }
+
+  .reader-bar__select {
+    min-width: 0;
+    flex: 1;
+    height: 2.5rem;
+    font-weight: 600;
+  }
+
+  @media (width >= 640px) {
+    .reader-bar__select {
+      width: 13rem;
+      flex: none;
+    }
+  }
+
+  @media (width >= 1024px) {
+    .reader-bar__select {
+      width: 16rem;
+    }
+  }
+
+  .reader-progress {
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    overflow: hidden;
+  }
+
+  .reader-progress__bar {
+    display: block;
+    height: 100%;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left center;
+    background: var(--t-accent);
+  }
+
+  /* Settings dropdown. */
+  .reader-setting {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.25rem 0.625rem 0.625rem;
+  }
+
+  .reader-setting__label {
+    font-size: 0.8125rem;
+    font-weight: 650;
+    color: var(--t-text-2);
+  }
+
+  .reader-setting__choice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .reader-setting__choice > button {
+    height: 2rem;
+  }
+
+  .reader-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .reader-stepper__value {
+    min-width: 3.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .reader-setting__hint {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.625rem 0.25rem;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .reader-setting__hint > span {
+    margin-left: 0.25rem;
+  }
+
+  /* ---- Chapter header ------------------------------------------------------------------- */
+  .reader-head {
+    margin: 1.25rem auto 1.75rem;
+    max-width: 44rem;
+    text-align: center;
+  }
+
+  @media (width >= 640px) {
+    .reader-head {
+      margin-top: 1.75rem;
+    }
+  }
+
+  .reader-head__series {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--t-accent-text);
+  }
+
+  .reader-head__series:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .reader-head__title {
+    margin-top: 0.5rem;
+    font-size: clamp(1.375rem, 1.1rem + 1.3vw, 2rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.022em;
+    color: var(--t-heading);
+    overflow-wrap: anywhere;
+  }
+
+  .reader-head__name {
+    color: var(--t-text-2);
+  }
+
+  .reader-head__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem 0.625rem;
+    margin-top: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  /* ---- Pages ------------------------------------------------------------------------------ */
+  .reader-pages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-inline: -1rem;
+  }
+
+  @media (width >= 640px) {
+    .reader-pages {
+      margin-inline: 0;
+    }
+  }
+
+  .reader-page {
+    position: relative;
+    width: 100%;
+    max-width: 52rem;
+    margin: 0;
+  }
+
+  .reader-page > img {
+    display: block;
+    height: auto;
+    width: 100%;
+  }
+
+  /* Placeholder until the image is there (keeps lazy pages from all loading at once). */
+  .reader-page[data-state='loading'] {
+    min-height: 70vh;
+    background: linear-gradient(
+      90deg,
+      var(--t-surface-2) 25%,
+      color-mix(in oklab, var(--t-hover) 80%, var(--t-overlay) 4%) 37%,
+      var(--t-surface-2) 63%
+    );
+    background-size: 400% 100%;
+    animation: ui-shimmer 1.4s ease infinite;
+  }
+
+  .reader-page[data-state='loading'] > img {
+    min-height: 70vh;
+  }
+
+  /* Once a page has loaded, the others reserve its proportions instead of a fixed height. */
+  .reader-pages[data-ratio] .reader-page[data-state='loading'] {
+    min-height: 0;
+  }
+
+  .reader-pages[data-ratio] .reader-page[data-state='loading'] > img {
+    min-height: 0;
+    aspect-ratio: var(--page-ratio);
+  }
+
+  .reader-page[data-state='error'] > img {
+    display: none;
+  }
+
+  .reader-page__error {
+    display: none;
+  }
+
+  .reader-page[data-state='error'] > .reader-page__error {
+    display: flex;
+    min-height: 40vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    border: 1px dashed var(--t-border-strong);
+    background: var(--t-surface-2);
+    padding: 2rem 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+
+  /* "Orijinal boyut": images at their own width, never wider than the screen. */
+  .reader[data-fit='original'] .reader-page {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .reader[data-fit='original'] .reader-page > img {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .reader[data-fit='original'] .reader-page[data-state='loading'] {
+    width: min(100%, 45rem);
+  }
+
+  .reader[data-fit='original'] .reader-page[data-state='loading'] > img {
+    width: 100%;
+  }
+
+  /* ---- Novel text --------------------------------------------------------------------------- */
+  .reader-prose {
+    margin-inline: auto;
+    max-width: 42rem;
+    font-size: var(--reader-font, 1.125rem);
+    line-height: 1.85;
+    color: var(--t-text);
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+
+  .reader-prose > p {
+    white-space: pre-line;
+  }
+
+  .reader-prose > p + p {
+    margin-top: 1.15em;
+  }
+
+  .reader-empty {
+    margin-inline: auto;
+    max-width: 42rem;
+  }
+
+  /* ---- End of chapter and navigation ------------------------------------------------------ */
+  .reader-end {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 3rem auto 0;
+    max-width: 42rem;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-panel);
+    background: var(--t-surface);
+    padding: 2rem 1.25rem 1.75rem;
+    text-align: center;
+  }
+
+  @media (width >= 640px) {
+    .reader-end {
+      padding: 2.25rem 2rem 2rem;
+    }
+  }
+
+  .reader-end__icon {
+    display: grid;
+    height: 3rem;
+    width: 3rem;
+    place-items: center;
+    margin-bottom: 0.75rem;
+    border-radius: 9999px;
+    background: var(--t-success-soft);
+    color: var(--t-success);
+  }
+
+  .reader-end__title {
+    margin-top: 0.375rem;
+    font-size: 1.375rem;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    color: var(--t-heading);
+  }
+
+  .reader-end__text {
+    margin-top: 0.5rem;
+    max-width: 30rem;
+    font-size: 0.9375rem;
+    color: var(--t-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .reader-end__actions {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  @media (width >= 640px) {
+    .reader-end__actions {
+      width: auto;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  }
+
+  /* Phones: the picker on its own row, previous/next side by side below it. */
+  .reader-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'select select'
+      'prev next';
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem auto 0;
+    max-width: 42rem;
+  }
+
+  @media (width >= 640px) {
+    .reader-nav {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: 'prev select next';
+    }
+  }
+
+  .reader-nav__prev {
+    grid-area: prev;
+  }
+
+  .reader-nav__next {
+    grid-area: next;
+  }
+
+  .reader-nav__select {
+    grid-area: select;
+    min-width: 0;
+    font-weight: 600;
+  }
+
+  .reader-comments {
+    margin: 3.5rem auto 0;
+    max-width: 48rem;
+  }
+}
+
+@media print {
+  .reader-bar,
+  .reader-end,
+  .reader-nav,
+  .reader-comments {
+    display: none !important;
+  }
+
+  .reader-page {
+    break-inside: avoid;
+  }
+
+  .reader-prose {
+    color: #000;
+    font-size: 12pt;
+  }
+}

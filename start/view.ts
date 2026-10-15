@@ -6,13 +6,39 @@ import theme from '#services/theme_service'
 import cosmetics from '#services/cosmetic_service'
 import { levelFor, parseTimestamp } from '#services/level'
 import { excerptOf } from '#services/comment_service'
+import { buildPaginationPages } from '#services/input_service'
 import type User from '#models/user'
+import type { Scheme } from '#config/theme'
 
 edge.global('site', site)
 edge.global('adminNav', adminNav)
 /** Accent override CSS and the announcement bar, both set under Admin → Tema. */
 edge.global('themeCss', () => theme.css)
 edge.global('themeAttrs', () => theme.attrs)
+/**
+ * Colour scheme of the page (`<html data-theme>`): the visitor's `theme` cookie (written by the
+ * scheme switch, plain and unsigned) when Admin → Tema allows it, else the default scheme.
+ * Rendered on the server so the first paint never flashes the wrong scheme.
+ */
+edge.global('schemeOf', (request?: { plainCookie?: (...args: unknown[]) => unknown }) => {
+  let choice: unknown = null
+  try {
+    choice = request?.plainCookie?.('theme', { encoded: false })
+  } catch {
+    choice = null
+  }
+  return theme.schemeFor(choice)
+})
+edge.global('themeMeta', (scheme: Scheme) => theme.themeColorMeta(scheme))
+/** Tone of a badge (`data-tone`): content type slug, status/age tone or a semantic tone. */
+const semanticTones = ['accent', 'success', 'warning', 'danger', 'info', 'neutral']
+edge.global('badgeTone', (kind: string, value: unknown) => {
+  const text = String(value ?? '')
+  if (kind === 'type') return site.badgeTones.type.includes(text) ? text : 'neutral'
+  if (kind === 'status') return site.badgeTones.status[text] ?? 'neutral'
+  if (kind === 'age') return site.badgeTones.age[text] ?? 'neutral'
+  return semanticTones.includes(kind) ? kind : 'neutral'
+})
 /** Show/hide switches from Admin → Tema → Göster / Gizle. */
 edge.global('ui', (key: string) => theme.flag(key))
 /** The admin panel can opt out of the theme, and `?guvenli=1` bypasses it if it became unreadable. */
@@ -37,6 +63,71 @@ edge.global('agoOf', (value: string) => {
   return `${Math.floor(seconds / (7 * 86400))} hafta önce`
 })
 edge.global('levelOf', (user: User | null) => levelFor(user?.exp || 0))
+/**
+ * Extra attributes forwarded by design-system components (`{{{ attrs(rest.all()) }}}`):
+ * Alpine attributes (@click, :class, x-*), aria-*, data-* … Values are HTML escaped, names are
+ * restricted (no inline on* handlers), `true` prints a bare attribute and false/null/undefined
+ * drop it. Edge's own
+ * `$props.toAttrs()` drops unknown names such as @click and does not escape values.
+ */
+const attributeName = /^[@:a-zA-Z_][\w:.@-]*$/
+edge.global('attrs', (values: Record<string, unknown> | null | undefined) => {
+  const parts: string[] = []
+  for (const [name, value] of Object.entries(values ?? {})) {
+    // Inline event handlers (onclick=…) are never forwarded: behaviour belongs in Alpine.
+    if (!attributeName.test(name) || /^on/i.test(name)) continue
+    if (value === false || value === null || value === undefined) continue
+    if (value === true) {
+      parts.push(name)
+      continue
+    }
+    const text = String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('"', '&quot;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+    parts.push(`${name}="${text}"`)
+  }
+  return parts.join(' ')
+})
+/** "12 Eki 2026" for a database timestamp, in the site's time zone. */
+edge.global('dateOf', (value: string, withYear = true) => {
+  const time = parseTimestamp(value)
+  if (!Number.isFinite(time)) return ''
+  return new Date(time).toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+    timeZone: site.timezone,
+  })
+})
+/** Page numbers with gaps ('...') for `ui/pagination`. */
+edge.global('pagesOf', (current: number, total: number) => buildPaginationPages(current, total))
+/**
+ * The current URL with some query parameters changed (null/'' removes one, page 1 is dropped),
+ * so pagination and filters keep the rest of the query on the server, without JavaScript.
+ */
+edge.global(
+  'withQuery',
+  (
+    request: { url: () => string; qs: () => Record<string, unknown> },
+    changes: Record<string, unknown>
+  ) => {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(request.qs()))
+      for (const item of Array.isArray(value) ? value : [value])
+        if (item !== undefined && item !== null && typeof item !== 'object')
+          params.append(key, String(item))
+    for (const [key, value] of Object.entries(changes)) {
+      params.delete(key)
+      if (value === null || value === undefined || value === '') continue
+      if (key === 'page' && Number(value) <= 1) continue
+      params.set(key, String(value))
+    }
+    const query = params.toString()
+    return request.url() + (query ? `?${query}` : '')
+  }
+)
 /** Inline style attribute for a cosmetic visual (custom gradients and images). */
 edge.global('visualStyle', (visual: { css?: string; img?: string } | null) => {
   if (!visual) return ''

@@ -1,0 +1,26 @@
+{{--
+  Empty, "no results" and error states (class `empty`).
+  Props: icon ('inbox'), title, description, tone (danger turns the icon red), class.
+  Slot: main (actions, e.g. a button that clears the filters).
+--}}
+@let(body = (await $slots.main()).trim())
+<div class="empty {{ $props.get('class', '') }}"
+  @if($props.get('tone') === 'danger')
+  role="alert"
+  @end
+  >
+  <span class="empty__icon {{ $props.get('tone') === 'danger' ? 'text-(--t-danger)' : '' }}">
+    @!component('components/icon', { name: $props.get('icon', 'inbox') })
+  </span>
+  @if($props.get('title'))
+  <p class="empty__title">{{ $props.get('title') }}</p>
+  @end
+  @if($props.get('description'))
+  <p class="empty__text">{{ $props.get('description') }}</p>
+  @end
+  @if(body)
+  <div class="empty__actions">
+    {{{ body }}}
+  </div>
+  @end
+</div>

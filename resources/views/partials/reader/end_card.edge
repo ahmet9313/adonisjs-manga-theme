@@ -1,0 +1,35 @@
+{{--
+  End of the chapter: what comes next and the main ways on (next chapter, the series page,
+  rating the series).
+--}}
+<section class="reader-end" aria-labelledby="reader-end-title">
+  <span class="reader-end__icon" aria-hidden="true">
+    @!component('components/icon', { name: 'check-circle', class: 'h-6 w-6' })
+  </span>
+  <p class="t-overline">Bölüm {{ chapter.number }} bitti</p>
+  @if(nextChapter)
+  <h2 id="reader-end-title" class="reader-end__title">Sırada Bölüm {{ nextChapter.number }} var</h2>
+  <p class="reader-end__text">{{ nextChapter.title ? '“' + nextChapter.title + '” seni bekliyor. Keyifli okumalar!' : 'Hikâye kaldığı yerden devam ediyor. Keyifli okumalar!' }}</p>
+  @else
+  <h2 id="reader-end-title" class="reader-end__title">Şimdilik son bölüm bu</h2>
+  <p class="reader-end__text">Yeni bölüm eklendiğinde seri sayfasında görünür. Seriyi kaydettiysen gelen kutuna da haber düşer.</p>
+  @end
+  <div class="reader-end__actions">
+    @if(nextChapter)
+    <a href="{{ chapterUrl(nextChapter.number) }}" rel="next" class="btn btn--primary btn--lg">
+      <span>Sonraki bölüm</span>
+      @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+    </a>
+    @end
+    <a href="{{ seriesUrl }}" class="btn {{ nextChapter ? 'btn--secondary' : 'btn--primary' }} btn--lg">
+      @!component('components/icon', { name: 'library', class: 'btn__icon' })
+      <span>Seriye dön</span>
+    </a>
+    @if(ui('series_reviews'))
+    <a href="{{ seriesUrl }}#incelemeler" class="btn btn--ghost btn--lg">
+      @!component('components/icon', { name: 'star', class: 'btn__icon' })
+      <span>Seriyi puanla</span>
+    </a>
+    @end
+  </div>
+</section>

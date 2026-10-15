@@ -1,0 +1,78 @@
+{{--
+  Searchable multi-select of related records (Alpine `multiSelect`, multi_select.js): chosen
+  items appear as chips, the list filters while typing. Keyboard: ArrowDown/ArrowUp open and
+  move, Enter toggles, Backspace in an empty search removes the last chip, Escape closes.
+  Every chosen id is posted as `<name>[]`; without JavaScript a native <select multiple> (in
+  <noscript>) posts the same values.
+  Props: name (required; posted as name[]), label, items [{ id, name }], selected (ids),
+         placeholder ('Ara veya seçin…'), emptyText ('Eşleşen kayıt yok'), hint, id ('f-' + name),
+         class.
+  After a failed submit the previous choice wins (also when every item was removed); the error
+  comes from inputErrorsBag.<name>.
+--}}
+@let(name = $props.get('name'))
+@let(id = $props.get('id', 'f-' + name))
+@let(failed = flashMessages.has('inputErrorsBag'))
+@let(chosen = (failed ? [].concat(flashMessages.get(name) || []) : ($props.get('selected') || [])).map(String))
+@let(items = ($props.get('items') || []).map((item) => ({ id: item.id, name: item.name, selected: chosen.includes(String(item.id)) })))
+@let(error = flashMessages.has('inputErrorsBag.' + name) ? flashMessages.get('inputErrorsBag.' + name)[0] : '')
+@let(hint = $props.get('hint', ''))
+@let(describedBy = [error ? id + '-error' : '', hint ? id + '-hint' : ''].filter(Boolean).join(' '))
+<div class="field {{ error ? 'field--invalid' : '' }} {{ $props.get('class', '') }}" x-data="multiSelect" data-id="{{ id }}" data-items="{{ JSON.stringify(items) }}">
+  <label for="{{ id }}" id="{{ id }}-label" class="field__label">{{ $props.get('label', '') }}</label>
+  <template x-for="item in selectedItems" :key="item.id">
+    <input type="hidden" name="{{ name }}[]" :value="item.id">
+  </template>
+  <noscript>
+    <select multiple size="6" name="{{ name }}[]" class="control" aria-labelledby="{{ id }}-label">
+      @each(item in items)
+      <option value="{{ item.id }}" {{ item.selected ? 'selected' : '' }}>{{ item.name }}</option>
+      @end
+    </select>
+  </noscript>
+  <div class="admin-combo" x-cloak @click.outside="if (open) close()">
+    <div class="control tag-input admin-picker" @click="show(); $refs.search.focus()">
+      <template x-for="item in selectedItems" :key="item.id">
+        <span class="tag">
+          <span x-text="item.name"></span>
+          <button type="button" @click.stop="remove(item.id)" :aria-label="'Kaldır: ' + item.name">
+            @!component('components/icon', { name: 'x', class: 'h-3 w-3' })
+          </button>
+        </span>
+      </template>
+      <input type="text" id="{{ id }}" x-ref="search" x-model="search" class="admin-picker__entry" autocomplete="off" spellcheck="false"
+             placeholder="{{ $props.get('placeholder', 'Ara veya seçin…') }}"
+             role="combobox" aria-autocomplete="list" aria-controls="{{ id }}-list"
+             :aria-expanded="open.toString()" :aria-activedescendant="activeId"
+             @input.stop="onInput()" @keydown="onKeydown($event)"
+        @if(describedBy)
+        aria-describedby="{{ describedBy }}"
+        @end
+        @if(error)
+        aria-invalid="true"
+        @end
+        >
+      @!component('components/icon', { name: 'chevron-down', class: 'admin-picker__caret' })
+    </div>
+    <ul id="{{ id }}-list" role="listbox" aria-multiselectable="true" aria-labelledby="{{ id }}-label" class="menu admin-combo__list"
+        x-show="open" x-transition.opacity.duration.100ms>
+      <template x-for="(item, index) in filtered" :key="item.id">
+        <li role="option" :id="optionId(item)" class="menu__item admin-option" :class="{ 'is-active': index === active }"
+            :aria-selected="item.selected.toString()" @mousedown.prevent @click="toggle(item); active = index" @mousemove="active = index">
+          <span class="admin-option__check" aria-hidden="true">
+            @!component('components/icon', { name: 'check' })
+          </span>
+          <span class="min-w-0 flex-1 truncate" x-text="item.name"></span>
+        </li>
+      </template>
+      <li role="presentation" class="px-3 py-4 text-center text-sm text-muted" x-show="filtered.length === 0">{{ $props.get('emptyText', 'Eşleşen kayıt yok') }}</li>
+    </ul>
+  </div>
+  <p class="sr-only" aria-live="polite" x-text="announcement"></p>
+  @if(hint)
+  <p id="{{ id }}-hint" class="field__hint">{{ hint }}</p>
+  @end
+  @if(error)
+  <p id="{{ id }}-error" class="field__error" role="alert">{{ error }}</p>
+  @end
+</div>

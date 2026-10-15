@@ -1,0 +1,33 @@
+{{--
+  Preview of a cosmetic (frame, name effect, wallpaper, sticker) as it looks when equipped.
+  Props: kind frame|effect|wallpaper|sticker, visual ({ cls?, css?, img? } from cosmetics.visual),
+         user (frames: shown around this user's avatar), name (effects: preview text, 'Aa'),
+         size sm|md|lg (md), class.
+  Alpine-rendered lists (cosmetics store, inventory) repeat this markup with the same classes.
+--}}
+@let(size = $props.get('size', 'md'))
+@let(box = { sm: 'h-12 w-16', md: 'h-20 w-full', lg: 'h-32 w-full' }[size])
+@let(ring = { sm: 'h-8 w-8', md: 'h-12 w-12', lg: 'h-20 w-20' }[size])
+@let(visual = $props.get('visual') || {})
+<span class="relative flex items-center justify-center overflow-hidden rounded-(--radius-control) bg-(--t-surface-2) {{ box }} {{ $props.get('class', '') }}">
+  @if(kind === 'sticker')
+  <img src="{{ visual.img || '' }}" alt="" loading="lazy" decoding="async" class="max-h-[80%] max-w-[80%] object-contain">
+  @elseif(kind === 'frame')
+  @if($props.get('user'))
+  @!component('components/avatar', { user: $props.get('user'), size: ring, text: 'text-sm', frame: visual })
+  @else
+  <span class="relative inline-flex {{ ring }}">
+    <span class="h-full w-full rounded-full bg-(--t-border-strong)"></span>
+    @if(visual.img)
+    <img src="{{ visual.img }}" alt="" class="avatar-frame-img">
+    @else
+    <span class="avatar-frame {{ visual.cls || '' }}" aria-hidden="true"></span>
+    @end
+  </span>
+  @end
+  @elseif(kind === 'effect')
+  <span class="px-2 text-center font-extrabold {{ size === 'sm' ? 'text-sm' : 'text-lg' }} {{ visual.cls || '' }}" style="{{ visualStyle(visual) }}">{{ $props.get('name', 'Aa') }}</span>
+  @else
+  <span class="wall absolute inset-0 {{ visual.cls || '' }}" style="{{ visualStyle(visual) }}"></span>
+  @end
+</span>

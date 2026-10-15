@@ -1,45 +1,147 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin → Tema → Gelişmiş: custom CSS (custom_css), export (/admin/tema/disa-aktar), import
+  (theme_json → /admin/tema/ice-aktar), safe mode (?guvenli=1) and reset (/admin/tema/sifirla).
+  Import and reset ask first (data-confirm, ui.js); without JavaScript they submit directly.
+--}}
+@let(safeMode = Boolean(request.qs().guvenli))
+@let(css = flashMessages.get('custom_css') ?? customCss)
+@component('components/layout/admin', {
+  title,
+  description: 'Özel CSS, temayı dışa ve içe aktarma, güvenli mod ve varsayılana dönüş.',
+  crumbs: [{ label: 'Tema', href: '/admin/tema/genel' }, { label: 'Gelişmiş' }]
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/', iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Siteyi aç<span class="sr-only"> (yeni sekmede)</span>
+    @end
+  @end
 
-@slot('main')
-  <div class="max-w-3xl space-y-6">
-    <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-6" aria-labelledby="css-title">
-      <h3 id="css-title" class="text-lg font-semibold text-gray-200">Özel CSS</h3>
-      <p class="mb-4 text-sm text-gray-500">Her sayfanın sonuna eklenir; diğer tüm ayarları ezer. Örn: <code class="rounded bg-(--t-field) px-1 text-gray-300">.glass { border-radius: 0 }</code></p>
-      <form action="/admin/tema/gelismis" method="POST" class="space-y-4">
-        {{ csrfField() }}
-        <label for="custom_css" class="sr-only">Özel CSS</label>
-        <textarea id="custom_css" name="custom_css" rows="12" maxlength="20000" spellcheck="false"
-                  class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-3 font-mono text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">{{ flashMessages.get('custom_css') || customCss }}</textarea>
-        @!component('components/field_error', { field: 'custom_css' })
-        <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
-      </form>
-    </section>
+  @slot('main')
+    @include('partials/admin/theme_nav')
 
-    <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-6" aria-labelledby="io-title">
-      <h3 id="io-title" class="text-lg font-semibold text-gray-200">Dışa / içe aktar</h3>
-      <p class="mb-4 text-sm text-gray-500">Renkler, görünüm, anahtarlar ve özel CSS tek bir JSON belgesidir. Başka bir kuruluma yapıştırarak taşıyabilirsiniz.</p>
-      <form action="/admin/tema/ice-aktar" method="POST" class="space-y-4">
-        {{ csrfField() }}
-        <label for="theme_json" class="sr-only">Tema JSON</label>
-        <textarea id="theme_json" name="theme_json" rows="10" spellcheck="false"
-                  class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-3 font-mono text-xs text-gray-300 focus:border-emerald-500 focus:outline-none">{{ flashMessages.get('theme_json') || exported }}</textarea>
-        @!component('components/field_error', { field: 'theme_json' })
-        <div class="flex flex-wrap gap-3">
-          <button type="submit" class="rounded-lg border border-emerald-700 px-5 py-2 text-sm font-medium text-emerald-400 transition hover:border-emerald-500">İçe aktar</button>
-          <a href="/admin/tema/disa-aktar" class="rounded-lg border border-gray-600 px-5 py-2 text-sm text-gray-300 transition hover:border-gray-400">tema.json indir</a>
+    <div class="te-page">
+      <section class="panel" aria-labelledby="css-title" x-data="{ length: 0 }" x-init="length = $el.querySelector('#f-custom_css').value.length">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="css-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'code' })
+              Özel CSS
+            </h2>
+            <p class="panel__desc">Her sayfanın sonuna eklenir ve diğer tüm tema ayarlarını ezer. HTML etiketi kabul edilmez.</p>
+          </div>
         </div>
-      </form>
-    </section>
+        <form action="/admin/tema/gelismis" method="POST" class="grid gap-4" data-submit-once>
+          {{ csrfField() }}
+          <div class="te-counted">
+            @!component('components/ui/field', { name: 'custom_css', label: 'CSS kodu', type: 'textarea', rows: 14, value: css, maxlength: 20000, spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', wrap: 'off', controlClass: 'te-code', placeholder: ':root { --t-radius: 0.6 }\n.series-card__title { letter-spacing: 0 }', hint: 'Tema renk değişkenlerini ve sınıfları değiştirebilirsiniz. Panel okunmaz hale gelirse güvenli modu kullanın.', 'x-on:input': 'length = $event.target.value.length' })
+            <span class="te-counter" aria-hidden="true"><span x-text="length.toLocaleString('tr-TR')">{{ (css || '').length }}</span> / 20.000</span>
+          </div>
+          <div class="form-actions">
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+              CSS'i kaydet
+            @end
+          </div>
+        </form>
+      </section>
 
-    <section class="rounded-xl border border-red-900/60 bg-(--t-surface) p-6" aria-labelledby="reset-title">
-      <h3 id="reset-title" class="text-lg font-semibold text-gray-200">Varsayılana dön</h3>
-      <p class="mb-4 text-sm text-gray-500">Tüm renkleri, görünüm ayarlarını, göster/gizle anahtarlarını ve özel CSS'i siler. Site adı, logo ve duyuru korunur. Panel okunmaz hale geldiyse bu sayfayı <code class="rounded bg-(--t-field) px-1 text-gray-300">/admin/tema/gelismis?guvenli=1</code> adresinden açın.</p>
-      <form action="/admin/tema/sifirla" method="POST" onsubmit="return confirm('Tüm tema ayarları silinecek. Emin misiniz?')">
-        {{ csrfField() }}
-        <button type="submit" class="rounded-lg border border-red-700 px-5 py-2 text-sm font-medium text-red-400 transition hover:bg-red-900/20">Temayı sıfırla</button>
-      </form>
-    </section>
-  </div>
-@end
+      <section class="panel" aria-labelledby="io-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="io-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'archive' })
+              Dışa / içe aktar
+            </h2>
+            <p class="panel__desc">Renkler (iki şema), görünüm, göster/gizle anahtarları ve özel CSS tek bir JSON belgesidir; başka bir kuruluma taşıyabilirsiniz. Site adı, logo ve duyuru dahil değildir.</p>
+          </div>
+        </div>
+        <div class="te-io">
+          <div>
+            <h3 class="te-io__title">Dışa aktar</h3>
+            <p class="te-io__text">Kayıtlı temanın bir kopyasını indirin. İçe aktarmadan önce yedek almanız önerilir.</p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              @component('components/ui/button', { href: '/admin/tema/disa-aktar', icon: 'download', download: 'tema.json' })
+                tema.json indir
+              @end
+            </div>
+            <details class="te-details mt-4">
+              <summary>
+                @!component('components/icon', { name: 'chevron-down', class: 'te-chevron' })
+                JSON'u göster
+              </summary>
+              <pre class="te-json" tabindex="0" aria-label="Kayıtlı tema JSON">{{ exported }}</pre>
+            </details>
+          </div>
 
+          <form action="/admin/tema/ice-aktar" method="POST" class="grid gap-4" data-submit-once
+                data-confirm="Renkler, görünüm, göster/gizle anahtarları ve özel CSS bu belgedekilerle değiştirilecek. Önce mevcut temayı indirmeniz önerilir."
+                data-confirm-title="Tema içe aktarılsın mı?" data-confirm-label="İçe aktar" data-confirm-tone="accent">
+            {{ csrfField() }}
+            <div>
+              <h3 class="te-io__title">İçe aktar</h3>
+              <p class="te-io__text">Bir tema JSON'unu yapıştırın ya da tema.json dosyasını seçin. Değerler kaydetmeden önce doğrulanır.</p>
+            </div>
+            @!component('components/ui/field', { name: 'theme_json', label: 'Tema JSON', type: 'textarea', rows: 8, spellcheck: 'false', autocomplete: 'off', wrap: 'off', controlClass: 'te-code', placeholder: '{ "colors": { … }, "lightColors": { … }, "looks": { … } }' })
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <label class="btn btn--ghost btn--md te-file">
+                @!component('components/icon', { name: 'upload', class: 'btn__icon' })
+                Dosya seç
+                <input type="file" accept="application/json,.json" class="sr-only"
+                       x-data x-on:change="const file = $event.target.files[0]; if (file) file.text().then((text) => { document.getElementById('f-theme_json').value = text })">
+              </label>
+              @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'upload' })
+                İçe aktar
+              @end
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <div class="te-split">
+        <section class="panel" aria-labelledby="safe-title">
+          <h2 id="safe-title" class="panel__title te-title">
+            @!component('components/icon', { name: 'shield' })
+            Güvenli mod
+          </h2>
+          <p class="mt-2 text-sm leading-relaxed text-(--t-text-2)">Renkler yüzünden panel okunmaz hale gelirse adresin sonuna <code class="te-kbd-url">?guvenli=1</code> ekleyin: yönetim paneli temasız, varsayılan koyu görünümle açılır. Site etkilenmez.</p>
+          <p class="mt-2 text-sm leading-relaxed text-(--t-muted)">Paneli kalıcı olarak temadan ayırmak için <a href="/admin/tema/goster#flags-effects" class="link">Göster / Gizle → Efektler</a> bölümündeki "Temayı yönetim paneline uygula" anahtarını kapatın.</p>
+          <div class="te-panel-foot">
+            @if(safeMode)
+            @component('components/ui/button', { href: request.url(), icon: 'eye' })
+              Güvenli moddan çık
+            @end
+            @else
+            @component('components/ui/button', { href: request.url() + '?guvenli=1', icon: 'shield' })
+              Güvenli modda aç
+            @end
+            @end
+          </div>
+        </section>
+
+        <section class="panel te-danger" aria-labelledby="reset-title">
+          <h2 id="reset-title" class="panel__title te-title">
+            @!component('components/icon', { name: 'refresh' })
+            Varsayılana dön
+          </h2>
+          <ul class="te-checklist" role="list">
+            <li>
+              @!component('components/icon', { name: 'x' })
+              Silinir: renkler (koyu ve açık), görünüm, göster/gizle anahtarları ve özel CSS
+            </li>
+            <li class="is-kept">
+              @!component('components/icon', { name: 'check' })
+              Korunur: site adı, açıklama, logo ve duyuru çubuğu
+            </li>
+          </ul>
+          <form action="/admin/tema/sifirla" method="POST" class="te-panel-foot" data-submit-once
+                data-confirm="Tüm renkler, görünüm ayarları, göster/gizle anahtarları ve özel CSS silinecek. Bu işlem geri alınamaz."
+                data-confirm-title="Tema sıfırlansın mı?" data-confirm-label="Temayı sıfırla" data-confirm-tone="danger">
+            {{ csrfField() }}
+            @component('components/ui/button', { type: 'submit', variant: 'danger', icon: 'refresh' })
+              Temayı sıfırla
+            @end
+          </form>
+        </section>
+      </div>
+    </div>
+  @end
 @end

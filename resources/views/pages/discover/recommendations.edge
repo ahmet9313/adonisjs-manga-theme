@@ -1,47 +1,116 @@
+{{--
+  Recommendations (/oneriler). Tabs are links: Yeni (/oneriler, new series, favourite genres
+  first) and Popüler (/oneriler?sekme=populer, most read series the visitor has not started).
+  No "continue reading" block here: the popular tab must never list series the reader started.
+--}}
 @component('components/layout/main', { title })
 
 @slot('main')
-  @!component('components/breadcrumb', { items: [{ label: 'Sana Özel Öneriler' }] })
-  <div class="glass rounded-3xl border border-white/10 p-5 sm:p-7">
-    <h1 class="section-title">Sana Özel Öneriler</h1>
-    <p class="mt-3 text-sm leading-relaxed text-gray-300">
-      Bugün ne okuyacağına karar veremiyor musun? {{ site.name }}’un <strong class="text-(--t-heading)">sana özel öneriler</strong> sayfası okuma geçmişini ve kaydettiğin serilerin türlerini inceleyerek zevkine uygun yeni seriler bulur.
-      @if(!(auth && auth.user))
-        <button type="button" @click="$dispatch('open-auth', 'login')" class="text-emerald-300 hover:underline">Giriş yaparsan</button> öneriler sana göre kişiselleşir.
-      @end
-    </p>
+  @let(signedIn = Boolean(auth && auth.user))
+  @let(items = tab === 'popular' ? popular : fresh.items)
 
-    <div class="mt-5 flex gap-1 border-b border-white/10" role="tablist">
-      <a href="/oneriler" role="tab" aria-selected="{{ tab === 'fresh' }}" class="-mb-px border-b-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wide {{ tab === 'fresh' ? 'border-white text-(--t-heading)' : 'border-transparent text-gray-400 hover:text-gray-200' }}">Yeni</a>
-      <a href="/oneriler?sekme=populer" role="tab" aria-selected="{{ tab === 'popular' }}" class="-mb-px border-b-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wide {{ tab === 'popular' ? 'border-white text-(--t-heading)' : 'border-transparent text-gray-400 hover:text-gray-200' }}">Popüler</a>
+  @!component('components/ui/page_header', {
+    title: 'Öneriler',
+    description: signedIn ? 'Okuduğun ve kaydettiğin serilere göre seçilmiş yeni ve popüler seriler.' : 'Yeni eklenen ve okurların en çok takip ettiği seriler.',
+  })
+
+  @!component('components/ui/tabs', {
+    mode: 'links',
+    label: 'Öneri listeleri',
+    active: tab,
+    tabs: [
+      { key: 'fresh', label: 'Yeni', href: '/oneriler' },
+      { key: 'popular', label: 'Popüler', href: '/oneriler?sekme=populer' },
+    ],
+  })
+
+  @if(!signedIn)
+  @component('components/ui/alert', { tone: 'accent', title: 'Öneriler sana göre şekillensin', class: 'mt-6' })
+    <p>Giriş yaptığında okuduğun ve kaydettiğin serilerin türleri öne çıkar, başladığın seriler listeden düşer.</p>
+    <div class="mt-3 flex flex-wrap gap-2">
+      @component('components/ui/button', { variant: 'primary', size: 'sm', href: '/giris?next=' + encodeURIComponent(request.url(true)), '@click.prevent': "$dispatch('open-auth', 'login')" })
+        Giriş yap
+      @end
+      @component('components/ui/button', { variant: 'secondary', size: 'sm', href: '/kayit', '@click.prevent': "$dispatch('open-auth', 'register')" })
+        Kayıt ol
+      @end
     </div>
+  @end
+  @end
 
-    @if(tab === 'fresh')
-      <h2 class="mt-6 text-lg font-bold text-(--t-heading)">Sevebileceğin yeni yayınlar</h2>
-      <p class="mb-4 text-sm text-gray-400">{{ fresh.personal ? 'Sık okuduğun türlerdeki yeni seriler önce gelir.' : 'En son eklenen seriler.' }}</p>
-      @if(fresh.items.length)
-        <div class="grid gap-2 md:grid-cols-2">
-          @each(item in fresh.items)
-            @!component('partials/community/series_row', { item, label: 'Son yayımlananlar' })
-          @end
-        </div>
-      @else
-        <p class="py-10 text-center text-gray-400">Okumadığın yeni bir seri kalmadı. Harikasın!</p>
-      @end
+  <section class="mt-8" aria-labelledby="discover-title">
+    @if(tab === 'popular')
+    @!component('components/ui/section_head', {
+      id: 'discover-title',
+      title: signedIn ? 'Henüz denemediğin popüler seriler' : 'Okurların en çok takip ettiği seriler',
+      description: 'Okur ve kaydeden sayısına göre sıralandı.',
+    })
     @else
-      <h2 class="mt-6 text-lg font-bold text-(--t-heading)">Henüz denemediğin popüler seriler</h2>
-      <p class="mb-4 text-sm text-gray-400">Okumadığın, okurların en çok takip ettiği seriler.</p>
-      @if(popular.length)
-        <div class="grid gap-2 md:grid-cols-2">
-          @each(item in popular)
-            @!component('partials/community/series_row', { item, label: 'Okurlar arasında popüler' })
+    @!component('components/ui/section_head', {
+      id: 'discover-title',
+      title: 'Sevebileceğin yeni yayınlar',
+      description: fresh.personal ? 'Sık okuduğun türlerdeki yeni seriler önce gelir.' : 'En son eklenen seriler.',
+    })
+    @end
+
+    @if(items.length)
+    <{{ tab === 'popular' ? 'ol' : 'ul' }} class="discover-list {{ tab === 'popular' ? 'discover-list--ranked' : '' }}">
+      @each(item in items)
+      @let(match = tab === 'fresh' ? item.genres.find((genre) => favourites.includes(genre)) : null)
+      <li>
+        @component('components/series/card', { series: item, layout: 'row', meta: item.chapterCount + ' bölüm', class: 'discover-card' })
+          @if(item.description)
+          <p class="discover-card__desc">{{ truncate(item.description, 220) }}</p>
           @end
-        </div>
-      @else
-        <p class="py-10 text-center text-gray-400">Gösterilecek seri bulunamadı.</p>
+          <div class="discover-card__foot">
+            @if(tab === 'popular')
+            <span class="discover-card__reason">
+              @!component('components/icon', { name: 'fire', class: 'h-3.5 w-3.5' })
+              Okurlar arasında popüler
+            </span>
+            @elseif(match)
+            <span class="discover-card__reason">
+              @!component('components/icon', { name: 'heart', class: 'h-3.5 w-3.5' })
+              Sevdiğin tür: {{ match }}
+            </span>
+            @else
+            <span class="discover-card__reason">
+              @!component('components/icon', { name: 'sparkles', class: 'h-3.5 w-3.5' })
+              Yeni eklendi
+              @if(agoOf(item.createdAt))
+              · {{ agoOf(item.createdAt) }}
+              @end
+            </span>
+            @end
+            <span class="discover-card__stats">
+              <span title="Okuyan kişi">
+                @!component('components/icon', { name: 'eye', class: 'h-4 w-4' })
+                {{ item.readers.toLocaleString('tr-TR') }}<span class="sr-only"> okur</span>
+              </span>
+              <span title="Kaydeden kişi">
+                @!component('components/icon', { name: 'bookmark', class: 'h-4 w-4' })
+                {{ item.savers.toLocaleString('tr-TR') }}<span class="sr-only"> kayıt</span>
+              </span>
+            </span>
+          </div>
+        @end
+      </li>
+      @end
+    </{{ tab === 'popular' ? 'ol' : 'ul' }}>
+    @elseif(tab === 'popular')
+    @component('components/ui/empty_state', { icon: 'fire', title: 'Gösterilecek seri kalmadı', description: 'Popüler serilerin hepsine başlamışsın. Seri listesinde yeni bir şey bulabilirsin.' })
+      @component('components/ui/button', { variant: 'primary', href: '/seriler', iconRight: 'arrow-right' })
+        Seri listesine göz at
       @end
     @end
-  </div>
+    @else
+    @component('components/ui/empty_state', { icon: 'sparkles', title: 'Okumadığın yeni bir seri kalmadı', description: 'Harikasın! Okurların en çok takip ettiği serilere de bakabilirsin.' })
+      @component('components/ui/button', { variant: 'primary', href: '/oneriler?sekme=populer', iconRight: 'arrow-right' })
+        Popüler seriler
+      @end
+    @end
+    @end
+  </section>
 @end
 
 @end

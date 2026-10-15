@@ -252,6 +252,8 @@ Durum: **Yeni** = yeni tasarım dilinde · **Yarı** = cam panel var ama input/b
 
 ## 4. Önerilen tasarım sistemi ve renk paleti (merlintoon tarzı)
 
+> **Yön değişti (2026-10-15):** Kullanıcı bu bölümdeki merlintoon tarzı koyu cam tema yerine "Mürekkep & Kâğıt" tasarım dilini seçti (nötr koyu zemin + kâğıt beyazı açık şema, menekşe vurgu, Manrope, blur yok). Uygulanan sistem README.md → "Tasarım sistemi: Mürekkep & Kâğıt" bölümünde ve AGENTS.md günlüğündedir. Bu bölümün renk/görsel dil kısmı (merlintoon, #0fa942 yeşil, cam paneller) geçersizdir; bileşen envanteri, kontrast kuralları, z-index/hareket ölçekleri ve erişilebilirlik bulguları hâlâ geçerlidir ve yeni sistemde kullanıldı.
+
 **İlkeler**
 
 - Tek koyu tema.

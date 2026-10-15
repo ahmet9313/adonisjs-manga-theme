@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
+import db from '@adonisjs/lucid/services/db'
 import Cosmetic from '#models/cosmetic'
 import User from '#models/user'
 import cosmetics from '#services/cosmetic_service'
@@ -38,7 +39,12 @@ const grantValidator = vine.compile(
 export default class CosmeticAdminController {
   private formData() {
     return {
-      kinds: kindNames.map((name) => ({ name, label: cosmeticKinds[name].label })),
+      kinds: kindNames.map((name) => ({
+        name,
+        label: cosmeticKinds[name].label,
+        plural: cosmeticKinds[name].plural,
+        path: cosmeticKinds[name].path,
+      })),
       presets,
       badges: badges.map((badge) => ({ slug: badge.slug, name: `${badge.icon} ${badge.name}` })),
     }
@@ -54,12 +60,19 @@ export default class CosmeticAdminController {
     const items = await query.paginate(pageNumber(request.input('page')), 50)
     items.baseUrl('/admin/kozmetikler')
     if (kind) items.queryString({ tur: kind })
+    // Item count of every kind for the tabs.
+    const rows = await db.from('cosmetics').select('kind').count('* as total').groupBy('kind')
+    const counts: Record<string, number> = Object.fromEntries(
+      rows.map((row) => [String(row.kind), Number(row.total)])
+    )
     return view.render('pages/admin/cosmetics/index', {
       title: 'Kozmetikler',
       items,
       paginator: items,
       kind,
       kinds: this.formData().kinds,
+      counts,
+      total: Object.values(counts).reduce((sum, count) => sum + count, 0),
       visual: (item: Cosmetic) => cosmetics.visual(item),
       lockText: (item: Cosmetic) => cosmetics.lockText(item),
     })
@@ -87,11 +100,16 @@ export default class CosmeticAdminController {
       )
       .orderBy('username')
       .limit(100)
+    const [owned] = await db
+      .from('user_cosmetics')
+      .where('cosmetic_id', item.id)
+      .count('* as total')
     return view.render('pages/admin/cosmetics/form', {
       title: 'Kozmetik Düzenle',
       item,
       kind: item.kind,
       owners,
+      ownerCount: Number(owned.total),
       ...this.formData(),
     })
   }

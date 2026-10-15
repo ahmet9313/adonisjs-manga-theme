@@ -1,5 +1,10 @@
+{{-- 404. Series and chapter pages pass `missing` ('series' | 'chapter') for a specific message. --}}
 @!component('components/layout/error', {
   code: 404,
-  title: 'Sayfa bulunamadı',
-  message: 'Aradığınız sayfa mevcut değil veya kaldırılmış olabilir.',
+  title: missing === 'series' ? 'Seri bulunamadı' : missing === 'chapter' ? 'Bölüm bulunamadı' : 'Sayfa bulunamadı',
+  message: missing === 'series'
+    ? 'Bu seri kaldırılmış ya da adresi değişmiş olabilir. Adını aşağıya yazarak arayabilirsin.'
+    : missing === 'chapter'
+      ? 'Bu bölüm henüz yayınlanmamış ya da kaldırılmış olabilir. Seriyi aşağıdan arayıp diğer bölümlerine göz atabilirsin.'
+      : 'Aradığın sayfa taşınmış ya da kaldırılmış olabilir. Adresi kontrol et veya aşağıdan bir seri ara.',
 })

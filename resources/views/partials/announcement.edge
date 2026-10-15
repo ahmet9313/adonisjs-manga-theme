@@ -1,9 +1,14 @@
-@if(announcement())
-  <div class="border-b border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-center text-sm text-emerald-200" role="region" aria-label="Duyuru">
-    @if(announcement().url)
-      <a href="{{ announcement().url }}" class="underline decoration-emerald-400/50 underline-offset-2 hover:text-(--t-heading)">{{ announcement().text }}</a>
+{{-- Announcement bar above the header (Admin → Tema → Duyuru Çubuğu). --}}
+@let(note = announcement())
+@if(note)
+<div class="border-b border-(--t-accent-line) bg-(--t-accent-soft) text-sm text-(--t-heading)" role="region" aria-label="Duyuru">
+  <div class="mx-auto flex max-w-(--t-container) items-center justify-center gap-2 px-4 py-2 text-center sm:px-6 lg:px-8">
+    @!component('components/icon', { name: 'megaphone', class: 'hidden h-4 w-4 shrink-0 text-(--t-accent) sm:block' })
+    @if(note.url)
+    <a href="{{ note.url }}" class="font-semibold underline decoration-(--t-accent) underline-offset-4 hover:decoration-2">{{ note.text }}</a>
     @else
-      {{ announcement().text }}
+    <span class="font-semibold">{{ note.text }}</span>
     @end
   </div>
+</div>
 @end

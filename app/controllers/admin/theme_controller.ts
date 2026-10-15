@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
 import {
   colorGroups,
+  colorPageLooks,
   colorTokens,
   flagGroups,
   flags,
@@ -10,7 +11,13 @@ import {
   presets,
 } from '#config/theme'
 import settings from '#services/settings_service'
-import theme, { colorKey, flagKey, lookKey, CUSTOM_CSS_KEY } from '#services/theme_service'
+import theme, {
+  colorKey,
+  flagKey,
+  lightColorKey,
+  lookKey,
+  CUSTOM_CSS_KEY,
+} from '#services/theme_service'
 import { invalidField } from '#services/upload_service'
 
 /** Public paths or http(s) addresses only; blocks `javascript:` and protocol-relative links. */
@@ -47,9 +54,15 @@ const titles = {
 type Section = keyof typeof titles
 const isSection = (value: string): value is Section => value in titles
 
-/** Effective colours/looks (stored or stock) the editors start from. */
-const currentColors = () =>
-  Object.fromEntries(colorTokens.map((t) => [t.key, settings.get(colorKey(t.key)) || t.default]))
+/** Effective colours of both schemes and looks (stored or stock) the editors start from. */
+const currentColors = () => ({
+  dark: Object.fromEntries(
+    colorTokens.map((t) => [t.key, settings.get(colorKey(t.key)) || t.default])
+  ),
+  light: Object.fromEntries(
+    colorTokens.map((t) => [t.key, settings.get(lightColorKey(t.key)) || t.light])
+  ),
+})
 const currentLooks = () =>
   Object.fromEntries(looks.map((l) => [l.key, settings.get(lookKey(l.key)) || String(l.default)]))
 const currentFlags = () =>
@@ -78,20 +91,22 @@ export default class ThemeController {
         ].map((key) => [key, settings.get(key)])
       )
     } else if (section === 'renkler') {
+      const colors = currentColors()
       data.config = {
         mode: 'colors',
         groups: colorGroups,
         tokens: colorTokens,
-        values: currentColors(),
+        values: colors.dark,
+        lightValues: colors.light,
         presets,
-        looks: looks.filter((look) => look.key === 'scheme'),
+        looks: looks.filter((look) => colorPageLooks.includes(look.key)),
         lookValues: currentLooks(),
         stacks: fontStacks,
       }
     } else if (section === 'gorunum') {
       data.config = {
         mode: 'looks',
-        looks: looks.filter((look) => look.key !== 'scheme'),
+        looks: looks.filter((look) => !colorPageLooks.includes(look.key)),
         lookValues: currentLooks(),
         stacks: fontStacks,
       }
@@ -130,11 +145,15 @@ export default class ThemeController {
         announcement_url: data.announcement_url ?? '',
       }
     } else if (section === 'renkler') {
-      entries = { ...theme.readColors(body), ...theme.readLooks(body, ['scheme']) }
+      entries = {
+        ...theme.readColors(body),
+        ...theme.readColors(body, { light: true }),
+        ...theme.readLooks(body, colorPageLooks),
+      }
     } else if (section === 'gorunum') {
       entries = theme.readLooks(
         body,
-        looks.map((l) => l.key).filter((key) => key !== 'scheme')
+        looks.map((l) => l.key).filter((key) => !colorPageLooks.includes(key))
       )
     } else if (section === 'goster') {
       entries = theme.readFlags(body)
@@ -147,12 +166,12 @@ export default class ThemeController {
     return response.redirect(`/admin/tema/${section}`)
   }
 
-  /** Every customised theme value as a portable document. */
+  /** Every theme value as a portable document (`colors` is the dark scheme). */
   private snapshot() {
+    const colors = currentColors()
     return {
-      colors: Object.fromEntries(
-        colorTokens.map((t) => [t.key, settings.get(colorKey(t.key)) || t.default])
-      ),
+      colors: colors.dark,
+      lightColors: colors.light,
       looks: Object.fromEntries(
         looks.map((l) => [l.key, settings.get(lookKey(l.key)) || String(l.default)])
       ),
@@ -170,6 +189,7 @@ export default class ThemeController {
   async import({ request, session, response }: HttpContext) {
     let data: {
       colors?: Record<string, unknown>
+      lightColors?: Record<string, unknown>
       looks?: Record<string, unknown>
       flags?: Record<string, unknown>
       css?: unknown
@@ -182,9 +202,10 @@ export default class ThemeController {
     if (!data || typeof data !== 'object')
       invalidField('theme_json', 'Tema belgesi bir nesne olmalı.')
 
-    const colors = Object.fromEntries(
-      Object.entries(data.colors ?? {}).map(([key, value]) => [`c_${key}`, value])
-    )
+    const colors = Object.fromEntries([
+      ...Object.entries(data.colors ?? {}).map(([key, value]) => [`c_${key}`, value]),
+      ...Object.entries(data.lightColors ?? {}).map(([key, value]) => [`cl_${key}`, value]),
+    ])
     const lookInput = Object.fromEntries(
       Object.entries(data.looks ?? {}).map(([key, value]) => [`l_${key}`, value])
     )
@@ -193,6 +214,7 @@ export default class ThemeController {
     )
     await settings.save({
       ...theme.readColors(colors),
+      ...theme.readColors(colors, { light: true }),
       ...theme.readLooks(lookInput),
       ...theme.readFlags(flagInput),
       ...theme.readCss(data.css),
@@ -204,7 +226,10 @@ export default class ThemeController {
   /** Drops every colour, look, switch and custom CSS value; site name and announcement stay. */
   async reset({ session, response }: HttpContext) {
     const entries: Record<string, string> = { [CUSTOM_CSS_KEY]: '' }
-    for (const token of colorTokens) entries[colorKey(token.key)] = ''
+    for (const token of colorTokens) {
+      entries[colorKey(token.key)] = ''
+      entries[lightColorKey(token.key)] = ''
+    }
     for (const look of looks) entries[lookKey(look.key)] = ''
     for (const flag of flags) entries[flagKey(flag.key)] = ''
     await settings.save(entries)

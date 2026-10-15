@@ -1,88 +1,90 @@
-@component('components/layout/admin', { title })
-
-@slot('main')
-  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h3 class="text-lg font-semibold text-gray-200">Kozmetikler</h3>
-      <p class="text-sm text-gray-500">Satış yok: öğeler seviye, rozet ya da yönetici hediyesiyle açılır.</p>
-    </div>
-    <a href="/admin/kozmetikler/ekle{{ kind ? '?tur=' + kind : '' }}" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-(--t-on-accent) hover:bg-emerald-500">+ Yeni Kozmetik</a>
-  </div>
-
-  <div class="mb-4 flex flex-wrap gap-2">
-    <a href="/admin/kozmetikler" class="pill {{ kind ? '' : 'pill-active' }}">Tümü</a>
-    @each(entry in kinds)
-      <a href="/admin/kozmetikler?tur={{ entry.name }}" class="pill {{ kind === entry.name ? 'pill-active' : '' }}">{{ entry.label }}</a>
+{{--
+  Admin → Topluluk → Kozmetikler: kind tabs with item counts, a card grid that previews every
+  item as it looks when equipped (components/ui/cosmetic_preview), its status and unlock rule,
+  and edit / gift / delete actions. Gifting happens on the edit page (#hediye).
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(kindOf = Object.fromEntries(kinds.map((entry) => [entry.name, entry])))
+@let(current = kind ? kindOf[kind] : null)
+@let(tabs = [{ key: 'all', label: 'Tümü', count: number(total), href: '/admin/kozmetikler' }].concat(kinds.map((entry) => ({ key: entry.name, label: entry.plural, count: number(counts[entry.name]), href: '/admin/kozmetikler?tur=' + entry.name }))))
+@let(first = items.total ? (items.currentPage - 1) * items.perPage + 1 : 0)
+@let(last = Math.min(items.currentPage * items.perPage, items.total))
+@let(unit = current ? current.label.toLocaleLowerCase('tr') : 'öğe')
+@component('components/layout/admin', { title, description: 'Satış yok: öğeler seviye, rozet ya da yönetici hediyesiyle açılır. Kartlarda her öğe kuşanılmış hâliyle görünür.' })
+  @slot('actions')
+    @component('components/ui/button', { variant: 'primary', href: '/admin/kozmetikler/ekle' + (kind ? '?tur=' + kind : ''), icon: 'plus' })
+      Yeni kozmetik
     @end
-  </div>
+  @end
 
-  <div class="overflow-hidden rounded-xl border border-gray-700 bg-(--t-surface)">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-700 text-left text-gray-400">
-            <th class="px-4 py-3 font-medium">Önizleme</th>
-            <th class="px-4 py-3 font-medium">Ad</th>
-            <th class="px-4 py-3 font-medium">Tür</th>
-            <th class="px-4 py-3 font-medium">Kilit</th>
-            <th class="px-4 py-3 font-medium">Durum</th>
-            <th class="px-4 py-3 text-right font-medium">İşlemler</th>
-          </tr>
-        </thead>
-        <tbody>
-          @each(item in items)
-            @let(look = visual(item))
-            <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
-              <td class="px-4 py-2">
-                <span class="flex h-12 w-16 items-center justify-center overflow-hidden rounded-lg bg-black/30">
-                  @if(item.kind === 'sticker')
-                    <img src="{{ look.img }}" alt="" class="max-h-10 max-w-12 object-contain" loading="lazy">
-                  @elseif(item.kind === 'frame')
-                    <span class="relative inline-flex h-8 w-8">
-                      <span class="h-full w-full rounded-full bg-gradient-to-br from-slate-500 to-slate-700"></span>
-                      @if(look.img)
-                        <img src="{{ look.img }}" alt="" class="avatar-frame-img">
-                      @else
-                        <span class="avatar-frame {{ look.cls || '' }}"></span>
-                      @end
-                    </span>
-                  @elseif(item.kind === 'effect')
-                    <span class="font-black {{ look.cls || '' }}" style="{{ visualStyle(look) }}">Aa</span>
-                  @else
-                    <span class="wall h-full w-full {{ look.cls || '' }}" style="{{ visualStyle(look) }}"></span>
-                  @end
-                </span>
-              </td>
-              <td class="px-4 py-2 text-gray-200">
-                {{ item.name }}
-                @if(item.featured)
-                  <span class="ml-1 rounded bg-sky-500/20 px-1.5 text-[10px] font-bold text-sky-300">ÖNE ÇIKAN</span>
-                @end
-              </td>
-              <td class="px-4 py-2 text-gray-400">{{ kinds.find((entry) => entry.name === item.kind).label }}</td>
-              <td class="px-4 py-2 text-gray-400">{{ lockText(item) }}</td>
-              <td class="px-4 py-2">
-                <span class="rounded px-2 py-0.5 text-xs {{ item.active ? 'bg-emerald-500/15 text-emerald-300' : 'bg-gray-700 text-gray-400' }}">{{ item.active ? 'Aktif' : 'Gizli' }}</span>
-              </td>
-              <td class="px-4 py-2 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <a href="/admin/kozmetikler/{{ item.id }}/duzenle" class="rounded border border-emerald-800 px-3 py-1 text-xs text-emerald-400 hover:border-emerald-600">Düzenle</a>
-                  <form action="/admin/kozmetikler/{{ item.id }}/sil" method="POST" onsubmit="return confirm('Bu öğe silinsin mi? Kuşananlardan da kaldırılır.')">
-                    {{ csrfField() }}
-                    <button type="submit" class="rounded border border-red-800 px-3 py-1 text-xs text-red-400 hover:border-red-600">Sil</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          @end
-          @if(items.total === 0)
-            <tr><td colspan="6" class="px-5 py-8 text-center text-gray-500">Kozmetik yok</td></tr>
-          @end
-        </tbody>
-      </table>
+  @slot('main')
+    <div class="ac-page">
+      @!component('components/ui/tabs', { mode: 'links', tabs, active: kind || 'all', label: 'Kozmetik türleri' })
+
+      @if(items.total)
+      <p class="ac-summary">
+        <span><strong>{{ number(items.total) }}</strong> {{ unit }}</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ current ? 'sıra numarasına göre' : 'türe ve sıra numarasına göre' }}</span>
+      </p>
+
+      <ul class="ac-grid" aria-label="{{ current ? current.plural : 'Kozmetikler' }}">
+        @each(item in items)
+        @let(look = visual(item))
+        @let(editUrl = '/admin/kozmetikler/' + item.id + '/duzenle')
+        @let(lockIcon = item.grantOnly ? 'gift' : item.requiredBadge ? 'badge' : 'lock')
+        @let(deleteMessage = '“' + item.name + '” kalıcı olarak silinecek. ' + (item.kind === 'sticker' ? 'Bu çıkartmayla gönderilen yorumlardan kaldırılır' : 'Kuşanan üyelerin profilinden çıkarılır') + ' ve hediye kayıtları da silinir. Bu işlem geri alınamaz.')
+        <li class="ac-item {{ item.active ? '' : 'is-off' }}">
+          <a href="{{ editUrl }}" class="ac-item__stage" tabindex="-1" aria-hidden="true">
+            @!component('components/ui/cosmetic_preview', { kind: item.kind, visual: look, user: auth.user, size: 'lg' })
+          </a>
+          <div class="ac-item__body">
+            <a href="{{ editUrl }}" class="ac-item__name">{{ item.name }}</a>
+            <p class="ac-item__meta">
+              @if(!current)
+              <span>{{ kindOf[item.kind].label }}</span>
+              <span aria-hidden="true">·</span>
+              @end
+              <span class="ac-lock">
+                @!component('components/icon', { name: lockIcon })
+                {{ lockText(item) }}
+              </span>
+            </p>
+            <p class="ac-item__badges">
+              @if(item.active)
+              @!component('components/ui/badge', { kind: 'success', text: 'Aktif', size: 'sm' })
+              @else
+              @!component('components/ui/badge', { kind: 'neutral', text: 'Gizli', size: 'sm', title: 'Koleksiyonda ve envanterde görünmez' })
+              @end
+              @if(item.featured)
+              @!component('components/ui/badge', { kind: 'accent', text: 'Öne çıkan', size: 'sm' })
+              @end
+            </p>
+          </div>
+          <div class="ac-actions ac-item__actions">
+            @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: editUrl, label: 'Düzenle: ' + item.name, title: 'Düzenle' })
+            @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'gift', href: editUrl + '#hediye', label: 'Hediye et: ' + item.name, title: 'Hediye et' })
+            <form action="/admin/kozmetikler/{{ item.id }}/sil" method="POST" data-submit-once
+                  data-confirm="{{ deleteMessage }}" data-confirm-title="Kozmetik silinsin mi?" data-confirm-label="Kalıcı olarak sil">
+              {{ csrfField() }}
+              @!component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'trash', label: 'Sil: ' + item.name, title: 'Sil', class: 'ac-danger' })
+            </form>
+          </div>
+        </li>
+        @end
+      </ul>
+
+      <div class="ac-listfoot">
+        <p class="ac-listfoot__info">{{ number(first) }}–{{ number(last) }} / {{ number(items.total) }} {{ unit }}</p>
+        @!component('components/ui/pagination', { current: items.currentPage, total: items.lastPage, label: 'Kozmetik sayfaları' })
+      </div>
+      @else
+      @component('components/ui/empty_state', { icon: 'sparkles', title: current ? 'Bu türde öğe yok' : 'Henüz kozmetik yok', description: current ? 'Bu türdeki ilk öğeyi ekleyin; seviye, rozet ya da hediyeyle açılmasını seçebilirsiniz.' : 'Ad efektleri, avatar çerçeveleri, duvar kağıtları ve çıkartmalar ekleyin.', class: 'mt-6' })
+        @component('components/ui/button', { variant: 'primary', href: '/admin/kozmetikler/ekle' + (kind ? '?tur=' + kind : ''), icon: 'plus' })
+          Yeni kozmetik
+        @end
+      @end
+      @end
     </div>
-  </div>
-  @include('partials/admin/pagination')
-@end
-
+  @end
 @end

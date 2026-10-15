@@ -1,0 +1,314 @@
+/*
+ * Design tokens of the "Mürekkep & Kâğıt" (Ink & Paper) design system.
+ *
+ * Two colour schemes: dark (default) and light. `<html data-theme="dark|light|system">` is set
+ * on the server (cookie `theme`, see `schemeOf()` in start/view.ts); "system" follows the OS.
+ * The stock colours below mirror config/theme.ts (`default` = dark, `light` = light) and
+ * tests/unit/tokens.spec.ts keeps them in sync. Admin → Tema writes overrides into an inline
+ * <style> after this file: `:root{…}` for dark and `:root[data-theme="light"]{…}` for light.
+ * Everything else (Tailwind colours, radii, fonts) is derived from these variables.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Arka plan */
+  --t-bg: #0e0e11;
+  --t-glow-1: #8b74ff12;
+  --t-glow-2: #8b74ff0a;
+  --t-glow-3: #8b74ff00;
+  --t-dots: #ffffff06;
+  /* Metin */
+  --t-heading: #f5f5f3;
+  --t-text: #e4e4e1;
+  --t-text-2: #c3c3c0;
+  --t-muted: #8f8f97;
+  --t-subtle: #6a6a72;
+  --t-overlay: #ffffff;
+  /* Üst menü (header) */
+  --t-header-bg: #0e0e11;
+  --t-header-text: #c3c3c0;
+  --t-header-hover: #f5f5f3;
+  --t-header-line: #ffffff;
+  --t-logo-1: #f5f5f3;
+  --t-logo-2: #cdc2ff;
+  --t-logo-3: #8b74ff;
+  /* Alt bilgi (footer) */
+  --t-footer-bg: #0b0b0d;
+  --t-footer-text: #f5f5f3;
+  --t-footer-link: #a1a1a9;
+  /* Yüzeyler ve alanlar */
+  --t-surface: #16161a;
+  --t-surface-2: #1d1d22;
+  --t-panel: #16161a;
+  --t-field: #121215;
+  --t-border: #2a2a31;
+  --t-border-strong: #3a3a43;
+  --t-hover: #222228;
+  --t-scrim: #00000099;
+  --t-shadow-color: #00000073;
+  /* Vurgu */
+  --t-accent: #8b74ff;
+  --t-accent-strong: #6d4aff;
+  --t-accent-text: #b4a3ff;
+  --t-accent-2: #6d4aff;
+  --t-on-accent: #ffffff;
+  /* Durum renkleri */
+  --t-success: #34d399;
+  --t-warning: #fbbf24;
+  --t-danger: #f87171;
+  --t-info: #60a5fa;
+  /* Rozetler */
+  --t-badge-manga: #2563eb;
+  --t-badge-manhwa: #15803d;
+  --t-badge-manhua: #dc2626;
+  --t-badge-novel: #7c3aed;
+  --t-badge-webtoon: #c2410c;
+  --t-badge-ongoing: #15803d;
+  --t-badge-completed: #2563eb;
+  --t-badge-dropped: #52525b;
+  --t-badge-age18: #dc2626;
+  --t-badge-age16: #c2410c;
+  --t-badge-age13: #a16207;
+  --t-badge-age7: #2563eb;
+
+  /* Layout and type (Admin → Tema → Düzen ve Görünüm) */
+  --t-img: none;
+  --t-img-size: cover;
+  --t-img-attach: fixed;
+  --t-container: 80rem;
+  --t-radius: 1;
+  --t-blur: 0px;
+  --t-font: 'Manrope Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --t-font-scale: 100%;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Arka plan */
+  --t-bg: #f7f6f3;
+  --t-glow-1: #5b3df00d;
+  --t-glow-2: #5b3df008;
+  --t-glow-3: #5b3df000;
+  --t-dots: #0000000b;
+  /* Metin */
+  --t-heading: #141417;
+  --t-text: #232327;
+  --t-text-2: #3f3f46;
+  --t-muted: #5f5f67;
+  --t-subtle: #8a8a92;
+  --t-overlay: #000000;
+  /* Üst menü (header) */
+  --t-header-bg: #f7f6f3;
+  --t-header-text: #3f3f46;
+  --t-header-hover: #141417;
+  --t-header-line: #000000;
+  --t-logo-1: #141417;
+  --t-logo-2: #4b2fd6;
+  --t-logo-3: #5b3df0;
+  /* Alt bilgi (footer) */
+  --t-footer-bg: #efede7;
+  --t-footer-text: #141417;
+  --t-footer-link: #55555d;
+  /* Yüzeyler ve alanlar */
+  --t-surface: #ffffff;
+  --t-surface-2: #f1efe9;
+  --t-panel: #ffffff;
+  --t-field: #ffffff;
+  --t-border: #e4e1da;
+  --t-border-strong: #cfcbc2;
+  --t-hover: #ebe8e1;
+  --t-scrim: #14141766;
+  --t-shadow-color: #1414171f;
+  /* Vurgu */
+  --t-accent: #5b3df0;
+  --t-accent-strong: #5b3df0;
+  --t-accent-text: #4b2fd6;
+  --t-accent-2: #4b2fd6;
+  --t-on-accent: #ffffff;
+  /* Durum renkleri */
+  --t-success: #166534;
+  --t-warning: #92400e;
+  --t-danger: #b91c1c;
+  --t-info: #1d4ed8;
+  /* Rozetler */
+  --t-badge-manga: #2563eb;
+  --t-badge-manhwa: #15803d;
+  --t-badge-manhua: #dc2626;
+  --t-badge-novel: #7c3aed;
+  --t-badge-webtoon: #c2410c;
+  --t-badge-ongoing: #15803d;
+  --t-badge-completed: #2563eb;
+  --t-badge-dropped: #52525b;
+  --t-badge-age18: #dc2626;
+  --t-badge-age16: #c2410c;
+  --t-badge-age13: #a16207;
+  --t-badge-age7: #2563eb;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme='system'] {
+    color-scheme: light;
+
+    /* Arka plan */
+    --t-bg: #f7f6f3;
+    --t-glow-1: #5b3df00d;
+    --t-glow-2: #5b3df008;
+    --t-glow-3: #5b3df000;
+    --t-dots: #0000000b;
+    /* Metin */
+    --t-heading: #141417;
+    --t-text: #232327;
+    --t-text-2: #3f3f46;
+    --t-muted: #5f5f67;
+    --t-subtle: #8a8a92;
+    --t-overlay: #000000;
+    /* Üst menü (header) */
+    --t-header-bg: #f7f6f3;
+    --t-header-text: #3f3f46;
+    --t-header-hover: #141417;
+    --t-header-line: #000000;
+    --t-logo-1: #141417;
+    --t-logo-2: #4b2fd6;
+    --t-logo-3: #5b3df0;
+    /* Alt bilgi (footer) */
+    --t-footer-bg: #efede7;
+    --t-footer-text: #141417;
+    --t-footer-link: #55555d;
+    /* Yüzeyler ve alanlar */
+    --t-surface: #ffffff;
+    --t-surface-2: #f1efe9;
+    --t-panel: #ffffff;
+    --t-field: #ffffff;
+    --t-border: #e4e1da;
+    --t-border-strong: #cfcbc2;
+    --t-hover: #ebe8e1;
+    --t-scrim: #14141766;
+    --t-shadow-color: #1414171f;
+    /* Vurgu */
+    --t-accent: #5b3df0;
+    --t-accent-strong: #5b3df0;
+    --t-accent-text: #4b2fd6;
+    --t-accent-2: #4b2fd6;
+    --t-on-accent: #ffffff;
+    /* Durum renkleri */
+    --t-success: #166534;
+    --t-warning: #92400e;
+    --t-danger: #b91c1c;
+    --t-info: #1d4ed8;
+    /* Rozetler */
+    --t-badge-manga: #2563eb;
+    --t-badge-manhwa: #15803d;
+    --t-badge-manhua: #dc2626;
+    --t-badge-novel: #7c3aed;
+    --t-badge-webtoon: #c2410c;
+    --t-badge-ongoing: #15803d;
+    --t-badge-completed: #2563eb;
+    --t-badge-dropped: #52525b;
+    --t-badge-age18: #dc2626;
+    --t-badge-age16: #c2410c;
+    --t-badge-age13: #a16207;
+    --t-badge-age7: #2563eb;
+  }
+}
+
+/* Derived values: computed from the colours above in whichever scheme is active. */
+:root {
+  --t-accent-soft: color-mix(in oklab, var(--t-accent) 16%, transparent);
+  --t-accent-line: color-mix(in oklab, var(--t-accent) 45%, transparent);
+  --t-success-soft: color-mix(in oklab, var(--t-success) 14%, transparent);
+  --t-warning-soft: color-mix(in oklab, var(--t-warning) 14%, transparent);
+  --t-danger-soft: color-mix(in oklab, var(--t-danger) 14%, transparent);
+  --t-info-soft: color-mix(in oklab, var(--t-info) 14%, transparent);
+  --t-shadow-1: 0 1px 2px var(--t-shadow-color);
+  --t-shadow-2: 0 2px 6px var(--t-shadow-color), 0 18px 48px -12px var(--t-shadow-color);
+  --t-ring: 0 0 0 3px color-mix(in oklab, var(--t-accent) 30%, transparent);
+
+  /* Radii follow the "Köşe yuvarlaklığı" multiplier. */
+  --radius-xs: calc(0.25rem * var(--t-radius));
+  --radius-sm: calc(0.375rem * var(--t-radius));
+  --radius-md: calc(0.5rem * var(--t-radius));
+  --radius-lg: calc(0.625rem * var(--t-radius));
+  --radius-xl: calc(0.875rem * var(--t-radius));
+  --radius-2xl: calc(1.125rem * var(--t-radius));
+  --radius-3xl: calc(1.5rem * var(--t-radius));
+  --radius-badge: var(--radius-sm);
+  --radius-control: var(--radius-lg);
+  --radius-card: var(--radius-xl);
+  --radius-panel: var(--radius-2xl);
+
+  /* Layers and motion */
+  --z-sticky: 30;
+  --z-nav: 40;
+  --z-dropdown: 50;
+  --z-modal: 80;
+  --z-popover: 85;
+  --z-toast: 90;
+  --z-lightbox: 95;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-1: 150ms;
+  --dur-2: 220ms;
+
+  /* Tailwind's own variables follow the theme, so older utility classes keep working. */
+  --font-sans: var(--t-font);
+  --color-white: var(--t-overlay);
+  --color-gray-200: var(--t-text);
+  --color-gray-300: var(--t-text-2);
+  --color-gray-400: var(--t-muted);
+  --color-gray-500: var(--t-subtle);
+  --color-gray-600: var(--t-border-strong);
+  --color-gray-700: var(--t-border);
+  --color-gray-800: var(--t-hover);
+
+  /* Legacy emerald/teal utilities are re-derived from the accent colours. */
+  --color-emerald-50: color-mix(in oklab, var(--t-accent) 6%, white);
+  --color-emerald-100: color-mix(in oklab, var(--t-accent) 14%, white);
+  --color-emerald-200: color-mix(in oklab, var(--t-accent) 30%, white);
+  --color-emerald-300: color-mix(in oklab, var(--t-accent) 50%, white);
+  --color-emerald-400: color-mix(in oklab, var(--t-accent) 75%, white);
+  --color-emerald-500: var(--t-accent);
+  --color-emerald-600: color-mix(in oklab, var(--t-accent) 85%, black);
+  --color-emerald-700: color-mix(in oklab, var(--t-accent) 68%, black);
+  --color-emerald-800: color-mix(in oklab, var(--t-accent) 52%, black);
+  --color-emerald-900: color-mix(in oklab, var(--t-accent) 38%, black);
+  --color-emerald-950: color-mix(in oklab, var(--t-accent) 22%, black);
+  --color-teal-300: color-mix(in oklab, var(--t-accent-2) 45%, white);
+  --color-teal-500: color-mix(in oklab, var(--t-accent-2) 85%, white);
+  --color-teal-600: var(--t-accent-2);
+  --color-teal-700: color-mix(in oklab, var(--t-accent-2) 80%, black);
+}
+
+/*
+ * Semantic Tailwind utilities: bg-surface, bg-surface-2, bg-field, border-line, text-ink,
+ * text-body, text-muted, text-accent-text, bg-accent-strong, text-on-accent, shadow-1 …
+ * `inline` makes them read the variables directly, so they follow the active scheme.
+ */
+@theme inline {
+  --color-canvas: var(--t-bg);
+  --color-surface: var(--t-surface);
+  --color-surface-2: var(--t-surface-2);
+  --color-field: var(--t-field);
+  --color-hover: var(--t-hover);
+  --color-line: var(--t-border);
+  --color-line-strong: var(--t-border-strong);
+  --color-ink: var(--t-heading);
+  --color-body: var(--t-text);
+  --color-body-2: var(--t-text-2);
+  --color-muted: var(--t-muted);
+  --color-subtle: var(--t-subtle);
+  --color-accent: var(--t-accent);
+  --color-accent-strong: var(--t-accent-strong);
+  --color-accent-text: var(--t-accent-text);
+  --color-accent-soft: var(--t-accent-soft);
+  --color-on-accent: var(--t-on-accent);
+  /* Fixed white for text and icons over images and saturated fills (never scheme dependent). */
+  --color-on-image: #ffffff;
+  --color-success: var(--t-success);
+  --color-warning: var(--t-warning);
+  --color-danger: var(--t-danger);
+  --color-info: var(--t-info);
+  --shadow-1: var(--t-shadow-1);
+  --shadow-2: var(--t-shadow-2);
+}

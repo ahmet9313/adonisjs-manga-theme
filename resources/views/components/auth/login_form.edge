@@ -1,22 +1,14 @@
-{{-- Locals: prefix, next --}}
-<form action="/giris" method="POST" class="space-y-4">
+{{-- Sign-in form (page and dialog). Props: prefix (id prefix), next (redirect after sign-in). --}}
+<form action="/giris" method="POST" class="space-y-4" data-submit-once>
   {{ csrfField() }}
   <input type="hidden" name="next" value="{{ next || '/' }}">
-  @!component('components/auth/field', { id: prefix + '-login', name: 'login', type: 'text', label: 'Kullanıcı adı veya e-posta', value: flashMessages.get('login'), autocomplete: 'username', placeholder: 'Kullanıcı adı veya e-posta' })
-  <div x-data="{ show: false }">
-    <label for="{{ prefix }}-password" class="mb-1 block text-sm font-medium text-gray-300">Parola</label>
-    <div class="relative">
-      <input :type="show ? 'text' : 'password'" id="{{ prefix }}-password" name="password" required autocomplete="current-password" placeholder="Parola"
-             class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 pr-11 text-gray-200 placeholder-gray-500 transition focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-      <button type="button" @click="show = !show" class="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-gray-500 hover:text-gray-300" :aria-label="show ? 'Parolayı gizle' : 'Parolayı göster'" :aria-pressed="show.toString()">
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-      </button>
-    </div>
-    @!component('components/field_error', { field: 'password' })
+  @!component('components/ui/field', { id: prefix + '-login', name: 'login', label: 'Kullanıcı adı veya e-posta', required: true, autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', 'data-autofocus': true })
+  @!component('components/auth/password', { id: prefix + '-password', name: 'password', label: 'Parola', autocomplete: 'current-password' })
+  <div class="flex items-center justify-between gap-3">
+    <label class="check">
+      <input type="checkbox" name="remember" value="on">
+      <span class="text-sm text-(--t-text-2)">Beni hatırla</span>
+    </label>
   </div>
-  <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-400">
-    <input type="checkbox" name="remember" value="on" class="h-4 w-4 rounded border-gray-600 bg-(--t-field) accent-emerald-500">
-    Beni hatırla
-  </label>
-  <button type="submit" class="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 py-2.5 font-semibold text-(--t-on-accent) transition hover:from-emerald-600 hover:to-teal-700">Oturum Aç</button>
+  <button type="submit" class="btn btn--primary btn--lg btn--block">Giriş yap</button>
 </form>

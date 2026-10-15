@@ -1,0 +1,83 @@
+{{--
+  Sticky reader toolbar (banner slot of the reader; Admin → Tema → Göster/Gizle → reader_toolbar):
+  back to the series, "Seri · Bölüm N", chapter picker, previous/next, reading settings and a 2px
+  reading-progress bar. readerToolbar (reader.js) navigates, saves the settings (localStorage
+  "reader-prefs") and slides the bar away while reading downwards.
+--}}
+<div class="reader-bar" x-data="readerToolbar" data-base="{{ seriesUrl }}/"
+  data-offset="{{ ui('header') && ui('header_sticky') ? 'header' : 'top' }}"
+  data-hidden="false" :data-hidden="hidden.toString()">
+  <nav class="reader-bar__inner" aria-label="Okuyucu">
+    <a href="{{ seriesUrl }}" class="btn btn--ghost btn--md btn--icon reader-bar__back" aria-label="{{ series.title }} sayfasına dön" title="Seriye dön">
+      @!component('components/icon', { name: 'arrow-left', class: 'btn__icon' })
+    </a>
+    <p class="reader-bar__title">
+      <a href="{{ seriesUrl }}" class="reader-bar__series">{{ series.title }}</a>
+      <span class="reader-bar__chapter"><span aria-hidden="true">·</span> Bölüm {{ chapter.number }}</span>
+    </p>
+
+    <div class="reader-bar__nav">
+      @if(prevChapter)
+      <a href="{{ chapterUrl(prevChapter.number) }}" rel="prev" class="btn btn--secondary btn--md btn--icon" aria-label="Önceki bölüm: Bölüm {{ prevChapter.number }}" title="Önceki bölüm (←)">
+        @!component('components/icon', { name: 'chevron-left', class: 'btn__icon' })
+      </a>
+      @else
+      <button type="button" class="btn btn--secondary btn--md btn--icon" disabled aria-label="Önceki bölüm yok">
+        @!component('components/icon', { name: 'chevron-left', class: 'btn__icon' })
+      </button>
+      @end
+
+      <label for="reader-chapter" class="sr-only">Bölüm seç</label>
+      <select id="reader-chapter" class="control control--sm reader-bar__select" @change="pick($event)" @keydown="pickKey($event)" @blur="pickBlur()">
+        @each(item in allChapters)
+        <option value="{{ item.number }}" {{ item.number === chapter.number ? 'selected' : '' }}>Bölüm {{ item.number }}{{ item.title ? ': ' + item.title : '' }}</option>
+        @end
+      </select>
+
+      @if(nextChapter)
+      <a href="{{ chapterUrl(nextChapter.number) }}" rel="next" class="btn btn--secondary btn--md btn--icon" aria-label="Sonraki bölüm: Bölüm {{ nextChapter.number }}" title="Sonraki bölüm (→)">
+        @!component('components/icon', { name: 'chevron-right', class: 'btn__icon' })
+      </a>
+      @else
+      <button type="button" class="btn btn--secondary btn--md btn--icon" disabled aria-label="Sonraki bölüm yok">
+        @!component('components/icon', { name: 'chevron-right', class: 'btn__icon' })
+      </button>
+      @end
+    </div>
+
+    @component('components/ui/dropdown', { id: 'reader-settings', label: 'Okuma ayarları', icon: 'sliders', iconOnly: true, align: 'right', width: 'w-72', buttonClass: 'btn btn--ghost btn--md btn--icon' })
+      <p class="menu__label">Okuma ayarları</p>
+      @if(isNovel)
+      <div class="reader-setting">
+        <span id="reader-font-label" class="reader-setting__label">Yazı boyutu</span>
+        <div class="reader-stepper" role="group" aria-labelledby="reader-font-label">
+          <button type="button" class="btn btn--secondary btn--sm btn--icon" @click="font(-1)" :disabled="prefs.font <= 0" aria-label="Yazıyı küçült">
+            @!component('components/icon', { name: 'minus', class: 'btn__icon' })
+          </button>
+          <output class="reader-stepper__value t-num" aria-live="polite" x-text="fontLabel()">100%</output>
+          <button type="button" class="btn btn--secondary btn--sm btn--icon" @click="font(1)" :disabled="prefs.font >= fontMax" aria-label="Yazıyı büyüt">
+            @!component('components/icon', { name: 'plus', class: 'btn__icon' })
+          </button>
+        </div>
+      </div>
+      @else
+      <div class="reader-setting">
+        <span id="reader-fit-label" class="reader-setting__label">Sayfa genişliği</span>
+        <div class="segmented reader-setting__choice" role="group" aria-labelledby="reader-fit-label">
+          <button type="button" @click="setFit('width')" aria-pressed="true" :aria-pressed="(prefs.fit === 'width').toString()">Ekrana sığdır</button>
+          <button type="button" @click="setFit('original')" aria-pressed="false" :aria-pressed="(prefs.fit === 'original').toString()">Orijinal boyut</button>
+        </div>
+      </div>
+      @end
+      <div class="menu__sep"></div>
+      <p class="reader-setting__hint">
+        <kbd class="kbd">←</kbd>
+        <kbd class="kbd">→</kbd>
+        <span>önceki / sonraki bölüm</span>
+      </p>
+    @end
+  </nav>
+  <div class="reader-progress" role="progressbar" aria-label="Okuma ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" :aria-valuenow="percent">
+    <span class="reader-progress__bar" x-ref="bar"></span>
+  </div>
+</div>

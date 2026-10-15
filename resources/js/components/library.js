@@ -111,3 +111,6 @@ export function librarySync() {
     },
   }
 }
+
+/** Alpine components of this module, registered by resources/js/app.js. */
+export const components = { readingTracker, continueReading, librarySync }

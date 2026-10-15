@@ -1,0 +1,80 @@
+{{--
+  One comment out of its thread (home page, profile): the author's wallpaper card, where it was
+  written, what it answers and the counts. The whole card links to the comment section.
+  Props: item (comment with user, series.contentType, chapter, parent.user, body, spoiler,
+         stickerId, image, likeCount, replyCount, parentId, createdAt), showAuthor (true),
+         showKind (Yorum/Yanıt badge, false), time ago|date (ago), look (wallpaper owner's look;
+         default lookOf(item.user)), class.
+--}}
+@let(look = $props.get('look') || lookOf(item.user))
+@let(link = '/series/' + item.series.contentType.slug + '/' + item.series.slug + (item.chapter ? '/' + item.chapter.number : '') + '#yorumlar')
+@let(sticker = stickerOf(item.stickerId))
+@let(when = $props.get('time', 'ago') === 'date' ? dateOf(item.createdAt) : agoOf(item.createdAt))
+<article class="c-card group p-4 transition-colors hover:border-(--t-border-strong) {{ $props.get('class', '') }}">
+  @if(look.wallpaper)
+  <div class="c-wall wall {{ look.wallpaper.cls || '' }}" style="{{ visualStyle(look.wallpaper) }}"></div>
+  @end
+  <div class="c-veil"></div>
+  <div class="flex items-start gap-3">
+    @if($props.get('showAuthor', true))
+    @!component('components/avatar', { user: item.user, size: 'h-10 w-10', text: 'text-sm', frame: look.frame })
+    @end
+    <div class="min-w-0 flex-1">
+      <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-(--t-muted)">
+        @if($props.get('showKind'))
+        @!component('components/ui/badge', { kind: item.parentId ? 'info' : 'accent', text: item.parentId ? 'Yanıt' : 'Yorum', size: 'sm' })
+        @end
+        @if($props.get('showAuthor', true))
+        <strong class="max-w-[12rem] truncate text-sm text-(--t-heading)">
+          @!component('components/user_name', { user: item.user, look })
+        </strong>
+        @!component('components/level_badge', { level: levelOf(item.user).level })
+        @end
+        <span>{{ when }}</span>
+      </div>
+      <p class="mt-0.5 text-xs text-(--t-muted)">
+        <a href="{{ link }}" class="font-semibold text-(--t-accent-text) after:absolute after:inset-0 group-hover:underline">{{ item.series.title }}</a>
+        @if(item.chapter)
+        · Bölüm {{ item.chapter.number }}
+        @else
+        · Seri sayfası
+        @end
+      </p>
+      @if(item.parent)
+      <div class="reply-ref">
+        @!component('components/icon', { name: 'reply', class: 'h-3.5 w-3.5 shrink-0 text-(--t-accent)' })
+        @if(item.parent.deletedAt)
+        <span class="italic">Silinmiş bir yoruma yanıt</span>
+        @else
+        <span class="min-w-0 truncate"><strong class="font-semibold text-(--t-accent-text)">&#64;{{ item.parent.user.username }}</strong> kişisine yanıt: <span class="italic text-(--t-text-2)">“{{ excerptOf(item.parent) }}”</span></span>
+        @end
+      </div>
+      @end
+      @if(item.spoiler)
+      <p class="mt-2 text-sm italic text-(--t-warning)">Spoiler içeren yorum</p>
+      @else
+      @if(item.body)
+      <p class="mt-2 line-clamp-3 whitespace-pre-wrap break-words text-sm text-(--t-text)">{{ item.body }}</p>
+      @end
+      @if(sticker)
+      <img src="{{ sticker.image }}" alt="{{ sticker.name }} çıkartması" loading="lazy" class="mt-2 h-16 w-16 object-contain">
+      @end
+      @if(item.image)
+      <img src="{{ item.image }}" alt="" loading="lazy" class="mt-2 max-h-32 rounded-lg border border-(--t-border) object-contain">
+      @end
+      @end
+      <p class="mt-2 flex flex-wrap gap-3 text-xs text-(--t-muted)">
+        <span class="inline-flex items-center gap-1" title="Artı oy">
+          @!component('components/icon', { name: 'up', class: 'h-3.5 w-3.5' })
+          {{ item.likeCount }}
+        </span>
+        @if(item.replyCount)
+        <span class="inline-flex items-center gap-1">
+          @!component('components/icon', { name: 'chat', class: 'h-3.5 w-3.5' })
+          {{ item.replyCount }} yanıt
+        </span>
+        @end
+      </p>
+    </div>
+  </div>
+</article>

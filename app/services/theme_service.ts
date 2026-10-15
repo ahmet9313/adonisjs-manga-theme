@@ -3,14 +3,17 @@ import {
   derivedAccents,
   flags,
   fontStacks,
+  isScheme,
   looks,
   type ColorToken,
   type Flag,
+  type Scheme,
 } from '#config/theme'
 import { invalidField } from '#services/upload_service'
 
-/** Storage keys in the `settings` table. */
+/** Storage keys in the `settings` table. Dark colours are `c.*`, light colours `cl.*`. */
 export const colorKey = (key: string) => `c.${key}`
+export const lightColorKey = (key: string) => `cl.${key}`
 export const lookKey = (key: string) => `l.${key}`
 export const flagKey = (key: string) => `f.${key}`
 export const CUSTOM_CSS_KEY = 'x.css'
@@ -29,31 +32,60 @@ export function normalizeColor(value: string): string | null {
 /** A value equal to the stock one is not stored, so defaults can change with the code. */
 const stored = (value: string, fallback: string) => (value === fallback ? '' : value)
 
-/** The compiled theme: one stylesheet, the <html> attributes it needs and the switches. */
+/** Stock value of a colour token in one scheme. */
+export const stockColor = (item: ColorToken, light = false) => (light ? item.light : item.default)
+
+/**
+ * The compiled theme: one stylesheet with the overrides of both colour schemes, the <html>
+ * attributes it needs, the default scheme and the switches. Stock values live in tokens.css.
+ */
 class ThemeService {
   css = ''
   attrs = ''
+  /** Scheme shown to visitors who did not pick one (Admin → Tema → Renkler). */
+  scheme: Scheme = 'dark'
+  /** Effective header background of each scheme, for <meta name="theme-color">. */
+  headerColors = { dark: '#0e0e11', light: '#f7f6f3' }
   private switches = new Map<string, boolean>()
 
   apply(get: (key: string) => string) {
+    const dark: string[] = []
+    const light: string[] = []
     const vars: string[] = []
-    const attrs: string[] = []
+    const forced: string[] = []
+    const attrs = new Set<string>()
 
-    for (const token of colorTokens) {
-      const value = get(colorKey(token.key))
-      if (!value || !hexPattern.test(value)) continue
-      vars.push(`${token.css}:${value}`)
-      if (derivedAccents[token.key]) attrs.push(derivedAccents[token.key])
+    for (const item of colorTokens) {
+      for (const [list, value] of [
+        [dark, get(colorKey(item.key))],
+        [light, get(lightColorKey(item.key))],
+      ] as const) {
+        if (!value || !hexPattern.test(value)) continue
+        list.push(`${item.css}:${value}`)
+        if (derivedAccents[item.key]) attrs.add(derivedAccents[item.key])
+      }
+    }
+    const header = colorTokens.find((item) => item.key === 'header_bg')!
+    const headerOf = (value: string, fallback: string) =>
+      (hexPattern.test(value) ? value : fallback).slice(0, 7)
+    this.headerColors = {
+      dark: headerOf(get(colorKey('header_bg')), header.default),
+      light: headerOf(get(lightColorKey('header_bg')), header.light),
     }
 
+    this.scheme = 'dark'
     for (const look of looks) {
       const value = get(lookKey(look.key))
+      if (look.key === 'default_scheme') {
+        if (isScheme(value)) this.scheme = value
+        continue
+      }
       if (!value) continue
       if (look.type === 'range') {
         const number = Number(value)
         if (Number.isFinite(number)) vars.push(`${look.css}:${number}${look.unit}`)
       } else if (look.type === 'select') {
-        if (!look.choices.some((choice) => choice.value === value)) continue
+        if (!look.css || !look.choices.some((choice) => choice.value === value)) continue
         if (look.key === 'font') vars.push(`${look.css}:${fontStacks[value] ?? ''}`)
         else vars.push(`${look.css}:${value}`)
       } else if (urlPattern.test(value)) {
@@ -68,12 +100,23 @@ class ThemeService {
       })
     )
     if (!this.flag('bg_glow'))
-      vars.push('--t-glow-1:transparent;--t-glow-2:transparent;--t-glow-3:transparent')
-    if (!this.flag('bg_dots')) vars.push('--t-dots:transparent')
-    if (!this.flag('bg_fixed')) vars.push('--t-img-attach:scroll')
+      forced.push('--t-glow-1:transparent;--t-glow-2:transparent;--t-glow-3:transparent')
+    if (!this.flag('bg_dots')) forced.push('--t-dots:transparent')
+    if (!this.flag('bg_fixed')) forced.push('--t-img-attach:scroll')
 
+    // `:root` overrides the dark stock values; the light block of tokens.css is more specific,
+    // so dark overrides never leak into the light scheme and vice versa.
     const rules: string[] = []
-    if (vars.length) rules.push(`:root{${vars.join(';')}}`)
+    if (dark.length || vars.length) rules.push(`:root{${[...dark, ...vars].join(';')}}`)
+    if (light.length) {
+      const block = light.join(';')
+      rules.push(
+        `:root[data-theme="light"]{${block}}`,
+        `@media (prefers-color-scheme: light){:root[data-theme="system"]{${block}}}`
+      )
+    }
+    // Switches win in both schemes.
+    if (forced.length) rules.push(`:root,:root[data-theme]{${forced.join(';')}}`)
     if (!this.flag('header_sticky')) rules.push('.site-header{position:static!important}')
     if (!this.flag('animations'))
       rules.push(
@@ -83,28 +126,55 @@ class ThemeService {
     if (custom) rules.push(custom)
 
     this.css = rules.join('\n')
-    this.attrs = attrs.map((name) => ` ${name}`).join('')
+    this.attrs = [...attrs].map((name) => ` ${name}`).join('')
   }
 
   flag(key: string) {
     return this.switches.get(key) ?? flags.find((flag) => flag.key === key)?.default ?? true
   }
 
+  /** The scheme of a request: the visitor's `theme` cookie when allowed, else the default. */
+  schemeFor(choice: unknown): Scheme {
+    return this.flag('scheme_switch') && isScheme(choice) ? choice : this.scheme
+  }
+
+  /** `<meta name="theme-color">` tags for a scheme (two media-bound tags for "system"). */
+  themeColorMeta(scheme: Scheme) {
+    const tag = (color: string, media = '') =>
+      `<meta name="theme-color" content="${color}"${media ? ` media="${media}"` : ''}>`
+    if (scheme === 'system')
+      return (
+        tag(this.headerColors.dark, '(prefers-color-scheme: dark)') +
+        tag(this.headerColors.light, '(prefers-color-scheme: light)')
+      )
+    return tag(this.headerColors[scheme])
+  }
+
   /* ---- Reading form input ------------------------------------------------------------ */
 
-  /** `c_<key>` fields → storage entries. Empty means "stock value". */
-  readColors(body: Record<string, unknown>, tokens: ColorToken[] = colorTokens) {
+  /**
+   * `c_<key>` (dark) or `cl_<key>` (light) fields → storage entries. Empty means "stock value",
+   * and so does a value equal to the stock one.
+   */
+  readColors(body: Record<string, unknown>, options: { light?: boolean } = {}) {
+    const light = options.light === true
+    const prefix = light ? 'cl_' : 'c_'
+    const keyOf = light ? lightColorKey : colorKey
     const entries: Record<string, string> = {}
-    for (const token of tokens) {
-      const raw = String(body[`c_${token.key}`] ?? '').trim()
+    for (const item of colorTokens) {
+      const field = prefix + item.key
+      const raw = String(body[field] ?? '').trim()
       if (!raw) {
-        entries[colorKey(token.key)] = ''
+        entries[keyOf(item.key)] = ''
         continue
       }
       const color = normalizeColor(raw)
       if (!color)
-        invalidField(`c_${token.key}`, `${token.label}: geçerli bir renk girin (#rrggbb).`)
-      entries[colorKey(token.key)] = stored(color, token.default)
+        invalidField(
+          field,
+          `${item.label} (${light ? 'açık' : 'koyu'} şema): geçerli bir renk girin (#rrggbb).`
+        )
+      entries[keyOf(item.key)] = stored(color, stockColor(item, light))
     }
     return entries
   }

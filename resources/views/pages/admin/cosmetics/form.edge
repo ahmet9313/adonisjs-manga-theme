@@ -1,129 +1,474 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin cosmetic form (create and edit). Kind and name, the look (preset tiles, a custom name
+  gradient or an uploaded image), the unlock rule and visibility, with a live preview of the item
+  as it looks when equipped (Alpine `cosmeticForm`, resources/js/components/admin_community.js).
+  Posted fields are unchanged: kind, name, style_mode, preset, colors[], image, required_level,
+  required_badge, grant_only, featured, active, sort_order (lock_rule only drives the form).
+  Editing adds gifting (POST …/hediye, field username, routes unchanged) and deletion.
+--}}
+@let(isEdit = Boolean(item))
+@let(sent = flashMessages.has('kind'))
+@let(kindNameList = kinds.map((entry) => entry.name))
+@let(currentKind = sent && kindNameList.includes(flashMessages.get('kind')) ? flashMessages.get('kind') : kind)
+@let(kindInfo = kinds.find((entry) => entry.name === currentKind) || kinds[0])
+@let(storedStyle = item && item.style ? item.style : '')
+@let(storedColors = storedStyle.startsWith('grad:') ? storedStyle.slice(5).split(',') : null)
+@let(storedMode = item ? (item.image ? 'image' : storedColors ? 'gradient' : 'preset') : 'preset')
+@let(modes = { sticker: ['image'], effect: ['preset', 'gradient'], frame: ['preset', 'image'], wallpaper: ['preset', 'image'] })
+@let(wantedMode = sent ? flashMessages.get('style_mode') : storedMode)
+@let(currentMode = modes[currentKind].includes(wantedMode) ? wantedMode : modes[currentKind][0])
+@let(sentPreset = sent ? flashMessages.get('preset') : '')
+@let(presetFor = (group) => sent && currentKind === group && sentPreset && presets[group][sentPreset] ? sentPreset : item && item.kind === group && presets[group][storedStyle] ? storedStyle : Object.keys(presets[group])[0])
+@let(sentColors = sent && Array.isArray(flashMessages.get('colors')) ? flashMessages.get('colors') : null)
+@let(colorSource = sentColors || storedColors)
+@let(colors = [0, 1, 2].map((index) => (colorSource && colorSource[index]) || ['#34d399', '#22d3ee', '#a855f7'][index]))
+@let(third = colorSource ? colorSource.length > 2 : true)
+@let(rule = sent ? (flashMessages.has('grant_only') ? 'gift' : flashMessages.get('required_badge') ? 'badge' : 'level') : item ? (item.grantOnly ? 'gift' : item.requiredBadge ? 'badge' : 'level') : 'level')
+@let(badgeValue = (sent ? flashMessages.get('required_badge') : item && item.requiredBadge) || badges[0].slug)
+@let(active = sent ? flashMessages.has('active') : (item ? item.active : true))
+@let(featured = sent ? flashMessages.has('featured') : (item ? item.featured : false))
+@let(config = { kind: currentKind, mode: currentMode, presets: { effect: presetFor('effect'), frame: presetFor('frame'), wallpaper: presetFor('wallpaper') }, colors, third, rule, level: String(sent ? flashMessages.get('required_level') || '' : item ? item.requiredLevel : 1), badge: badgeValue, name: sent ? flashMessages.get('name') || '' : item ? item.name : '', active, featured, image: item && item.image ? item.image : '' })
+@let(hide = (visible) => visible ? '' : 'display: none')
+@let(errorBag = flashMessages.get('inputErrorsBag') || {})
+@let(formErrors = Object.entries(errorBag).filter((entry) => entry[0] !== 'username'))
+@let(fieldLabels = { kind: 'Tür', name: 'Ad', style_mode: 'Görünüm türü', preset: 'Hazır stil', colors: 'Renk geçişi', image: 'Görsel', required_level: 'Gerekli seviye', required_badge: 'Gerekli rozet', grant_only: 'Yalnızca hediye', sort_order: 'Sıra' })
+@let(fieldIds = { kind: 'cosmetic-kind', style_mode: 'cosmetic-look', preset: 'cosmetic-look', colors: 'cosmetic-look', image: 'f-image', grant_only: 'cosmetic-lock' })
+@let(kindHints = { sticker: 'Yorumlara eklenen görsel', frame: 'Profil resminin çevresi', effect: 'Kullanıcı adını boyar', wallpaper: 'Yorum ve profil kartı zemini' })
+@let(kindIcons = { sticker: 'smile', frame: 'user', effect: 'sparkles', wallpaper: 'photo' })
+@let(listUrl = '/admin/kozmetikler?tur=' + (isEdit ? item.kind : currentKind))
+@let(deleteMessage = isEdit ? '“' + item.name + '” kalıcı olarak silinecek. ' + (item.kind === 'sticker' ? 'Bu çıkartmayla gönderilen yorumlardan kaldırılır' : 'Kuşanan üyelerin profilinden çıkarılır') + ' ve hediye kayıtları da silinir. Bu işlem geri alınamaz.' : '')
+@let(me = auth.user)
+@component('components/layout/admin', {
+  title: isEdit ? item.name : title,
+  description: isEdit ? kindInfo.label + ' · Görünümü, açılma koşulunu ve görünürlüğü düzenleyin; aşağıdan üyelere hediye edebilirsiniz.' : 'Türü seçin, görünümü ayarlayın ve nasıl açılacağını belirleyin. Önizleme siz değiştirdikçe güncellenir.',
+  crumbs: [{ label: 'Kozmetikler', href: '/admin/kozmetikler' }, { label: isEdit ? 'Düzenle' : 'Yeni kozmetik' }]
+})
+  @slot('actions')
+    @if(isEdit)
+    @component('components/ui/button', { href: '#hediye', icon: 'gift' })
+      Hediye et
+    @end
+    @component('components/ui/button', { href: '/kozmetik/' + kinds.find((entry) => entry.name === item.kind).path, iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Koleksiyonda gör
+    @end
+    @end
+  @end
 
-@slot('main')
-  @let(field = 'w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500')
-  @let(currentKind = flashMessages.get('kind') || kind)
-  @let(currentMode = flashMessages.get('style_mode') || (item ? (item.image ? 'image' : item.style && item.style.startsWith('grad:') ? 'gradient' : 'preset') : 'preset'))
-  @let(colors = item && item.style && item.style.startsWith('grad:') ? item.style.slice(5).split(',') : ['#34d399', '#22d3ee', '#a855f7'])
-  <div class="max-w-3xl space-y-6">
-    <a href="/admin/kozmetikler" class="text-sm text-gray-400 hover:text-gray-200">← Kozmetiklere dön</a>
+  @slot('main')
+    <div class="ac-page ac-editor" x-data="cosmeticForm" data-config="{{ JSON.stringify(config) }}">
+      <div class="ac-editor__main">
+      <form id="cosmetic-form" class="grid gap-6" action="{{ isEdit ? '/admin/kozmetikler/' + item.id + '/duzenle' : '/admin/kozmetikler/ekle' }}"
+            method="POST" enctype="multipart/form-data" data-submit-once @input="dirty = true" @change="dirty = true">
+        {{ csrfField() }}
 
-    <form action="{{ item ? '/admin/kozmetikler/' + item.id + '/duzenle' : '/admin/kozmetikler/ekle' }}" method="POST" enctype="multipart/form-data"
-          class="space-y-5 rounded-xl border border-gray-700 bg-(--t-surface) p-6"
-          x-data="{ kind: '{{ currentKind }}', mode: '{{ currentMode }}' }">
-      {{ csrfField() }}
-      <h3 class="text-lg font-semibold text-gray-200">{{ item ? 'Kozmetik düzenle' : 'Yeni kozmetik' }}</h3>
-
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label for="kind" class="mb-1 block text-sm font-medium text-gray-300">Tür</label>
-          <select id="kind" name="kind" x-model="kind" class="{{ field }}">
-            @each(entry in kinds)
-              <option value="{{ entry.name }}" {{ currentKind === entry.name ? 'selected' : '' }}>{{ entry.label }}</option>
+        @if(formErrors.length)
+        @component('components/ui/alert', { tone: 'danger', title: 'Kozmetik kaydedilemedi' })
+          <p>Aşağıdaki alanları düzeltip yeniden kaydedin. Seçtiğiniz görsel güvenlik nedeniyle yeniden seçilmelidir.</p>
+          <ul class="mt-2 list-disc space-y-1 pl-5">
+            @each(entry in formErrors)
+            @let(label = fieldLabels[entry[0]] || entry[0])
+            @let(target = fieldIds[entry[0]] || 'f-' + entry[0])
+            @if(String(entry[1][0]).startsWith(label))
+            <li><a href="#{{ target }}" class="link">{{ entry[1][0] }}</a></li>
+            @else
+            <li><a href="#{{ target }}" class="link">{{ label }}</a>: {{ entry[1][0] }}</li>
             @end
-          </select>
-          @!component('components/field_error', { field: 'kind' })
-        </div>
-        <div>
-          <label for="name" class="mb-1 block text-sm font-medium text-gray-300">Ad</label>
-          <input id="name" name="name" required maxlength="60" value="{{ flashMessages.get('name') || (item ? item.name : '') }}" class="{{ field }}">
-          @!component('components/field_error', { field: 'name' })
-        </div>
-      </div>
+            @end
+          </ul>
+        @end
+        @end
 
-      {{-- Appearance --}}
-      <fieldset class="space-y-3 rounded-lg border border-gray-700 p-4">
-        <legend class="px-1 text-sm font-medium text-gray-300">Görünüm</legend>
-        <div class="flex flex-wrap gap-4 text-sm text-gray-300" x-show="kind !== 'sticker'">
-          <label class="flex items-center gap-2"><input type="radio" name="style_mode" value="preset" x-model="mode" class="accent-emerald-500"> Hazır stil</label>
-          <label class="flex items-center gap-2" x-show="kind === 'effect'"><input type="radio" name="style_mode" value="gradient" x-model="mode" class="accent-emerald-500"> Özel renk geçişi</label>
-          <label class="flex items-center gap-2" x-show="kind !== 'effect'"><input type="radio" name="style_mode" value="image" x-model="mode" class="accent-emerald-500"> Görsel yükle</label>
-        </div>
-        <template x-if="kind === 'sticker'"><input type="hidden" name="style_mode" value="image"></template>
-
-        @each(group in Object.keys(presets))
-          <div x-show="kind === '{{ group }}' && mode === 'preset'">
-            <label class="mb-1 block text-sm text-gray-400">Hazır stil</label>
-            <select name="preset" :disabled="!(kind === '{{ group }}' && mode === 'preset')" class="{{ field }}">
-              @each(key in Object.keys(presets[group]))
-                <option value="{{ key }}" {{ item && item.style === key ? 'selected' : '' }}>{{ presets[group][key] }}</option>
-              @end
-            </select>
+        @component('components/ui/panel', { title: 'Tür ve ad', id: 'basics' })
+          <div class="grid gap-5">
+            <fieldset id="cosmetic-kind" class="ac-fieldset">
+              <legend class="field__label">Tür</legend>
+              <div class="ac-choices ac-choices--kinds">
+                @each(entry in kinds)
+                <label class="ac-choice">
+                  <input type="radio" name="kind" value="{{ entry.name }}" class="ac-choice__input" x-model="kind" {{ currentKind === entry.name ? 'checked' : '' }}>
+                  <span class="ac-choice__icon">
+                    @!component('components/icon', { name: kindIcons[entry.name] })
+                  </span>
+                  <span class="ac-choice__text">
+                    <span class="ac-choice__label">{{ entry.label }}</span>
+                    <span class="ac-choice__hint">{{ kindHints[entry.name] }}</span>
+                  </span>
+                </label>
+                @end
+              </div>
+              @!component('components/field_error', { field: 'kind' })
+            </fieldset>
+            @!component('components/ui/field', { name: 'name', label: 'Ad', required: true, value: isEdit ? item.name : '', minlength: 2, maxlength: 60, autocomplete: 'off', placeholder: 'Örn. Gece Mavisi', hint: 'Koleksiyonda, envanterde ve bildirimlerde görünen ad (2–60 karakter).', 'x-model': 'name' })
           </div>
         @end
-        @!component('components/field_error', { field: 'preset' })
 
-        <div x-show="kind === 'effect' && mode === 'gradient'" class="flex flex-wrap items-center gap-3">
-          @each((color, index) in colors)
-            <input type="color" name="colors[{{ index }}]" value="{{ color }}" :disabled="!(kind === 'effect' && mode === 'gradient')" class="h-10 w-14 cursor-pointer rounded border border-gray-600 bg-transparent">
-          @end
-          <span class="text-xs text-gray-500">2-3 renk; ad soldan sağa bu renklerle boyanır.</span>
-        </div>
-        @!component('components/field_error', { field: 'colors' })
+        @component('components/ui/panel', { title: 'Görünüm', id: 'look', description: 'Hazır bir stil seçin, ad efektine kendi renk geçişinizi verin ya da görsel yükleyin.' })
+          <div id="cosmetic-look" class="grid gap-5">
+            <fieldset class="ac-fieldset" x-show="kind !== 'sticker'" style="{{ hide(currentKind !== 'sticker') }}">
+              <legend class="field__label">Görünüm türü</legend>
+              <div class="ac-modes">
+                <label class="ac-mode">
+                  <input type="radio" name="style_mode" value="preset" class="ac-choice__input" x-model="mode" :disabled="kind === 'sticker' || !allowed('preset')" {{ currentMode === 'preset' ? 'checked' : '' }}>
+                  @!component('components/icon', { name: 'grid' })
+                  Hazır stil
+                </label>
+                <label class="ac-mode" x-show="allowed('gradient')" style="{{ hide(currentKind === 'effect') }}">
+                  <input type="radio" name="style_mode" value="gradient" class="ac-choice__input" x-model="mode" :disabled="kind === 'sticker' || !allowed('gradient')" {{ currentMode === 'gradient' ? 'checked' : '' }}>
+                  @!component('components/icon', { name: 'palette' })
+                  Özel renk geçişi
+                </label>
+                <label class="ac-mode" x-show="allowed('image')" style="{{ hide(currentKind === 'frame' || currentKind === 'wallpaper') }}">
+                  <input type="radio" name="style_mode" value="image" class="ac-choice__input" x-model="mode" :disabled="kind === 'sticker' || !allowed('image')" {{ currentMode === 'image' ? 'checked' : '' }}>
+                  @!component('components/icon', { name: 'upload' })
+                  Görsel yükle
+                </label>
+              </div>
+            </fieldset>
+            <input type="hidden" name="style_mode" value="image" :disabled="kind !== 'sticker'" {{ currentKind === 'sticker' ? '' : 'disabled' }}>
 
-        <div x-show="kind === 'sticker' || mode === 'image'">
-          <label for="image" class="mb-1 block text-sm text-gray-400">Görsel (PNG/WebP/GIF önerilir, en fazla 6 MB)</label>
-          @if(item && item.image)
-            <img src="{{ item.image }}" alt="" class="mb-2 max-h-24 rounded border border-gray-700 bg-black/30 object-contain p-1">
-          @end
-          <input type="file" id="image" name="image" accept="image/png,image/webp,image/gif,image/jpeg" class="block w-full text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-700 file:px-3 file:py-2 file:text-gray-200">
-          <p class="mt-1 text-xs text-gray-500">Çerçeve görselleri avatarın etrafına %140 boyutunda, ortası şeffaf olacak şekilde hazırlanmalıdır.</p>
-          @!component('components/field_error', { field: 'image' })
-        </div>
-      </fieldset>
-
-      {{-- Unlock --}}
-      <fieldset class="grid gap-4 rounded-lg border border-gray-700 p-4 sm:grid-cols-2">
-        <legend class="px-1 text-sm font-medium text-gray-300">Kilit</legend>
-        <div>
-          <label for="required_level" class="mb-1 block text-sm text-gray-400">Gereken seviye</label>
-          <input type="number" id="required_level" name="required_level" min="1" max="100" value="{{ flashMessages.get('required_level') || (item ? item.requiredLevel : 1) }}" class="{{ field }}">
-          @!component('components/field_error', { field: 'required_level' })
-        </div>
-        <div>
-          <label for="required_badge" class="mb-1 block text-sm text-gray-400">Ya da gereken rozet</label>
-          <select id="required_badge" name="required_badge" class="{{ field }}">
-            <option value="">— Yok (seviye kullanılır) —</option>
-            @each(badge in badges)
-              <option value="{{ badge.slug }}" {{ item && item.requiredBadge === badge.slug ? 'selected' : '' }}>{{ badge.name }}</option>
+            {{-- One radio group per kind (own name); the chosen key is posted as `preset`. --}}
+            <input type="hidden" name="preset" value="{{ currentKind === 'sticker' ? '' : presetFor(currentKind) }}" :value="presetKey" :disabled="!(kind !== 'sticker' && mode === 'preset')"
+              @if(currentKind === 'sticker' || currentMode !== 'preset')
+              disabled
+              @end
+              >
+            @each(group in Object.keys(presets))
+            <fieldset class="ac-fieldset" x-show="kind === '{{ group }}' && mode === 'preset'" style="{{ hide(currentKind === group && currentMode === 'preset') }}">
+              <legend class="field__label">Hazır stil</legend>
+              <div class="ac-tiles">
+                @each(key in Object.keys(presets[group]))
+                <label class="ac-tile">
+                  <input type="radio" name="preset_{{ group }}" value="{{ key }}" class="ac-choice__input" x-model="presets.{{ group }}" {{ presetFor(group) === key ? 'checked' : '' }}>
+                  <span class="ac-tile__look">
+                    @if(group === 'effect')
+                    <span class="ac-tile__fx fx fx-{{ key }}">Aa</span>
+                    @elseif(group === 'frame')
+                    <span class="ac-tile__ring" aria-hidden="true">
+                      <span class="avatar-frame frame-{{ key }}"></span>
+                    </span>
+                    @else
+                    <span class="ac-tile__wall wall wall-{{ key }}" aria-hidden="true"></span>
+                    @end
+                  </span>
+                  <span class="ac-tile__label">{{ presets[group][key] }}</span>
+                </label>
+                @end
+              </div>
+            </fieldset>
             @end
-          </select>
-        </div>
-        <label class="flex items-center gap-2 text-sm text-gray-300 sm:col-span-2">
-          <input type="checkbox" name="grant_only" {{ item && item.grantOnly ? 'checked' : '' }} class="accent-emerald-500">
-          Yalnızca hediye (seviye/rozetle açılmaz; aşağıdan üyelere verilir)
-        </label>
-      </fieldset>
+            @!component('components/field_error', { field: 'preset' })
 
-      <div class="flex flex-wrap items-center gap-5 text-sm text-gray-300">
-        <label class="flex items-center gap-2"><input type="checkbox" name="active" {{ !item || item.active ? 'checked' : '' }} class="accent-emerald-500"> Aktif</label>
-        <label class="flex items-center gap-2"><input type="checkbox" name="featured" {{ item && item.featured ? 'checked' : '' }} class="accent-emerald-500"> Öne çıkan</label>
-        <label class="flex items-center gap-2">Sıra <input type="number" name="sort_order" value="{{ item ? item.sortOrder : 0 }}" class="w-24 rounded-lg border border-gray-600 bg-(--t-field) px-3 py-1.5 text-gray-200"></label>
+            <fieldset class="ac-fieldset" x-show="kind === 'effect' && mode === 'gradient'" style="{{ hide(currentKind === 'effect' && currentMode === 'gradient') }}">
+              <legend class="field__label">Renk geçişi</legend>
+              <div class="ac-colors">
+                @each((color, index) in colors)
+                <label class="ac-color"
+                  @if(index === 2)
+                  x-show="third" style="{{ hide(third) }}"
+                  @end
+                  >
+                  <input type="color" name="colors[{{ index }}]" value="{{ color }}" x-model="colors[{{ index }}]"
+                         :disabled="!(kind === 'effect' && mode === 'gradient'{{ index === 2 ? ' && third' : '' }})">
+                  <span class="min-w-0">
+                    <span class="block text-sm font-semibold text-ink">{{ index + 1 }}. renk</span>
+                    <span class="ac-mono" x-text="colors[{{ index }}]">{{ color }}</span>
+                  </span>
+                </label>
+                @end
+              </div>
+              <span class="ac-gradient" aria-hidden="true" :style="'background-image: ' + gradient"></span>
+              <label class="check mt-1">
+                <input type="checkbox" x-model="third" {{ third ? 'checked' : '' }}>
+                <span>Üçüncü rengi kullan</span>
+              </label>
+              <p class="field__hint">Ad soldan sağa bu renklerle boyanır; 2 ya da 3 renk seçin.</p>
+              @!component('components/field_error', { field: 'colors' })
+            </fieldset>
+
+            <div class="field" x-show="usesImage" style="{{ hide(currentKind === 'sticker' || currentMode === 'image') }}">
+              <span id="f-image-label" class="field__label">Görsel</span>
+              <label class="dropzone ac-drop {{ isEdit && item.image ? 'has-image' : '' }}" :class="{ 'is-over': over, 'has-image': Boolean(imageUrl) }"
+                     @dragover.prevent="over = true" @dragleave="if (!$el.contains($event.relatedTarget)) over = false" @drop.prevent="dropFile($event)">
+                <input type="file" id="f-image" name="image" accept="image/png,image/webp,image/gif,image/jpeg" class="sr-only" x-ref="file"
+                       aria-labelledby="f-image-label" aria-describedby="f-image-hint{{ errorBag.image ? ' f-image-error' : '' }}"
+                       :disabled="!usesImage" @change="pickFile($event)"
+                  @if(errorBag.image)
+                  aria-invalid="true"
+                  @end
+                  >
+                <span class="ac-drop__thumb ac-checker" x-show="imageUrl" style="{{ hide(isEdit && item.image) }}">
+                  <img alt="" :src="imageUrl || null"
+                    @if(isEdit && item.image)
+                    src="{{ item.image }}"
+                    @end
+                    >
+                </span>
+                <span class="ac-drop__text">
+                  @!component('components/icon', { name: 'photo' })
+                  <span class="ac-drop__cta" x-show="imageUrl" style="{{ hide(isEdit && item.image) }}">Görseli değiştir</span>
+                  <span class="ac-drop__cta" x-show="!imageUrl" style="{{ hide(!(isEdit && item.image)) }}">Görsel seçin</span>
+                  <span>veya buraya sürükleyip bırakın</span>
+                </span>
+              </label>
+              <div class="ac-file" x-show="fileName" x-cloak aria-live="polite">
+                @!component('components/icon', { name: 'check-circle' })
+                <span class="min-w-0 flex-1 truncate"><span x-text="fileName"></span> · <span x-text="fileSize"></span></span>
+                <button type="button" class="btn btn--link btn--sm shrink-0" @click="resetFile()">Seçimi geri al</button>
+              </div>
+              <p class="field__error" role="alert" x-show="fileError === 'type'" x-cloak>Yalnız PNG, WebP, GIF veya JPG görseli seçin.</p>
+              <p class="field__error" role="alert" x-show="fileError === 'size'" x-cloak>Görsel 6 MB sınırını aşıyor; daha küçük bir dosya seçin.</p>
+              <p class="field__error" role="alert" x-show="fileError === 'drop'" x-cloak>Tarayıcınız sürükle bırakı desteklemiyor; görseli tıklayarak seçin.</p>
+              <p id="f-image-hint" class="field__hint">
+                PNG, WebP, GIF veya JPG; en fazla 6 MB.
+                <span x-show="kind === 'frame'" style="{{ hide(currentKind === 'frame') }}">Çerçeve avatarın etrafına %140 boyutunda yerleşir: ortası şeffaf, kare bir görsel hazırlayın.</span>
+                <span x-show="kind === 'wallpaper'" style="{{ hide(currentKind === 'wallpaper') }}">Yorum kartının ve profil başlığının zeminini kaplar; yatay görseller en iyi sonucu verir.</span>
+                <span x-show="kind === 'sticker'" style="{{ hide(currentKind === 'sticker') }}">Şeffaf PNG/WebP ya da hareketli GIF; yorumlarda küçük boyutta gösterilir.</span>
+              </p>
+              @!component('components/field_error', { field: 'image', id: 'f-image-error' })
+            </div>
+
+            <div x-show="dropsImage" x-cloak>
+              @component('components/ui/alert', { tone: 'warning', role: 'status' })
+                <p>Bu öğenin yüklü bir görseli var. Görsel kullanmayan bir görünümle kaydederseniz görsel silinir.</p>
+              @end
+            </div>
+          </div>
+        @end
+
+        @component('components/ui/panel', { title: 'Açılma koşulu', id: 'unlock', description: 'Satın alma yok: öğe seviye, rozet ya da yönetici hediyesiyle açılır. Hediye edilen üye öğeyi her durumda kullanabilir.' })
+          <div class="grid gap-5">
+            <fieldset id="cosmetic-lock" class="ac-fieldset">
+              <legend class="sr-only">Açılma koşulu</legend>
+              <div class="ac-choices ac-choices--rules">
+                <label class="ac-choice">
+                  <input type="radio" name="lock_rule" value="level" class="ac-choice__input" x-model="rule" {{ rule === 'level' ? 'checked' : '' }}>
+                  <span class="ac-choice__icon">
+                    @!component('components/icon', { name: 'lock' })
+                  </span>
+                  <span class="ac-choice__text">
+                    <span class="ac-choice__label">Seviye ile</span>
+                    <span class="ac-choice__hint">Üye bu seviyeye ulaşınca açılır</span>
+                  </span>
+                </label>
+                <label class="ac-choice">
+                  <input type="radio" name="lock_rule" value="badge" class="ac-choice__input" x-model="rule" {{ rule === 'badge' ? 'checked' : '' }}>
+                  <span class="ac-choice__icon">
+                    @!component('components/icon', { name: 'badge' })
+                  </span>
+                  <span class="ac-choice__text">
+                    <span class="ac-choice__label">Rozet ile</span>
+                    <span class="ac-choice__hint">Seçilen rozeti kazanınca açılır</span>
+                  </span>
+                </label>
+                <label class="ac-choice">
+                  <input type="radio" name="lock_rule" value="gift" class="ac-choice__input" x-model="rule" {{ rule === 'gift' ? 'checked' : '' }}>
+                  <span class="ac-choice__icon">
+                    @!component('components/icon', { name: 'gift' })
+                  </span>
+                  <span class="ac-choice__text">
+                    <span class="ac-choice__label">Yalnızca hediye</span>
+                    <span class="ac-choice__hint">Yalnız yönetici hediyesiyle verilir</span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+            <input type="hidden" name="grant_only" value="on" :disabled="rule !== 'gift'" {{ rule === 'gift' ? '' : 'disabled' }}>
+            <div x-show="rule === 'level'" style="{{ hide(rule === 'level') }}">
+              @!component('components/ui/field', { name: 'required_level', label: 'Gerekli seviye', type: 'number', value: isEdit ? item.requiredLevel : 1, min: 1, max: 100, step: 1, inputmode: 'numeric', controlClass: 'max-w-[12rem]', hint: '1 ile 100 arası.', 'x-model': 'level' })
+            </div>
+            <div x-show="rule === 'badge'" style="{{ hide(rule === 'badge') }}">
+              @!component('components/ui/field', { name: 'required_badge', label: 'Gerekli rozet', type: 'select', value: badgeValue, options: badges.map((badge) => ({ value: badge.slug, label: badge.name })), controlClass: 'max-w-sm', 'x-model': 'badge', 'x-ref': 'badge', ':disabled': "rule !== 'badge'", disabled: rule !== 'badge' })
+            </div>
+            <p class="field__hint" x-show="rule === 'gift'" style="{{ hide(rule === 'gift') }}">Seviye ve rozetle açılmaz; aşağıdaki “Üyeye hediye et” bölümünden tek tek verilir.</p>
+          </div>
+        @end
+
+        @component('components/ui/panel', { title: 'Görünürlük', id: 'visibility' })
+          <div class="grid gap-5">
+            @!component('components/ui/field', { name: 'active', label: 'Aktif', type: 'toggle', value: active, hint: 'Kapalıyken koleksiyonda, envanterde ve kuşananların görünümünde gösterilmez.', 'x-model': 'active' })
+            @!component('components/ui/field', { name: 'featured', label: 'Öne çıkan', type: 'toggle', value: featured, hint: 'Koleksiyon sayfasının varsayılan sıralamasında en başta ve işaretli görünür.', 'x-model': 'featured' })
+            @!component('components/ui/field', { name: 'sort_order', label: 'Sıra', type: 'number', value: isEdit ? item.sortOrder : 0, min: -9999, max: 9999, step: 1, controlClass: 'max-w-[12rem]', hint: 'Aynı türdeki öğeler arasında küçük sayı önce gelir.' })
+          </div>
+        @end
+
+        <div class="savebar">
+          <p class="ac-savebar__status" aria-live="polite">
+            <span x-show="!dirty">
+              @if(isEdit)
+              Son güncelleme {{ agoOf(item.updatedAt) }}.
+              @else
+              <span class="text-danger" aria-hidden="true">*</span> işaretli alanlar zorunludur.
+              @end
+            </span>
+            <span x-show="dirty" x-cloak class="inline-flex items-center gap-2 font-semibold text-warning">
+              <span class="h-2 w-2 rounded-full bg-warning" aria-hidden="true"></span>
+              Kaydedilmemiş değişiklikler var
+            </span>
+          </p>
+          <div class="form-actions">
+            @component('components/ui/button', { variant: 'ghost', href: listUrl })
+              Vazgeç
+            @end
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+              {{ isEdit ? 'Değişiklikleri kaydet' : 'Kozmetiği ekle' }}
+            @end
+          </div>
+        </div>
+      </form>
+
+
+      @if(isEdit)
+      <section id="hediye" class="panel ac-editor__extra scroll-mt-24" aria-labelledby="gift-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="gift-title" class="panel__title">Üyeye hediye et</h2>
+            <p class="panel__desc">Üye öğeyi açılma koşulundan bağımsız olarak hemen kullanabilir ve gelen kutusuna bildirim düşer.</p>
+          </div>
+        </div>
+        <form action="/admin/kozmetikler/{{ item.id }}/hediye" method="POST" class="ac-inline-form" data-submit-once>
+          {{ csrfField() }}
+          @!component('components/ui/field', { name: 'username', label: 'Kullanıcı adı', required: true, minlength: 3, maxlength: 32, placeholder: 'kullanici_adi', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false' })
+          @component('components/ui/button', { type: 'submit', icon: 'gift', class: 'ac-inline-form__submit' })
+            Hediye et
+          @end
+        </form>
+        <div class="divider my-5"></div>
+        <h3 class="t-overline">Hediye edilenler · {{ ownerCount.toLocaleString('tr-TR') }}</h3>
+        @if(owners.length)
+        <ul class="ac-owners" aria-label="Hediye edilen üyeler">
+          @each(owner in owners)
+          <li>
+            <a href="/uye/{{ owner.username }}" class="ac-owner">
+              @!component('components/avatar', { user: owner, size: 'h-6 w-6', text: 'text-[10px]' })
+              <span class="truncate">{{ '@' + owner.username }}</span>
+            </a>
+          </li>
+          @end
+        </ul>
+        @if(ownerCount > owners.length)
+        <p class="mt-2 text-xs text-muted">İlk {{ owners.length }} üye gösteriliyor.</p>
+        @end
+        @else
+        <p class="mt-2 text-sm text-muted">Henüz kimseye hediye edilmedi.</p>
+        @end
+      </section>
+
+      <section class="panel ac-editor__extra ac-danger-zone" aria-labelledby="delete-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="delete-title" class="panel__title">Kozmetiği sil</h2>
+            <p class="panel__desc">{{ deleteMessage }}</p>
+          </div>
+        </div>
+        <form action="/admin/kozmetikler/{{ item.id }}/sil" method="POST" data-submit-once
+              data-confirm="{{ deleteMessage }}" data-confirm-title="Kozmetik silinsin mi?" data-confirm-label="Kalıcı olarak sil">
+          {{ csrfField() }}
+          @component('components/ui/button', { type: 'submit', variant: 'danger', icon: 'trash' })
+            Kozmetiği sil
+          @end
+        </form>
+      </section>
+      @end
       </div>
 
-      <button type="submit" class="rounded-lg bg-emerald-600 px-6 py-2.5 font-semibold text-(--t-on-accent) hover:bg-emerald-500">{{ item ? 'Güncelle' : 'Ekle' }}</button>
-    </form>
+      <aside class="ac-editor__aside" aria-labelledby="preview-title">
+        <div class="panel ac-preview">
+          <div class="panel__head">
+            <div class="min-w-0">
+              <h2 id="preview-title" class="panel__title">Önizleme</h2>
+              <p class="panel__desc">Kuşanıldığında böyle görünür; siz değiştirdikçe güncellenir.</p>
+            </div>
+          </div>
 
-    @if(item)
-      <form action="/admin/kozmetikler/{{ item.id }}/hediye" method="POST" class="space-y-3 rounded-xl border border-gray-700 bg-(--t-surface) p-6">
-        {{ csrfField() }}
-        <h3 class="font-semibold text-gray-200">Üyeye hediye et</h3>
-        <p class="text-sm text-gray-500">Üye öğeyi kilit koşulundan bağımsız olarak hemen kullanabilir ve gelen kutusuna bildirim düşer.</p>
-        <div class="flex flex-wrap gap-2">
-          <input name="username" required placeholder="kullanici_adi" class="min-w-0 flex-1 rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none">
-          <button type="submit" class="rounded-lg border border-emerald-700 px-4 py-2.5 text-sm font-semibold text-emerald-300 hover:border-emerald-500">Hediye et</button>
+          <div class="ac-stage" :data-kind="kind" data-kind="{{ currentKind }}">
+            <div class="ac-stage__effect" x-show="kind === 'effect'" style="{{ hide(currentKind === 'effect') }}">
+              <span class="ac-stage__name" :class="effectClass" :style="effectStyle">{{ me.fullName }}</span>
+              <div class="user-chip">
+                @!component('components/avatar', { user: me, size: 'h-9 w-9', text: 'text-sm' })
+                <p class="user-chip__name">
+                  <span :class="effectClass" :style="effectStyle">{{ me.fullName }}</span>
+                  @!component('components/level_badge', { level: levelOf(me).level })
+                </p>
+              </div>
+            </div>
+
+            <div class="ac-stage__frame" x-show="kind === 'frame'" style="{{ hide(currentKind === 'frame') }}">
+              <span class="relative inline-flex h-24 w-24">
+                @!component('components/avatar', { user: me, size: 'h-24 w-24', text: 'text-3xl' })
+                <span class="avatar-frame" :class="frameClass" x-show="frameClass" aria-hidden="true"></span>
+                <img class="avatar-frame-img" alt="" :src="frameImage || null" x-show="frameImage">
+              </span>
+              <span class="relative inline-flex h-10 w-10">
+                @!component('components/avatar', { user: me, size: 'h-10 w-10', text: 'text-sm' })
+                <span class="avatar-frame" :class="frameClass" x-show="frameClass" aria-hidden="true"></span>
+                <img class="avatar-frame-img" alt="" :src="frameImage || null" x-show="frameImage">
+              </span>
+            </div>
+
+            <div class="c-card ac-stage__card" x-show="kind === 'wallpaper'" style="{{ hide(currentKind === 'wallpaper') }}">
+              <span class="c-wall wall" :class="wallClass" :style="wallStyle"></span>
+              <span class="c-veil"></span>
+              <div class="grid gap-2 p-4">
+                <div class="user-chip">
+                  @!component('components/avatar', { user: me, size: 'h-9 w-9', text: 'text-sm' })
+                  <p class="user-chip__name">
+                    <span>{{ me.fullName }}</span>
+                    @!component('components/level_badge', { level: levelOf(me).level })
+                  </p>
+                </div>
+                <p class="text-sm text-body">Bu bölümün kapanışı harikaydı, haftaya ne olacak çok merak ediyorum!</p>
+              </div>
+            </div>
+
+            <div class="c-card ac-stage__card" x-show="kind === 'sticker'" style="{{ hide(currentKind === 'sticker') }}">
+              <div class="grid gap-2 p-4">
+                <div class="user-chip">
+                  @!component('components/avatar', { user: me, size: 'h-9 w-9', text: 'text-sm' })
+                  <p class="user-chip__name">
+                    <span>{{ me.fullName }}</span>
+                    @!component('components/level_badge', { level: levelOf(me).level })
+                  </p>
+                </div>
+                <img class="ac-stage__sticker" alt="" :src="imageUrl || null" x-show="imageUrl">
+                <p class="ac-stage__empty" x-show="!imageUrl">Görsel seçildiğinde burada görünür.</p>
+              </div>
+            </div>
+
+            <p class="ac-stage__empty" x-show="(kind === 'frame' || kind === 'wallpaper') && mode === 'image' && !imageUrl" x-cloak>Görsel seçildiğinde burada görünür.</p>
+          </div>
+
+          <dl class="ac-facts">
+            <div>
+              <dt>Ad</dt>
+              <dd class="truncate" x-text="name || '—'">{{ config.name || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Tür</dt>
+              <dd>
+                @each(entry in kinds)
+                <span x-show="kind === '{{ entry.name }}'" style="{{ hide(currentKind === entry.name) }}">{{ entry.label }}</span>
+                @end
+              </dd>
+            </div>
+            <div>
+              <dt>Açılma</dt>
+              <dd>
+                <span x-show="rule === 'level'" style="{{ hide(rule === 'level') }}">Seviye <span x-text="level || '—'">{{ config.level }}</span></span>
+                <span x-show="rule === 'badge'" style="{{ hide(rule === 'badge') }}">Rozet: <span x-text="badgeName"></span></span>
+                <span x-show="rule === 'gift'" style="{{ hide(rule === 'gift') }}">Yalnızca hediye</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Durum</dt>
+              <dd class="flex flex-wrap justify-end gap-1">
+                <span class="badge badge--sm" data-tone="success" x-show="active" style="{{ hide(active) }}">Aktif</span>
+                <span class="badge badge--sm" data-tone="neutral" x-show="!active" style="{{ hide(!active) }}">Gizli</span>
+                <span class="badge badge--sm" data-tone="accent" x-show="featured" style="{{ hide(featured) }}">Öne çıkan</span>
+              </dd>
+            </div>
+          </dl>
         </div>
-        @!component('components/field_error', { field: 'username' })
-        @if(owners && owners.length)
-          <p class="text-sm text-gray-400">Hediye edilenler:
-            @each((owner, index) in owners)
-              <a href="/uye/{{ owner.username }}" class="text-emerald-300 hover:underline">&#64;{{ owner.username }}</a>{{ index < owners.length - 1 ? ',' : '' }}
-            @end
-          </p>
-        @end
-      </form>
-    @end
-  </div>
-@end
-
+      </aside>
+    </div>
+  @end
 @end

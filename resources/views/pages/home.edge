@@ -1,281 +1,53 @@
+{{--
+  Home page. Page 1: featured carousel (layout banner slot, full width), then "Son Güncellenenler",
+  "Popüler Seriler", "Türlere Göre Keşfet", the community block, "Ayın Okurları" and
+  "Tamamlanan Seriler". From page 2 on (?page=) only the latest updates list is shown.
+  Every section follows its Admin → Tema → Göster/Gizle switch (ui('home_*')); the controller does
+  not query hidden sections, and sections without data are left out.
+  The page's only <h1> is visually hidden: in front of the carousel when it is shown, else at the
+  top of <main>.
+--}}
+@let(heroOn = ui('home_hero') && featured.length > 0)
 @component('components/layout/main')
 
+@slot('banner')
+  @if(heroOn)
+  <section class="home-intro" aria-labelledby="home-title">
+    <h1 id="home-title" class="sr-only">{{ site.name }} — {{ site.description }}</h1>
+    @include('partials/home/hero')
+  </section>
+  @end
+@end
+
 @slot('main')
-  {{-- Hero Banner Slider --}}
-  @if(ui('home_hero') && featured.length)
-  <section
-    x-data="heroSlider({{ featured.length }})"
-    @mouseenter="pause('hover')"
-    @mouseleave="resume('hover')"
-    @focusin="pause('focus')"
-    @focusout="$el.contains($event.relatedTarget) || resume('focus')"
-    @touchstart.passive="handleTouchStart($event)"
-    @touchend.passive="handleTouchEnd($event)"
-    @keydown.left.prevent="previous()"
-    @keydown.right.prevent="next()"
-    class="relative -mx-4 mb-8 overflow-hidden bg-(--t-surface-2) shadow-2xl shadow-black/20 sm:mx-0 sm:rounded-2xl"
-    role="region"
-    aria-roledescription="carousel"
-    aria-label="Öne çıkan seriler"
-  >
-    <div class="relative h-[420px] sm:h-[390px] lg:h-[410px]">
-      @each((item, index) in featured)
-      <article
-        x-show="current === {{ index }}"
-        @if(index !== 0)
-        x-cloak
-        @end
-        x-transition:enter="transition-opacity duration-500 ease-out"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
-        x-transition:leave="transition-opacity duration-300 ease-in"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        :aria-hidden="current !== {{ index }}"
-        aria-roledescription="slide"
-        aria-label="{{ index + 1 }} / {{ featured.length }}: {{ item.title }}"
-        class="absolute inset-0"
-        data-hero-slide
-      >
-        {{-- Background artwork --}}
-        <div class="absolute inset-0 bg-(--t-surface-2)" aria-hidden="true">
-          <img
-            src="{{ item.bannerImage || item.coverImage }}"
-            alt=""
-            class="h-full w-full object-cover object-center"
-            @if(index !== 0)
-            loading="lazy"
-            @end
-            onerror="this.onerror=null;this.style.display='none'"
-          >
-          <div class="absolute inset-0 bg-gradient-to-r from-(--t-bg) via-(--t-bg)/90 to-(--t-bg)/25"></div>
-          <div class="absolute inset-0 bg-gradient-to-t from-(--t-bg) via-transparent to-black/15"></div>
-        </div>
-
-        {{-- Slide content --}}
-        <div class="relative z-10 mx-auto flex h-full max-w-6xl items-center gap-7 px-5 pb-16 pt-7 sm:px-8 sm:pb-14 lg:gap-10 lg:px-12">
-          <a
-            href="/series/{{ item.type }}/{{ item.slug }}"
-            class="hidden shrink-0 overflow-hidden rounded-xl border border-white/10 bg-(--t-surface-2) shadow-2xl shadow-black/50 sm:block"
-            aria-label="{{ item.title }} seri sayfasına git"
-          >
-            <img
-              src="{{ item.coverImage }}"
-              alt="{{ item.title }} kapak görseli"
-              class="h-64 w-44 object-cover lg:h-72 lg:w-48"
-              @if(index !== 0)
-              loading="lazy"
-              @end
-              onerror="this.onerror=null;this.style.display='none'"
-            >
-          </a>
-
-          <div class="min-w-0 max-w-2xl flex-1">
-            <div class="mb-3 flex flex-wrap items-center gap-2">
-              <span class="rounded-md px-2.5 py-1 text-xs font-bold text-(--t-on-accent)
-                @if(item.type === 'manga')
-                  bg-blue-600
-                @elseif(item.type === 'manhwa')
-                  bg-green-600
-                @elseif(item.type === 'manhua')
-                  bg-red-600
-                @elseif(item.type === 'novel')
-                  bg-purple-600
-                @else
-                  bg-orange-600
-                @end
-              ">{{ item.type.charAt(0).toUpperCase() + item.type.slice(1) }}</span>
-              <span class="text-sm font-medium {{ item.status === 'Devam Ediyor' ? 'text-emerald-400' : 'text-sky-400' }}">{{ item.status }}</span>
-              @if(item.ageRating && (item.ageRating.includes('18') || item.ageRating.includes('16')))
-              <span class="rounded-md bg-red-600 px-2 py-1 text-xs font-bold text-(--t-on-accent)">{{ item.ageRating }}</span>
-              @end
-            </div>
-
-            <a href="/series/{{ item.type }}/{{ item.slug }}" class="group inline-block">
-              <h2 class="mb-3 line-clamp-2 text-3xl font-extrabold tracking-tight text-(--t-heading) transition-colors group-hover:text-emerald-400 sm:text-4xl lg:text-5xl" data-hero-title>{{ item.title }}</h2>
-            </a>
-            <p class="mb-5 line-clamp-3 max-w-xl text-sm leading-6 text-gray-300 sm:text-base sm:leading-7">{{ item.featuredDescription || item.description }}</p>
-
-            <div class="mb-6 flex flex-wrap gap-2">
-              @each(genre in item.genres.slice(0, 4))
-              <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-gray-200 backdrop-blur-sm">{{ genre }}</span>
-              @end
-            </div>
-
-            <a href="/series/{{ item.type }}/{{ item.slug }}" class="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-(--t-on-accent) shadow-lg shadow-emerald-950/30 transition-colors hover:bg-emerald-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400">
-              Seriye Git
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </a>
-          </div>
-        </div>
-      </article>
-      @end
-    </div>
-
-    {{-- Carousel controls --}}
-    @if(featured.length > 1)
-    <div x-cloak class="absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-3 bg-gradient-to-t from-(--t-bg) via-(--t-bg)/80 to-transparent px-4 pb-4 pt-8 sm:justify-end sm:px-7">
-      <button
-        type="button"
-        @click="previous()"
-        class="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-black/30 text-gray-200 backdrop-blur-sm transition hover:border-white/30 hover:bg-white/15 hover:text-(--t-heading) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-        aria-label="Önceki banner"
-      >
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-      </button>
-
-      <div class="flex items-center gap-2" role="group" aria-label="Banner seçimi">
-        @each((item, index) in featured)
-        <button
-          type="button"
-          @click="goTo({{ index }})"
-          :class="current === {{ index }} ? 'w-7 bg-emerald-400' : 'w-2 bg-gray-500 hover:bg-gray-300'"
-          :aria-current="current === {{ index }} ? 'true' : 'false'"
-          class="h-2 rounded-full transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400"
-          aria-label="{{ index + 1 }}. banner: {{ item.title }}"
-        ></button>
-        @end
-      </div>
-
-      <button
-        type="button"
-        @click="next()"
-        class="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-black/30 text-gray-200 backdrop-blur-sm transition hover:border-white/30 hover:bg-white/15 hover:text-(--t-heading) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-        aria-label="Sonraki banner"
-        data-hero-next
-      >
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </div>
-    @end
-  </section>
+  @if(!heroOn)
+  <h1 class="sr-only">{{ site.name }} — {{ site.description }}</h1>
   @end
 
-  {{-- Son Güncellenenler --}}
   @if(ui('home_updates'))
-  <section>
-    <h2 class="text-lg font-bold text-(--t-heading) mb-4 uppercase tracking-wide">Son Güncellenenler</h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      @each((item, index) in recentlyUpdated)
-      <div class="glass rounded-lg p-4 flex gap-4 hover:bg-white/5 transition-colors group">
-        {{-- Cover --}}
-        <a href="/series/{{ item.type }}/{{ item.slug }}" class="shrink-0 relative">
-          <img
-            src="{{ item.coverImage }}"
-            alt="{{ item.title }}"
-            class="w-24 h-32 object-cover rounded-lg shadow"
-            loading="lazy"
-            onerror="this.onerror=null;this.style.display='none'"
-          >
-          <span class="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded text-(--t-on-accent)
-            @if(item.type === 'manga')
-              bg-blue-600
-            @elseif(item.type === 'manhwa')
-              bg-green-600
-            @elseif(item.type === 'manhua')
-              bg-red-600
-            @elseif(item.type === 'novel')
-              bg-purple-600
-            @else
-              bg-orange-600
-            @end
-          ">{{ item.type.charAt(0).toUpperCase() + item.type.slice(1) }}</span>
-        </a>
-
-        {{-- Info --}}
-        <div class="flex-1 min-w-0">
-          <a href="/series/{{ item.type }}/{{ item.slug }}" class="font-semibold text-(--t-heading) hover:text-emerald-400 transition-colors text-sm block truncate">
-            {{ item.title }}
-          </a>
-          <div class="flex items-center gap-2 mt-1">
-            <span class="text-xs {{ item.status === 'Devam Ediyor' ? 'text-green-400' : item.status === 'Bırakıldı' ? 'text-red-400' : 'text-blue-400' }}">{{ item.status }}</span>
-            @if(item.ratingCount)
-            <span class="text-xs text-amber-300" title="{{ item.ratingCount }} puan">★ {{ item.ratingAverage.toFixed(1) }}</span>
-            @end
-            @if(item.ageRating && (item.ageRating.includes('18') || item.ageRating.includes('16')))
-            <span class="text-[10px] text-red-400 border border-red-600 rounded px-1">{{ item.ageRating }}</span>
-            @end
-          </div>
-
-          {{-- Latest chapters with titles --}}
-          <div class="mt-2.5 space-y-1.5">
-            @each(chapter in item.latestChapters)
-            <a href="/series/{{ item.type }}/{{ item.slug }}/{{ chapter.number }}" class="flex items-center justify-between text-xs group/ch">
-              <span class="text-gray-300 group-hover/ch:text-emerald-400 transition-colors truncate mr-2">{{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</span>
-              <span class="text-gray-600 shrink-0">{{ chapter.timeAgo }}</span>
-            </a>
-            @end
-          </div>
-        </div>
-      </div>
-      @end
-    </div>
-
-    @if(recentlyUpdated.length === 0)
-    <div class="text-center text-gray-500 py-12">Henüz seri eklenmemiş.</div>
-    @end
-
-    {{-- Modern Pagination --}}
-    @if(totalPages > 1)
-    <nav class="flex justify-center mt-8" aria-label="Sayfalama">
-      <ul class="flex flex-wrap justify-center items-center gap-1">
-        {{-- First Page --}}
-        @if(currentPage > 2)
-        <li>
-          <a href="/?page=1" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200" title="İlk Sayfa">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
-          </a>
-        </li>
-        @end
-
-        {{-- Previous --}}
-        @if(currentPage > 1)
-        <li>
-          <a href="/?page={{ currentPage - 1 }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200" title="Önceki">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          </a>
-        </li>
-        @end
-
-        {{-- Page Numbers --}}
-        @each(pg in paginationPages)
-        <li>
-          @if(pg === '...')
-          <span class="flex items-center justify-center w-9 h-9 text-gray-600 text-sm">...</span>
-          @elseif(pg === currentPage)
-          <span class="flex items-center justify-center w-9 h-9 rounded-lg text-sm font-bold bg-gradient-to-br from-emerald-500 to-blue-600 text-(--t-on-accent) shadow-lg shadow-emerald-500/20">{{ pg }}</span>
-          @else
-          <a href="/?page={{ pg }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-300 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200">{{ pg }}</a>
-          @end
-        </li>
-        @end
-
-        {{-- Next --}}
-        @if(hasNextPage)
-        <li>
-          <a href="/?page={{ currentPage + 1 }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200" title="Sonraki">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-          </a>
-        </li>
-        @end
-
-        {{-- Last Page --}}
-        @if(currentPage < totalPages - 1)
-        <li>
-          <a href="/?page={{ totalPages }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-400 hover:text-(--t-heading) hover:bg-white/5 transition-all duration-200" title="Son Sayfa">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
-          </a>
-        </li>
-        @end
-      </ul>
-    </nav>
-    @end
-  </section>
+  @include('partials/home/updates')
   @end
 
-  @if(ui('home_community') && currentPage === 1)
-    @include('partials/home/community')
+  @if(currentPage === 1)
+  @if(ui('home_popular') && popular.length)
+  @include('partials/home/popular')
+  @end
+
+  @if(ui('home_genres') && genres.length)
+  @include('partials/home/genres')
+  @end
+
+  @if(ui('home_community') && (latestComments.length || topReviews.length))
+  @include('partials/home/community')
+  @end
+
+  @if(ui('home_readers') && readers.length)
+  @include('partials/home/readers')
+  @end
+
+  @if(ui('home_completed') && completed.length)
+  @include('partials/home/completed')
+  @end
   @end
 @end
 

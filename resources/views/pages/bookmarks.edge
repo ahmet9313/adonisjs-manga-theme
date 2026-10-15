@@ -1,3 +1,9 @@
+{{--
+  Saved series (/kaydedilenler). The grid is drawn in the browser by bookmarkPage
+  (bookmarks.js) with the same classes as components/series/card. Members get their list in
+  data-items (compact JSON, rendered by the server); guests have no data-items attribute and
+  read localStorage. "Hepsini kaldır" asks first through the shared confirm dialog (data-confirm).
+--}}
 @component('components/layout/main', { title: 'Kaydedilenler' })
 
 @slot('main')
@@ -6,82 +12,84 @@
   @else
   <div x-data="bookmarkPage">
   @end
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <h1 class="text-xl font-bold text-(--t-heading) uppercase">Kayıtlı Serilerim</h1>
-      <button
-        @click="clearAll()" :disabled="bookmarks.length === 0 || busy"
-        class="flex items-center gap-2 px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 rounded text-sm text-gray-400 hover:text-red-400 hover:border-red-400 transition-colors"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-        Hepsini Kaldır
-      </button>
-    </div>
+    @component('components/ui/page_header', { title: 'Kaydedilenler', description: items ? 'Kaydettiğin seriler hesabında saklanır; her cihazda aynı listeyi görürsün.' : 'Kaydettiğin seriler ve kaldığın bölümler.' })
+      <p class="mt-2 text-sm font-semibold text-(--t-text-2) t-num" x-cloak x-show="bookmarks.length > 0" x-text="summary"></p>
+      @slot('actions')
+        <form x-cloak x-show="bookmarks.length > 0" @submit.prevent="clearAll()"
+              data-confirm="Kaydettiğin tüm seriler listeden kaldırılacak. Okuma geçmişin silinmez."
+              data-confirm-title="Tüm kayıtlar kaldırılsın mı?" data-confirm-label="Hepsini kaldır" data-confirm-tone="danger">
+          <button type="submit" class="btn btn--danger btn--md" :disabled="busy" aria-busy="false" :aria-busy="busy.toString()">
+            @!component('components/icon', { name: 'trash', class: 'btn__icon' })
+            <span>Hepsini kaldır</span>
+          </button>
+        </form>
+      @end
+    @end
 
     @if(!items)
-    <p class="mb-4 rounded-lg border border-white/10 glass px-4 py-3 text-sm text-gray-400">
-      Kayıtların ve okuma geçmişin şu an yalnızca bu tarayıcıda. <button type="button" @click="$dispatch('open-auth', 'login')" class="text-emerald-400 underline-offset-2 hover:underline">Giriş yaparsan</button> hesabına aktarılır ve her cihazda görünür.
-    </p>
+    @component('components/ui/alert', { tone: 'info', title: 'Kayıtların yalnızca bu tarayıcıda', class: 'mb-6' })
+      <p>Giriş yapmadan kaydettiğin seriler ve okuma geçmişin bu cihazda tutulur. Giriş yaptığında hesabına aktarılır ve her cihazdan erişebilirsin.</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a href="/giris?next=%2Fkaydedilenler" class="btn btn--primary btn--sm" @click.prevent="$dispatch('open-auth', 'login')">
+          @!component('components/icon', { name: 'login', class: 'btn__icon' })
+          <span>Giriş yap</span>
+        </a>
+        <a href="/kayit?next=%2Fkaydedilenler" class="btn btn--secondary btn--sm" @click.prevent="$dispatch('open-auth', 'register')">
+          <span>Ücretsiz hesap aç</span>
+        </a>
+      </div>
     @end
-    <p x-show="error" x-text="error" role="status" class="mb-4 text-red-400"></p>
-    {{-- Empty State --}}
-    <template x-if="bookmarks.length === 0">
-      <p class="text-gray-500 text-center py-12">Henüz kaydettiğiniz bir seri yok. Seri sayfasındaki Kaydet düğmesiyle listenizi oluşturabilirsiniz.</p>
-    </template>
+    @end
 
-    {{-- Bookmark Grid --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-      <template x-for="item in bookmarks" :key="item.key">
-        <div class="group relative">
-          <a :href="'/series/' + encodeURIComponent(item.type) + '/' + encodeURIComponent(item.slug)">
-            <div class="relative overflow-hidden rounded-lg aspect-[3/4] glass">
-              <img
-                :src="cover(item)" loading="lazy"
-                :alt="item.title"
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onerror="this.onerror=null;this.src='/images/no-cover.svg'"
-              >
-              {{-- Type Badge --}}
-              <span
-                class="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded text-(--t-heading)"
-                :class="{
-                  'bg-blue-600': item.type === 'manga',
-                  'bg-green-600': item.type === 'manhwa',
-                  'bg-red-600': item.type === 'manhua',
-                  'bg-purple-600': item.type === 'novel',
-                  'bg-orange-600': item.type === 'webtoon'
-                }"
-                x-text="item.type.charAt(0).toUpperCase() + item.type.slice(1)"
-              ></span>
+    <noscript>
+      @component('components/ui/alert', { tone: 'warning', title: 'JavaScript kapalı', class: 'mb-6' })
+        <p>Kaydedilenler listesi tarayıcında oluşturulur. Listeni görmek için JavaScript'i etkinleştir.</p>
+      @end
+    </noscript>
 
-              {{-- Bottom Gradient + Text Overlay --}}
-              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-10 pb-3 px-3">
-                <h3 class="text-sm font-bold text-(--t-heading) line-clamp-2 leading-tight break-words" x-text="item.title"></h3>
-                <p class="text-[11px] text-gray-400 mt-0.5" x-text="item.type.charAt(0).toUpperCase() + item.type.slice(1)"></p>
-              </div>
-            </div>
-          </a>
-          {{-- Continue reading --}}
-          <a x-show="item.lastRead !== null" :href="chapterUrl(item, item.lastRead)"
-             class="mt-2 flex items-center justify-center gap-1.5 rounded-md border border-emerald-700/60 bg-emerald-500/10 px-2 py-1.5 text-xs font-semibold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20 active:scale-95">
-            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-            <span x-text="'Devam et: Bölüm ' + item.lastRead"></span>
-          </a>
-          <span x-show="hasNew(item)" class="absolute right-2 top-11 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-(--t-on-accent)">YENİ</span>
-          <a x-show="item.lastRead === null" :href="'/series/' + encodeURIComponent(item.type) + '/' + encodeURIComponent(item.slug)"
-             class="mt-2 block rounded-md border border-white/10 px-2 py-1.5 text-center text-xs text-gray-400 transition hover:border-emerald-500 hover:text-(--t-heading)">Henüz okunmadı</a>
-          {{-- Remove Button --}}
-          <button
-            @click="removeBookmark(item.key)" :aria-label="item.title + ' kaydını kaldır'"
-            class="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center text-gray-400 hover:text-red-400 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus:opacity-100 transition-opacity"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-      </template>
+    <div x-cloak x-show="error" class="alert mb-6" data-tone="danger" role="alert">
+      @!component('components/icon', { name: 'exclamation' })
+      <p class="min-w-0 flex-1" x-text="error"></p>
     </div>
+
+    {{-- Empty state --}}
+    <div x-cloak x-show="bookmarks.length === 0 && !error" data-bookmarks-empty>
+      @component('components/ui/empty_state', { icon: 'bookmark', title: 'Henüz kaydettiğin bir seri yok', description: 'Seri sayfalarındaki Kaydet düğmesiyle beğendiğin serileri buraya ekle; kaldığın bölümden devam etmek tek dokunuş olsun.' })
+        @component('components/ui/button', { variant: 'primary', href: '/seriler', iconRight: 'arrow-right' })
+          Serilere göz at
+        @end
+      @end
+    </div>
+
+    {{-- Grid: the markup of components/series/card, drawn by Alpine --}}
+    <ul class="series-grid" x-cloak x-show="bookmarks.length > 0" aria-label="Kaydedilen seriler">
+      <template x-for="item in bookmarks" :key="item.key">
+        <li class="series-card bookmark-card">
+          <a :href="seriesUrl(item)" class="series-card__cover" tabindex="-1" aria-hidden="true">
+            <img :src="cover(item)" alt="" width="300" height="400" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+            <span class="series-card__badges">
+              <span class="bookmark-card__flags">
+                <span class="badge badge--sm badge--solid badge--caps" :data-tone="typeTone(item)" x-text="typeLabel(item)"></span>
+                <span x-show="hasNew(item)" class="badge badge--sm badge--solid badge--caps bookmark-card__new" data-tone="accent">YENİ</span>
+              </span>
+            </span>
+          </a>
+          <button type="button" class="btn btn--secondary btn--sm btn--icon bookmark-card__remove" @click="removeBookmark(item.key)" :disabled="busy" :aria-label="removeLabel(item)" :title="removeLabel(item)">
+            @!component('components/icon', { name: 'x', class: 'btn__icon' })
+          </button>
+          <div class="series-card__body">
+            <h2 class="series-card__title"><a :href="seriesUrl(item)" x-text="item.title"></a></h2>
+            <p class="series-card__meta">
+              <span x-text="progressText(item)"></span>
+              <span x-show="hasNew(item)" class="sr-only">, yeni bölüm var</span>
+            </p>
+            <a x-show="item.lastRead !== null" :href="chapterUrl(item, item.lastRead)" class="btn btn--secondary btn--sm btn--block bookmark-card__cta" x-text="continueText(item)"></a>
+            <a x-show="item.lastRead === null" :href="seriesUrl(item)" class="btn btn--secondary btn--sm btn--block bookmark-card__cta">Seriyi aç</a>
+          </div>
+        </li>
+      </template>
+    </ul>
   </div>
-
-
 @end
 
 @end

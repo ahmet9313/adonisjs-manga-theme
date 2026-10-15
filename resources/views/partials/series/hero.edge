@@ -1,0 +1,117 @@
+{{--
+  Series header over the banner art: cover, title, other names, metadata, genres, description and
+  the main actions (start/continue reading, save, share).
+  Hooks: continueReading (data-config with the account's last chapter), bookmarkButton (the first
+  [data-bookmark] on the page), textClamp and seriesShare (chapter_list.js).
+--}}
+@let(firstChapter = chapters.length ? chapters[chapters.length - 1] : null)
+@let(resume = reading && reading.last !== null && chapters.some((chapter) => chapter.number === reading.last) ? reading.last : null)
+@let(saved = Boolean(reading && reading.bookmarked))
+<section class="series-hero" aria-labelledby="series-title">
+  <div class="series-hero__grid">
+    <div class="series-hero__cover">
+      <img src="{{ series.coverImage }}" alt="{{ series.title }} kapak görseli" width="460" height="644" decoding="async" fetchpriority="high" data-fallback="/images/no-cover.svg">
+    </div>
+
+    <div class="series-hero__titles">
+      <h1 id="series-title" class="series-hero__title">{{ series.title }}</h1>
+      @if(series.alternativeTitles && series.alternativeTitles.length)
+      <p class="series-hero__alt" title="{{ series.alternativeTitles.join(' · ') }}"><span class="sr-only">Diğer adları: </span>{{ series.alternativeTitles.join(' · ') }}</p>
+      @end
+    </div>
+
+    <div class="series-hero__body">
+      <ul class="series-meta" aria-label="Seri özeti">
+        <li>
+          <a href="/seriler?type={{ encodeURIComponent(series.type) }}" class="badge badge--lg" data-tone="{{ badgeTone('type', series.type) }}" title="Tüm {{ typeLabel }} serileri">{{ typeLabel }}</a>
+        </li>
+        @if(series.status)
+        <li>
+          @!component('components/ui/badge', { kind: 'status', value: series.status, size: 'lg' })
+        </li>
+        @end
+        @if(series.ageRating)
+        <li>
+          @!component('components/ui/badge', { kind: 'age', value: series.ageRating, size: 'lg', title: series.ageRating.replace('+', '') + ' yaş ve üzeri okurlar için' })
+        </li>
+        @end
+        @if(series.publicationYear)
+        <li class="series-meta__item">
+          @!component('components/icon', { name: 'calendar', class: 'h-4 w-4' })
+          <span><span class="sr-only">Yayın yılı: </span>{{ series.publicationYear }}</span>
+        </li>
+        @end
+        @if(ui('series_reviews'))
+        <li>
+          <a href="#incelemeler" class="series-rating">
+            @if(series.ratingCount)
+            <span class="series-rating__star" aria-hidden="true">★</span>
+            <span class="series-rating__value t-num">{{ series.ratingAverage.toFixed(1) }}</span>
+            <span class="series-rating__count">({{ series.ratingCount }} puan · {{ series.reviewCount }} inceleme)</span>
+            @else
+            <span class="series-rating__star" aria-hidden="true">☆</span>
+            <span class="series-rating__count">Henüz puan yok · ilk puanı sen ver</span>
+            @end
+          </a>
+        </li>
+        @end
+      </ul>
+
+      @if(series.genres.length)
+      <ul class="series-genres" aria-label="Türler">
+        @each(genre in series.genres)
+        <li>
+          <a href="/seriler?genre={{ encodeURIComponent(genre) }}" class="link-chip" title="{{ genre }} türündeki seriler">{{ genre }}</a>
+        </li>
+        @end
+      </ul>
+      @end
+
+      @if(ui('series_description') && series.description)
+      <div class="series-desc" x-data="textClamp">
+        <p x-ref="text" class="series-desc__text is-clamped" :class="{ 'is-clamped': !open }">{{ series.description }}</p>
+        <button type="button" x-cloak x-show="long" @click="open = !open" aria-expanded="false" :aria-expanded="open.toString()" class="btn btn--link btn--sm series-desc__more">
+          <span x-text="open ? 'Daha az göster' : 'Devamını oku'">Devamını oku</span>
+        </button>
+      </div>
+      @end
+
+      <div class="series-actions">
+        @if(firstChapter)
+        <div x-data="continueReading" data-config="{{ JSON.stringify({ type: series.type, slug: series.slug, last: reading ? reading.last : null, chapters: chapters.map(c => c.number) }) }}" class="contents">
+          <a href="{{ seriesUrl }}/{{ resume !== null ? resume : firstChapter.number }}" data-start="{{ seriesUrl }}/{{ firstChapter.number }}" :href="last !== null ? href : $el.dataset.start" class="btn btn--primary btn--lg">
+            @!component('components/icon', { name: 'play', class: 'btn__icon' })
+            <span x-show="last === null"
+              @if(resume !== null)
+              style="display: none"
+              @end
+              >Okumaya Başla — Bölüm {{ firstChapter.number }}</span>
+            <span x-show="last !== null" x-text="'Okumaya Devam Et — Bölüm ' + last"
+              @if(resume === null)
+              style="display: none"
+              @end
+              >Okumaya Devam Et — Bölüm {{ resume }}</span>
+          </a>
+        </div>
+        @else
+        <button type="button" class="btn btn--primary btn--lg" disabled>Henüz bölüm yok</button>
+        @end
+
+        <button type="button" class="btn btn--secondary btn--lg"
+          x-data="bookmarkButton"
+          data-bookmark="{{ JSON.stringify({ type: series.type, slug: series.slug, title: series.title, coverImage: series.coverImage }) }}"
+          data-saved="{{ saved ? 'true' : 'false' }}"
+          aria-pressed="{{ saved ? 'true' : 'false' }}"
+          @click="toggle()" :aria-pressed="saved.toString()" :aria-busy="busy.toString()">
+          @!component('components/icon', { name: 'bookmark', class: 'btn__icon icon-fill' })
+          <span x-text="saved ? 'Kaydedildi' : 'Kaydet'">{{ saved ? 'Kaydedildi' : 'Kaydet' }}</span>
+        </button>
+
+        <button type="button" class="btn btn--secondary btn--lg series-share" x-data="seriesShare" data-share-title="{{ series.title }}" @click="share()" title="Bağlantıyı paylaş">
+          @!component('components/icon', { name: 'share', class: 'btn__icon' })
+          <span class="series-share__label">Paylaş</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>

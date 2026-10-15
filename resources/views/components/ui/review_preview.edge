@@ -1,0 +1,42 @@
+{{--
+  One rating/review out of its series page (home page, profile). The card links to #incelemeler.
+  Props: item (review with series.contentType, user, rating, title, body, spoiler, helpfulCount,
+         createdAt), showAuthor (true), time ago|date (ago), class.
+--}}
+@let(link = '/series/' + item.series.contentType.slug + '/' + item.series.slug + '#incelemeler')
+@let(when = $props.get('time', 'ago') === 'date' ? dateOf(item.createdAt) : agoOf(item.createdAt))
+<article class="card group relative flex gap-3 p-4 transition-colors hover:border-(--t-border-strong) {{ $props.get('class', '') }}">
+  <img src="{{ item.series.coverImage }}" alt="" width="64" height="88" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg" class="h-[5.5rem] w-16 shrink-0 rounded-lg object-cover">
+  <div class="min-w-0 flex-1">
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="{{ link }}" class="font-bold text-(--t-heading) after:absolute after:inset-0 group-hover:underline">{{ item.series.title }}</a>
+      <span class="inline-flex items-center gap-0.5 rounded-md bg-(--t-warning-soft) px-1.5 py-0.5 text-xs font-bold text-(--t-heading)" title="{{ item.rating }} / 10 puan"><span class="text-(--t-warning)" aria-hidden="true">★</span> {{ item.rating }}<span class="font-medium text-(--t-text-2)">/10</span></span>
+    </div>
+    @if(item.title)
+    <p class="mt-1 text-sm font-semibold text-(--t-heading)">{{ item.title }}</p>
+    @end
+    @if(item.body)
+    @if(item.spoiler)
+    <p class="mt-1 text-sm italic text-(--t-warning)">Spoiler içeren inceleme</p>
+    @else
+    <p class="mt-1 line-clamp-3 text-sm text-(--t-text-2)">{{ item.body }}</p>
+    @end
+    @else
+    <p class="mt-1 text-sm text-(--t-muted)">Yalnızca puan verdi.</p>
+    @end
+    <p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-(--t-muted)">
+      @if($props.get('showAuthor', true))
+      <span class="inline-flex items-center gap-1.5">
+        @!component('components/avatar', { user: item.user, size: 'h-5 w-5', text: 'text-[9px]' })
+        @!component('components/user_name', { user: item.user, look: lookOf(item.user), class: 'font-semibold text-(--t-text)' })
+      </span>
+      <span aria-hidden="true">·</span>
+      @end
+      <span>{{ when }}</span>
+      @if(item.helpfulCount)
+      <span aria-hidden="true">·</span>
+      <span class="text-(--t-success)">{{ item.helpfulCount }} kişi faydalı buldu</span>
+      @end
+    </p>
+  </div>
+</article>

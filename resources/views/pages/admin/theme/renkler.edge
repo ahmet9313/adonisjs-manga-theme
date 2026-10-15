@@ -1,86 +1,248 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin → Tema → Renkler: the colour editor of both schemes (themeEditor, theme_editor.js).
+  Contract (tests/functional/scheme.spec.ts, theme.spec.ts): every token is submitted twice through
+  server-rendered hidden inputs, `c_<key>` (dark) and `cl_<key>` (light), so saving one scheme or a
+  failed script never resets the other; `l_default_scheme` is the visitors' default scheme. The
+  colour rows have no name: they edit `sets.dark|light` and the editor previews them on this page.
+--}}
+@let(defaultLook = config.looks.find((look) => look.key === 'default_scheme'))
+@let(badgeTokens = config.tokens.filter((token) => token.group === 'badges'))
+@let(statusTokens = config.tokens.filter((token) => token.group === 'status'))
+@component('components/layout/admin', {
+  title,
+  description: 'Koyu ve açık şemanın renkleri, ziyaretçilerin varsayılan şeması ve hazır renk setleri.',
+  crumbs: [{ label: 'Tema', href: '/admin/tema/genel' }, { label: 'Renkler' }]
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/', iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Siteyi aç<span class="sr-only"> (yeni sekmede)</span>
+    @end
+  @end
 
-@slot('main')
-  <div x-data="themeEditor" data-config="{{ JSON.stringify(config) }}" class="max-w-5xl">
-    <form action="/admin/tema/renkler" method="POST">
-      {{ csrfField() }}
+  @slot('main')
+    @include('partials/admin/theme_nav')
 
-      <div class="mb-6 rounded-xl border border-gray-700 bg-(--t-surface) p-5">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 class="text-lg font-semibold text-gray-200">Renkler</h3>
-            <p class="text-sm text-gray-500">Değişiklikler bu sayfada anında görünür; kalıcı olması için <strong class="text-gray-300">Kaydet</strong>'e basın. Sayfayı yenilerseniz kaydedilmemiş değişiklikler silinir.</p>
+    <div x-data="{ hexOk: (value) => !value || /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) }">
+    <div x-data="themeEditor" data-config="{{ JSON.stringify(config) }}" class="te-colors">
+      <form action="/admin/tema/renkler" method="POST" data-submit-once>
+        {{ csrfField() }}
+        {{-- Both schemes are always submitted, whichever one is being edited (rendered on the server so a failed script never resets them). --}}
+        @each(token in config.tokens)
+        <input type="hidden" name="c_{{ token.key }}" value="{{ config.values[token.key] }}" :value="sets.dark['{{ token.key }}']">
+        <input type="hidden" name="cl_{{ token.key }}" value="{{ config.lightValues[token.key] }}" :value="sets.light['{{ token.key }}']">
+        @end
+
+        @if(flashMessages.has('inputErrorsBag'))
+        @component('components/ui/alert', { tone: 'danger', title: 'Bazı renkler kaydedilmedi', class: 'mb-6' })
+          @each(messages in Object.values(flashMessages.get('inputErrorsBag')))
+          <p>{{ messages[0] }}</p>
+          @end
+        @end
+        @end
+        <noscript>
+          <div class="alert mb-6" data-tone="warning" role="status">
+            <p>Renk düzenleyici JavaScript gerektirir. Kaydet'e basarsanız kayıtlı renkler değişmeden kalır.</p>
           </div>
-          <div class="flex items-center gap-2">
-            <a href="/" target="_blank" rel="noopener" class="rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-300 transition hover:border-gray-400">Siteyi aç ↗</a>
-            <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
+        </noscript>
+
+        <section class="panel te-toolbar" aria-labelledby="te-scheme-title">
+          <div class="te-toolbar__grid">
+            <div class="min-w-0">
+              <h2 id="te-scheme-title" class="panel__title">Düzenlenen şema</h2>
+              <p class="panel__desc">Koyu ve açık şema ayrı renk setleridir. Seçtiğiniz şema bu panelde anında önizlenir; kalıcı olması için Kaydet'e basın.</p>
+              <div class="segmented te-scheme" role="group" aria-labelledby="te-scheme-title">
+                <button type="button" x-on:click="editScheme('dark')" aria-pressed="true" :aria-pressed="(scheme === 'dark').toString()">
+                  @!component('components/icon', { name: 'moon' })
+                  Koyu
+                  <span class="te-count" x-show="changedCount('dark')" x-cloak><span x-text="changedCount('dark')"></span><span class="sr-only"> değişiklik</span></span>
+                </button>
+                <button type="button" x-on:click="editScheme('light')" aria-pressed="false" :aria-pressed="(scheme === 'light').toString()">
+                  @!component('components/icon', { name: 'sun' })
+                  Açık
+                  <span class="te-count" x-show="changedCount('light')" x-cloak><span x-text="changedCount('light')"></span><span class="sr-only"> değişiklik</span></span>
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="l_default_scheme" class="field__label">Ziyaretçilerin varsayılan şeması</label>
+              <select id="l_default_scheme" name="l_default_scheme" class="control" x-on:change="dirty = true" aria-describedby="l_default_scheme-hint">
+                @each(choice in defaultLook.choices)
+                <option value="{{ choice.value }}" {{ config.lookValues.default_scheme === choice.value ? 'selected' : '' }}>{{ choice.label }}</option>
+                @end
+              </select>
+              <p id="l_default_scheme-hint" class="field__hint">{{ defaultLook.hint }} Ziyaretçinin seçimi <a href="/admin/tema/goster#flags-header" class="link">Göster / Gizle</a>'den kapatılabilir.</p>
+            </div>
           </div>
-        </div>
 
-        <div class="mt-4">
-          <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Hazır temalar</h4>
-          <div class="flex flex-wrap gap-2">
-            <template x-for="preset in presets" :key="preset.key">
-              <button type="button" @click="applyPreset(preset)" class="flex items-center gap-2 rounded-lg border border-gray-600 px-3 py-1.5 text-sm text-gray-300 transition hover:border-emerald-500">
-                <span class="h-4 w-4 rounded-full ring-1 ring-white/20" :style="'background-color:' + preset.swatch"></span>
-                <span x-text="preset.label"></span>
-              </button>
-            </template>
-          </div>
-          <p x-show="notice" x-cloak x-text="notice" class="mt-2 text-sm text-emerald-400" role="status"></p>
-        </div>
-
-        <div class="mt-4">
-          <label for="l_scheme" class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500">Tarayıcı bileşenleri</label>
-          <select id="l_scheme" name="l_scheme" :value="lookValues.scheme" @change="setLook('scheme', $event.target.value)"
-                  class="rounded-lg border border-gray-600 bg-(--t-field) px-3 py-2 text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
-            <option value="dark">Koyu (kaydırma çubuğu, tarih seçici)</option>
-            <option value="light">Açık</option>
-          </select>
-        </div>
-      </div>
-
-      @!component('components/field_error', { field: 'c_bg' })
-
-      <div class="space-y-6">
-        @each((group, key) in config.groups)
-          <section class="rounded-xl border border-gray-700 bg-(--t-surface) p-5" aria-labelledby="group-{{ key }}">
-            <h3 id="group-{{ key }}" class="text-base font-semibold text-gray-200">{{ group.label }}</h3>
-            <p class="mb-4 text-sm text-gray-500">{{ group.hint }}</p>
-            <div class="grid gap-3 md:grid-cols-2">
-              <template x-for="token in tokensOf('{{ key }}')" :key="token.key">
-                <div class="rounded-lg border border-gray-700/60 bg-(--t-field) p-3">
-                  <div class="flex items-center justify-between gap-2">
-                    <label :for="'c_' + token.key" class="text-sm font-medium text-gray-300" x-text="token.label"></label>
-                    <button type="button" x-show="!isDefault(token.key)" x-cloak @click="resetColor(token.key)" class="text-xs text-gray-500 transition hover:text-emerald-400" :aria-label="token.label + ' varsayılana dön'">↺ varsayılan</button>
-                  </div>
-                  <p x-show="token.hint" class="mt-0.5 text-xs text-gray-500" x-text="token.hint"></p>
-                  <div class="mt-2 flex items-center gap-2">
-                    <input type="color" :value="picker(token.key)" @input="setPicker(token.key, $event.target.value)" :aria-label="token.label + ' renk seçici'"
-                           class="h-9 w-12 shrink-0 cursor-pointer rounded border border-gray-600 bg-transparent p-0.5">
-                    <input type="text" :id="'c_' + token.key" :name="'c_' + token.key" :value="values[token.key]" @input="setColor(token.key, $event.target.value.trim())"
-                           maxlength="9" autocomplete="off" spellcheck="false"
-                           class="w-28 rounded-lg border border-gray-600 bg-transparent px-3 py-1.5 font-mono text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
-                    <template x-if="token.alpha">
-                      <label class="flex min-w-0 flex-1 items-center gap-2 text-xs text-gray-500">
-                        <span class="sr-only" x-text="token.label + ' saydamlık'"></span>
-                        <input type="range" min="0" max="100" :value="alpha(token.key)" @input="setAlpha(token.key, $event.target.value)" class="min-w-0 flex-1 accent-emerald-500">
-                        <span class="w-9 text-right tabular-nums" x-text="alpha(token.key) + '%'"></span>
-                      </label>
-                    </template>
-                  </div>
-                </div>
+          <div class="te-toolbar__presets">
+            <p id="te-presets-label" class="t-overline">Hazır renk setleri · <span x-text="scheme === 'light' ? 'açık şema' : 'koyu şema'">koyu şema</span></p>
+            <div class="te-presets" role="group" aria-labelledby="te-presets-label">
+              <template x-for="preset in presetsOf(scheme)" :key="preset.key">
+                <button type="button" class="te-preset" x-on:click="applyPreset(preset)"
+                        :aria-current="tokens.every((t) => (preset.colors[t.key] || stock(t.key, preset.scheme)).toLowerCase() === (sets[preset.scheme][t.key] || '').toLowerCase()).toString()">
+                  <span class="te-preset__sample" aria-hidden="true" :style="{ backgroundColor: preset.colors.bg || stock('bg', preset.scheme) }">
+                    <span :style="{ backgroundColor: preset.colors.surface || stock('surface', preset.scheme) }"></span>
+                    <span :style="{ backgroundColor: preset.colors.accent || stock('accent', preset.scheme) }"></span>
+                  </span>
+                  <span x-text="preset.label"></span>
+                  @!component('components/icon', { name: 'check', class: 'te-preset__check' })
+                </button>
               </template>
             </div>
-          </section>
-        @end
-      </div>
+            <p class="te-notice" role="status" x-text="notice"></p>
+          </div>
+        </section>
 
-      <div class="mt-6">
-        <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
-      </div>
-    </form>
-  </div>
-@end
+        <div class="te-layout">
+          <aside class="te-aside" aria-label="Önizleme ve renk grupları">
+            <section class="panel te-preview" aria-labelledby="te-preview-title" x-data="{ open: false }" :class="open ? 'is-open' : ''">
+              <div class="te-preview__head">
+                <h2 id="te-preview-title" class="panel__title">Önizleme</h2>
+                <span class="badge badge--sm" data-tone="accent" x-text="scheme === 'light' ? 'Açık şema' : 'Koyu şema'">Koyu şema</span>
+                <button type="button" class="btn btn--ghost btn--sm te-preview__toggle" x-on:click="open = !open"
+                        aria-expanded="false" :aria-expanded="open.toString()" aria-controls="te-preview-body">
+                  <span x-text="open ? 'Gizle' : 'Göster'">Göster</span>
+                  @!component('components/icon', { name: 'chevron-down', class: 'btn__icon te-chevron' })
+                </button>
+              </div>
+              <div id="te-preview-body" class="te-preview__body">
+                <div class="te-pv" aria-hidden="true">
+                  <div class="te-pv__header">
+                    <span class="logo__mark">{{ site.name.charAt(0).toUpperCase() }}</span>
+                    <span class="logo__text">{{ site.name }}</span>
+                    <span class="te-pv__nav">
+                      <span class="is-active">Seriler</span>
+                      <span>Öneriler</span>
+                    </span>
+                  </div>
+                  <div class="te-pv__body">
+                    <div class="te-pv__card">
+                      <span class="te-pv__cover">
+                        @!component('components/icon', { name: 'book-open' })
+                      </span>
+                      <div class="min-w-0">
+                        <p class="te-pv__title">Örnek seri başlığı</p>
+                        <p class="te-pv__meta">Bölüm 128 · 3 sa önce</p>
+                        <p class="te-pv__text">Gövde metni burada okunur.</p>
+                        <p class="te-pv__subtle">Çok soluk not</p>
+                      </div>
+                    </div>
+                    <div class="te-pv__row">
+                      <span class="btn btn--primary btn--sm">Okumaya başla</span>
+                      <span class="btn btn--secondary btn--sm">Kaydet</span>
+                      <span class="te-pv__link">Bağlantı</span>
+                    </div>
+                    <span class="te-pv__field">
+                      @!component('components/icon', { name: 'search' })
+                      Seri ara…
+                    </span>
+                    <div class="te-pv__row">
+                      @each(token in statusTokens)
+                      <span class="badge badge--sm" data-tone="{{ token.key }}">{{ token.label }}</span>
+                      @end
+                    </div>
+                    <div class="te-pv__row">
+                      @each(token in badgeTokens)
+                      <span class="badge badge--sm badge--solid" data-tone="{{ token.key.replace('badge_', '') }}">{{ token.label }}</span>
+                      @end
+                    </div>
+                  </div>
+                  <div class="te-pv__footer">
+                    <span>&copy; {{ site.name }}</span>
+                    <span>Gizlilik · İletişim</span>
+                  </div>
+                </div>
+                <p class="te-preview__note">Kaydedilmemiş renkleri gösterir; panelin kendisi de anında değişir.</p>
+              </div>
+            </section>
 
+            <nav class="te-toc" aria-labelledby="te-toc-title">
+              <p id="te-toc-title" class="t-overline">Renk grupları</p>
+              <ul class="te-toc__list" role="list">
+                @each((group, key) in config.groups)
+                <li>
+                  <a href="#grup-{{ key }}" class="te-toc__link">
+                    <span class="truncate">{{ group.label }}</span>
+                    <span class="te-count" x-show="tokensOf('{{ key }}').some((t) => !isDefault(t.key))" x-cloak><span x-text="tokensOf('{{ key }}').filter((t) => !isDefault(t.key)).length"></span><span class="sr-only"> değişiklik</span></span>
+                  </a>
+                </li>
+                @end
+              </ul>
+            </nav>
+          </aside>
+
+          <div class="te-main">
+            @each((group, key) in config.groups)
+            <section id="grup-{{ key }}" class="panel te-group" aria-labelledby="grup-{{ key }}-title">
+              <div class="panel__head">
+                <div class="min-w-0">
+                  <h2 id="grup-{{ key }}-title" class="panel__title">{{ group.label }}</h2>
+                  <p class="panel__desc">{{ group.hint }}</p>
+                </div>
+                <button type="button" class="btn btn--ghost btn--sm" x-show="tokensOf('{{ key }}').some((t) => !isDefault(t.key))" x-cloak
+                        x-on:click="tokensOf('{{ key }}').forEach((t) => resetColor(t.key))">
+                  @!component('components/icon', { name: 'refresh', class: 'btn__icon' })
+                  Grubu sıfırla
+                </button>
+              </div>
+              <ul class="te-rows" role="list">
+                <template x-for="token in tokensOf('{{ key }}')" :key="token.key">
+                  <li class="te-row" :class="isDefault(token.key) ? '' : 'is-changed'">
+                    <label class="te-swatch">
+                      <span class="te-swatch__fill" :style="{ backgroundColor: value(token.key) }"></span>
+                      <input type="color" class="te-swatch__input" :value="picker(token.key)" x-on:input="setPicker(token.key, $event.target.value)" :aria-label="token.label + ' renk seçici'">
+                    </label>
+                    <div class="te-row__text">
+                      <label :for="'edit_' + token.key" class="te-row__label">
+                        <span x-show="token.group !== 'badges'" x-text="token.label"></span>
+                        <span x-show="token.group === 'badges'" class="badge badge--solid" :data-tone="token.key.replace('badge_', '')" x-text="token.label"></span>
+                        <span x-show="token.group === 'status'" class="badge badge--sm" :data-tone="token.key" aria-hidden="true">Örnek</span>
+                      </label>
+                      <p x-show="token.hint" class="te-row__hint" x-text="token.hint"></p>
+                    </div>
+                    <div class="te-row__value">
+                      <input type="text" :id="'edit_' + token.key" :value="value(token.key)" x-on:input="setColor(token.key, $event.target.value.trim())"
+                             :aria-invalid="!hexOk(value(token.key))" :aria-describedby="hexOk(value(token.key)) ? null : 'err_' + token.key"
+                             maxlength="9" autocomplete="off" spellcheck="false" class="control control--sm te-hex">
+                      <template x-if="token.alpha">
+                        <label class="te-alpha">
+                          <span class="sr-only" x-text="token.label + ' saydamlık'"></span>
+                          <input type="range" min="0" max="100" :value="alpha(token.key)" x-on:input="setAlpha(token.key, $event.target.value)">
+                          <span class="te-alpha__value" x-text="alpha(token.key) + '%'"></span>
+                        </label>
+                      </template>
+                    </div>
+                    <button type="button" class="btn btn--ghost btn--md btn--icon te-reset" :class="isDefault(token.key) ? 'invisible' : ''" x-on:click="resetColor(token.key)"
+                            :aria-label="token.label + ': varsayılana dön (' + stock(token.key) + ')'" :title="'Varsayılana dön: ' + stock(token.key)">
+                      @!component('components/icon', { name: 'refresh', class: 'btn__icon' })
+                    </button>
+                    <p class="te-row__error" :id="'err_' + token.key" x-show="!hexOk(value(token.key))" x-cloak>Geçersiz renk. #rgb, #rrggbb veya #rrggbbaa biçiminde yazın.</p>
+                  </li>
+                </template>
+              </ul>
+            </section>
+            @end
+          </div>
+        </div>
+
+        <div class="savebar te-savebar">
+          <div class="te-savebar__status">
+            <span class="te-dot" data-tone="success" :data-tone="dirty ? 'warning' : 'success'" aria-hidden="true"></span>
+            <div class="min-w-0">
+              <p class="te-savebar__title" aria-live="polite" x-text="dirty ? 'Kaydedilmemiş değişiklikler var' : 'Tüm değişiklikler kayıtlı'">Değişiklikleri kaydetmeyi unutmayın</p>
+              <p class="te-savebar__meta" x-cloak>Varsayılandan farklı: koyu <span class="t-num" x-text="changedCount('dark')"></span>, açık <span class="t-num" x-text="changedCount('light')"></span> renk</p>
+            </div>
+          </div>
+          <div class="te-savebar__actions">
+            <a href="{{ request.url(true) }}" class="btn btn--ghost btn--md" x-show="dirty" x-cloak title="Kaydedilmemiş değişiklikleri at">Vazgeç</a>
+            <button type="submit" class="btn btn--primary btn--md">
+              @!component('components/icon', { name: 'check', class: 'btn__icon' })
+              Kaydet
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+    </div>
+  @end
 @end

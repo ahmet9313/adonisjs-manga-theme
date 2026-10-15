@@ -1,0 +1,15 @@
+{{--
+  Row of filter chips that are links (each choice is its own URL), e.g. cosmetic sort orders.
+  Props: items [{ label, href, active, count? }], label (aria-label), class.
+  For buttons that filter in the browser use <button class="chip" :aria-pressed="…"> directly.
+--}}
+<nav class="flex flex-wrap gap-2 {{ $props.get('class', '') }}" aria-label="{{ $props.get('label', '') }}">
+  @each(item in $props.get('items', []))
+  <a href="{{ item.href }}" class="chip" {{ item.active ? 'aria-current=page' : '' }}>
+    {{ item.label }}
+    @if(item.count != null)
+    <span class="chip__count">{{ item.count }}</span>
+    @end
+  </a>
+  @end
+</nav>

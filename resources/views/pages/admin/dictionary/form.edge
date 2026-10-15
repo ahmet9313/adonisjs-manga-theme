@@ -1,0 +1,82 @@
+{{--
+  Shared create/edit form of the four dictionaries (genres, authors, artists, content types).
+  Props from the controller: dictionary (labels), item (edit), usage (number of series, edit).
+  A duplicate name comes back as the `error` flash with the typed name kept (flashExcept), so
+  the field shows it inline; other validation errors use inputErrorsBag.name.
+--}}
+@let(isEdit = Boolean(item))
+@let(action = isEdit ? dictionary.base + '/' + item.id + '/duzenle' : dictionary.base + '/ekle')
+@let(duplicate = flashMessages.has('error') && flashMessages.has('name') ? flashMessages.get('error') : '')
+@let(singularLower = dictionary.singular.toLocaleLowerCase('tr'))
+@let(catalogUrl = isEdit ? '/seriler?' + dictionary.catalogParam + '=' + encodeURIComponent(item[dictionary.catalogField]) : '')
+@component('components/layout/admin', {
+  title: isEdit ? item.name : title,
+  description: isEdit ? dictionary.singular + ' · ' + (usage ? usage + ' seride kullanılıyor' : 'henüz hiçbir seride kullanılmıyor') : dictionary.description,
+  crumbs: [{ label: dictionary.label, href: dictionary.base }, { label: isEdit ? 'Düzenle' : 'Yeni' }]
+})
+  @slot('actions')
+    @if(isEdit && usage)
+    @component('components/ui/button', { href: catalogUrl, iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Katalogda gör
+    @end
+    @end
+  @end
+
+  @slot('main')
+    <div class="grid max-w-2xl grid-cols-1 gap-6">
+      <form action="{{ action }}" method="POST" class="panel" data-submit-once>
+        {{ csrfField() }}
+        <div class="admin-fields">
+          @!component('components/ui/field', { name: 'name', label: dictionary.nameLabel, required: true, maxlength: dictionary.maxLength, placeholder: dictionary.placeholder, autocomplete: 'off', value: isEdit ? item.name : '', autofocus: !isEdit, hint: duplicate ? '' : (isEdit ? '' : dictionary.slugNote), 'aria-invalid': duplicate ? 'true' : null, 'aria-describedby': duplicate ? 'name-duplicate' : null })
+          @if(duplicate)
+          <p id="name-duplicate" class="field__error -mt-3" role="alert">{{ duplicate }}. Başka bir ad deneyin.</p>
+          @end
+          @if(isEdit)
+          <div class="field">
+            <span class="field__label">Adres (slug)</span>
+            <p class="inset admin-mono px-3 py-2.5">{{ item.slug }}</p>
+            <p class="field__hint">{{ dictionary.slugNote }}</p>
+          </div>
+          @end
+        </div>
+        <div class="form-actions mt-6 border-t border-line pt-5">
+          @component('components/ui/button', { variant: 'ghost', href: dictionary.base })
+            Vazgeç
+          @end
+          @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+            {{ isEdit ? 'Kaydet' : 'Ekle' }}
+          @end
+        </div>
+      </form>
+
+      @if(isEdit)
+      <section class="panel admin-danger-zone flex flex-wrap items-center justify-between gap-4" aria-labelledby="danger-title">
+        <div class="min-w-0 flex-1 basis-64">
+          <h2 id="danger-title" class="panel__title">{{ dictionary.singular }} silinsin mi?</h2>
+          @if(dictionary.restrictDelete && usage)
+          <p class="panel__desc">{{ dictionary.restrictNote.replace('{n}', usage) }}</p>
+          @elseif(usage)
+          <p class="panel__desc">{{ usage }} seriden kaldırılır; seriler silinmez.</p>
+          @else
+          <p class="panel__desc">Hiçbir seride kullanılmıyor.</p>
+          @end
+        </div>
+        @if(dictionary.restrictDelete && usage)
+        @component('components/ui/button', { variant: 'danger', icon: 'trash', disabled: true })
+          Silinemez
+        @end
+        @else
+        <form action="{{ dictionary.base }}/{{ item.id }}/sil" method="POST" data-submit-once
+              data-confirm="“{{ item.name }}” {{ usage ? dictionary.deleteUsed.replace('{n}', usage) : dictionary.deleteUnused }}"
+              data-confirm-title="{{ dictionary.deleteTitle }}" data-confirm-label="Sil">
+          {{ csrfField() }}
+          @component('components/ui/button', { type: 'submit', variant: 'danger', icon: 'trash' })
+            Sil
+          @end
+        </form>
+        @end
+      </section>
+      @end
+    </div>
+  @end
+@end

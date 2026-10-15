@@ -1,0 +1,20 @@
+{{--
+  "Tamamlanan Seriler" (switch home_completed): six completed series. A swipeable shelf on phones
+  and tablets, one row of six from 1024px.
+--}}
+<section class="section" aria-labelledby="home-completed-title">
+  @!component('components/ui/section_head', {
+    title: 'Tamamlanan Seriler',
+    id: 'home-completed-title',
+    icon: 'check-circle',
+    description: 'Final bölümü yayımlanmış, baştan sona okunabilecek seriler',
+    href: '/seriler?status=' + encodeURIComponent('Tamamlandı')
+  })
+  <ul class="rail home-rail home-shelf">
+    @each(item in completed)
+    <li>
+      @!component('components/series/card', { series: item, showStatus: false, meta: item.chapterCount + ' bölüm' })
+    </li>
+    @end
+  </ul>
+</section>

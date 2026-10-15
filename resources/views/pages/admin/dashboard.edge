@@ -1,101 +1,172 @@
-@component('components/layout/admin', { title })
-
-@slot('main')
-  {{-- Stats Grid --}}
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl p-4">
-      <div class="text-2xl font-bold text-emerald-400">{{ stats.series }}</div>
-      <div class="text-sm text-gray-400 mt-1">Seri</div>
-    </div>
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl p-4">
-      <div class="text-2xl font-bold text-purple-400">{{ stats.chapters }}</div>
-      <div class="text-sm text-gray-400 mt-1">Bölüm</div>
-    </div>
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl p-4">
-      <div class="text-2xl font-bold text-green-400">{{ stats.genres }}</div>
-      <div class="text-sm text-gray-400 mt-1">Tür</div>
-    </div>
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl p-4">
-      <div class="text-2xl font-bold text-yellow-400">{{ stats.authors }}</div>
-      <div class="text-sm text-gray-400 mt-1">Yazar</div>
-    </div>
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl p-4">
-      <div class="text-2xl font-bold text-pink-400">{{ stats.artists }}</div>
-      <div class="text-sm text-gray-400 mt-1">Çizer</div>
-    </div>
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl p-4">
-      <div class="text-2xl font-bold text-orange-400">{{ stats.contentTypes }}</div>
-      <div class="text-sm text-gray-400 mt-1">İçerik Türü</div>
-    </div>
-  </div>
-
-  <div class="grid lg:grid-cols-2 gap-6">
-    {{-- Recent Series --}}
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
-        <h3 class="font-semibold text-gray-200">Son Eklenen Seriler</h3>
-        <a href="/admin/seriler" class="text-sm text-emerald-400 hover:text-emerald-300">Tümünü Gör</a>
+{{--
+  Admin dashboard: catalogue counts (each tile opens its list), quick actions and the latest
+  changes (recently updated series, newly added chapters).
+--}}
+@let(me = auth.user)
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(typeName = (type) => type ? type.name.charAt(0).toLocaleUpperCase('tr') + type.name.slice(1) : 'Tür yok')
+@component('components/layout/admin', { title, description: 'Hoş geldin, ' + me.fullName + '. Kataloğun özeti ve son değişiklikler.' })
+  @slot('main')
+    <section aria-labelledby="stats-title">
+      <h2 id="stats-title" class="sr-only">Katalog özeti</h2>
+      <div class="admin-stats">
+        @!component('components/ui/stat', { label: 'Seriler', value: number(stats.series), hint: number(stats.ongoing) + ' devam ediyor', icon: 'library', href: '/admin/seriler' })
+        @!component('components/ui/stat', { label: 'Bölümler', value: number(stats.chapters), hint: stats.chaptersThisWeek ? '+' + number(stats.chaptersThisWeek) + ' son 7 günde' : 'Son 7 günde yeni yok', icon: 'document', href: '/admin/bolumler' })
+        @!component('components/ui/stat', { label: 'Türler', value: number(stats.genres), icon: 'tag', href: '/admin/turler' })
+        @!component('components/ui/stat', { label: 'Yazarlar', value: number(stats.authors), icon: 'pencil', href: '/admin/yazarlar' })
+        @!component('components/ui/stat', { label: 'Çizerler', value: number(stats.artists), icon: 'photo', href: '/admin/cizerler' })
+        @!component('components/ui/stat', { label: 'İçerik türleri', value: number(stats.contentTypes), icon: 'stack', href: '/admin/icerik-turleri' })
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left text-gray-400 border-b border-gray-700/50">
-              <th class="px-5 py-3 font-medium">Başlık</th>
-              <th class="px-5 py-3 font-medium">Tür</th>
-              <th class="px-5 py-3 font-medium">Durum</th>
-            </tr>
-          </thead>
-          <tbody>
-            @each(series in recentSeries)
-              <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
-                <td class="px-5 py-3">
-                  <a href="/admin/seriler/{{ series.id }}/duzenle" class="text-gray-200 hover:text-emerald-400">{{ series.title }}</a>
+    </section>
+
+    <section class="section" aria-labelledby="quick-title">
+      @!component('components/ui/section_head', { title: 'Hızlı işlemler', id: 'quick-title' })
+      <div class="admin-quick">
+        <a href="/admin/seriler/ekle" class="admin-quick__item">
+          <span class="admin-quick__icon">
+            @!component('components/icon', { name: 'plus' })
+          </span>
+          <span class="min-w-0">
+            <span class="admin-quick__title block">Yeni seri</span>
+            <span class="admin-quick__desc block">Kapak, tür ve kişileriyle ekleyin</span>
+          </span>
+          @!component('components/icon', { name: 'arrow-right', class: 'admin-quick__arrow' })
+        </a>
+        <a href="/admin/bolumler/ekle" class="admin-quick__item">
+          <span class="admin-quick__icon">
+            @!component('components/icon', { name: 'upload' })
+          </span>
+          <span class="min-w-0">
+            <span class="admin-quick__title block">Yeni bölüm</span>
+            <span class="admin-quick__desc block">Sayfaları yükleyip sıralayın</span>
+          </span>
+          @!component('components/icon', { name: 'arrow-right', class: 'admin-quick__arrow' })
+        </a>
+        @if(me.isAdmin)
+        <a href="/admin/kullanicilar" class="admin-quick__item">
+          <span class="admin-quick__icon">
+            @!component('components/icon', { name: 'users' })
+          </span>
+          <span class="min-w-0">
+            <span class="admin-quick__title block">Kullanıcılar</span>
+            <span class="admin-quick__desc block">Roller ve askıya almalar</span>
+          </span>
+          @!component('components/icon', { name: 'arrow-right', class: 'admin-quick__arrow' })
+        </a>
+        @end
+      </div>
+    </section>
+
+    <div class="section admin-recent">
+      <section class="panel panel--flush" aria-labelledby="recent-series-title">
+        <div class="panel__head">
+          <h2 id="recent-series-title" class="panel__title">Son güncellenen seriler</h2>
+          <a href="/admin/seriler" class="section-head__link">
+            Tümünü gör
+            @!component('components/icon', { name: 'arrow-right', class: 'h-4 w-4' })
+          </a>
+        </div>
+        @if(recentSeries.length)
+        <div class="overflow-x-auto">
+          <table class="table table--stack admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Seri</th>
+                <th scope="col" class="num">Bölüm</th>
+                <th scope="col">Güncellendi</th>
+              </tr>
+            </thead>
+            <tbody>
+              @each(series in recentSeries)
+              <tr>
+                <td class="cell-main">
+                  <div class="admin-cell">
+                    <img src="{{ series.coverImage || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--sm" width="32" height="43" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+                    <div class="admin-cell__body">
+                      <a href="/admin/seriler/{{ series.id }}/duzenle" class="admin-title line-clamp-1">{{ series.title }}</a>
+                      <div class="admin-cell__meta">
+                        @!component('components/ui/badge', { kind: 'type', value: series.contentType ? series.contentType.slug : '', text: typeName(series.contentType), size: 'sm' })
+                        @!component('components/ui/badge', { kind: 'status', value: series.status, size: 'sm' })
+                      </div>
+                      <p class="admin-cell__meta md:hidden">{{ number(series.$extras.chapters_count) }} bölüm · {{ agoOf(series.updatedAt) }}</p>
+                    </div>
+                  </div>
                 </td>
-                <td class="px-5 py-3 text-gray-400">{{ series.contentType?.name || '-' }}</td>
-                <td class="px-5 py-3">
-                  <span class="inline-block px-2 py-0.5 rounded text-xs {{ series.status === 'Devam Ediyor' ? 'bg-green-900/50 text-green-400' : series.status === 'Tamamlandı' ? 'bg-blue-900/50 text-blue-400' : 'bg-red-900/50 text-red-400' }}">
-                    {{ series.status }}
-                  </span>
+                <td data-label="Bölüm" class="num max-md:hidden">{{ number(series.$extras.chapters_count) }}</td>
+                <td data-label="Güncellendi" class="whitespace-nowrap text-muted max-md:hidden">
+                  <time datetime="{{ series.updatedAt }}" title="{{ dateOf(series.updatedAt) }}">{{ agoOf(series.updatedAt) }}</time>
                 </td>
               </tr>
-            @endeach
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    {{-- Recent Chapters --}}
-    <div class="bg-(--t-surface) border border-gray-700 rounded-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
-        <h3 class="font-semibold text-gray-200">Son Eklenen Bölümler</h3>
-        <a href="/admin/bolumler" class="text-sm text-emerald-400 hover:text-emerald-300">Tümünü Gör</a>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left text-gray-400 border-b border-gray-700/50">
-              <th class="px-5 py-3 font-medium">Seri</th>
-              <th class="px-5 py-3 font-medium">Bölüm</th>
-              <th class="px-5 py-3 font-medium">Tarih</th>
-            </tr>
-          </thead>
-          <tbody>
-            @each(chapter in recentChapters)
-              <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
-                <td class="px-5 py-3 text-gray-200">{{ chapter.series?.title || '-' }}</td>
-                <td class="px-5 py-3">
-                  <a href="/admin/bolumler/{{ chapter.id }}/duzenle" class="text-gray-300 hover:text-emerald-400">
-                    {{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}
-                  </a>
-                </td>
-                <td class="px-5 py-3 text-gray-400">{{ chapter.publishedAt }}</td>
-              </tr>
+              @end
+            </tbody>
+          </table>
+        </div>
+        @else
+        <div class="p-5">
+          @component('components/ui/empty_state', { icon: 'library', title: 'Henüz seri yok', description: 'İlk seriyi ekleyerek kataloğu oluşturmaya başlayın.' })
+            @component('components/ui/button', { variant: 'primary', href: '/admin/seriler/ekle', icon: 'plus' })
+              Yeni seri
             @end
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-@end
+          @end
+        </div>
+        @end
+      </section>
 
+      <section class="panel panel--flush" aria-labelledby="recent-chapters-title">
+        <div class="panel__head">
+          <h2 id="recent-chapters-title" class="panel__title">Son eklenen bölümler</h2>
+          <a href="/admin/bolumler" class="section-head__link">
+            Tümünü gör
+            @!component('components/icon', { name: 'arrow-right', class: 'h-4 w-4' })
+          </a>
+        </div>
+        @if(recentChapters.length)
+        <div class="overflow-x-auto">
+          <table class="table table--stack admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Bölüm</th>
+                <th scope="col">Seri</th>
+                <th scope="col">Eklendi</th>
+              </tr>
+            </thead>
+            <tbody>
+              @each(chapter in recentChapters)
+              <tr>
+                <td class="cell-main">
+                  <div class="admin-cell__body">
+                    <a href="/admin/bolumler/{{ chapter.id }}/duzenle" class="admin-title">Bölüm {{ chapter.number }}</a>
+                    @if(chapter.title)
+                    <span class="line-clamp-1 text-xs text-muted">{{ chapter.title }}</span>
+                    @end
+                    <p class="admin-cell__meta md:hidden">{{ chapter.series ? chapter.series.title + ' · ' : '' }}{{ agoOf(chapter.createdAt) }}</p>
+                  </div>
+                </td>
+                <td data-label="Seri" class="max-w-56 max-md:hidden">
+                  @if(chapter.series)
+                  <a href="/admin/bolumler?series_id={{ chapter.series.id }}" class="admin-quiet line-clamp-1" title="{{ chapter.series.title }} bölümleri">{{ chapter.series.title }}</a>
+                  @else
+                  <span class="text-muted">—</span>
+                  @end
+                </td>
+                <td data-label="Eklendi" class="whitespace-nowrap text-muted max-md:hidden">
+                  <time datetime="{{ chapter.createdAt }}" title="{{ dateOf(chapter.createdAt) }}">{{ agoOf(chapter.createdAt) }}</time>
+                </td>
+              </tr>
+              @end
+            </tbody>
+          </table>
+        </div>
+        @else
+        <div class="p-5">
+          @component('components/ui/empty_state', { icon: 'document', title: 'Henüz bölüm yok', description: 'Bir seri seçip ilk bölümün sayfalarını yükleyin.' })
+            @component('components/ui/button', { variant: 'primary', href: '/admin/bolumler/ekle', icon: 'upload' })
+              Bölüm yükle
+            @end
+          @end
+        </div>
+        @end
+      </section>
+    </div>
+  @end
 @end

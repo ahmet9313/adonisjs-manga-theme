@@ -1,0 +1,62 @@
+{{--
+  Tabs (classes `tabs`/`tab`, see components.css).
+  Props: tabs [{ key, label, count?, href? }], active (key), label (aria-label of the list),
+         mode panels|links (panels), id (prefix for element ids, 'tabs'), class, vertical.
+  panels: real tablist/tab/tabpanel with arrow, Home and End keys (Alpine `tabs`, ui.js).
+          One slot per tab key holds its panel. The server renders the active panel, the others
+          are `hidden` until selected, so every panel is in the HTML.
+  links:  a <nav> of links (each page is its own URL); the active link gets aria-current="page".
+    @component('components/ui/tabs', { tabs: [{ key: 'yorumlar', label: 'Yorumlar', count: 12 }, …], active: 'yorumlar', label: 'Son etkinlik', id: 'activity' })
+      @slot('yorumlar')
+        …
+      @end
+    @end
+--}}
+@let(tabs = $props.get('tabs', []))
+@let(active = $props.get('active', tabs.length ? tabs[0].key : ''))
+@let(prefix = $props.get('id', 'tabs'))
+@let(vertical = $props.get('vertical', false))
+@if($props.get('mode', 'panels') === 'links')
+<nav class="tabs {{ vertical ? 'tabs--vertical' : '' }} {{ $props.get('class', '') }}" aria-label="{{ $props.get('label', '') }}">
+  @each(tab in tabs)
+  <a href="{{ tab.href }}" class="tab" {{ tab.key === active ? 'aria-current=page' : '' }}>
+    {{ tab.label }}
+    @if(tab.count != null)
+    <span class="chip__count">{{ tab.count }}</span>
+    @end
+  </a>
+  @end
+</nav>
+@else
+<div x-data="tabs" data-active="{{ active }}" class="{{ $props.get('class', '') }}">
+  <div role="tablist" aria-label="{{ $props.get('label', '') }}" class="tabs {{ vertical ? 'tabs--vertical' : '' }}" @keydown="onKeydown($event)"
+    @if(vertical)
+    aria-orientation="vertical"
+    @end
+    >
+    @each(tab in tabs)
+    <button type="button" role="tab" id="{{ prefix }}-tab-{{ tab.key }}" data-tab="{{ tab.key }}" aria-controls="{{ prefix }}-panel-{{ tab.key }}"
+            aria-selected="{{ tab.key === active ? 'true' : 'false' }}" tabindex="{{ tab.key === active ? 0 : -1 }}"
+            :aria-selected="is('{{ tab.key }}').toString()" :tabindex="is('{{ tab.key }}') ? 0 : -1"
+            @click="select('{{ tab.key }}')" class="tab">
+      {{ tab.label }}
+      @if(tab.count != null)
+      <span class="chip__count">{{ tab.count }}</span>
+      @end
+    </button>
+    @end
+  </div>
+  @each(tab in tabs)
+  <div role="tabpanel" id="{{ prefix }}-panel-{{ tab.key }}" aria-labelledby="{{ prefix }}-tab-{{ tab.key }}" tabindex="0" class="pt-5 outline-none"
+       :hidden="!is('{{ tab.key }}')"
+       @if(tab.key !== active)
+       hidden
+       @end
+       >
+    @if($slots[tab.key])
+    {{{ await $slots[tab.key]() }}}
+    @end
+  </div>
+  @end
+</div>
+@end

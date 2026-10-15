@@ -1,0 +1,27 @@
+{{--
+  Sub-navigation of Admin → Tema, shared by the six theme pages (links with aria-current).
+  The sections come from config/admin_nav.ts (the sidebar's "Tema" group) and the active one from
+  the URL. Safe mode (?guvenli=1) is kept in the links and announced above the page.
+--}}
+@let(themeGroup = adminNav.find((group) => group.key === 'theme'))
+@let(themeSection = request.url().split('/').pop())
+@let(safeMode = Boolean(request.qs().guvenli))
+@let(themeSuffix = safeMode ? '?guvenli=1' : '')
+<div class="te-subnav" x-data x-init="const nav = $el.querySelector('nav'); const tab = nav && nav.querySelector('[aria-current]'); if (tab && nav.scrollWidth > nav.clientWidth) nav.scrollLeft += tab.getBoundingClientRect().left - nav.getBoundingClientRect().left - 16">
+  @!component('components/ui/tabs', {
+    mode: 'links',
+    label: 'Tema bölümleri',
+    active: themeSection,
+    tabs: (themeGroup ? themeGroup.items : []).map((item) => ({ key: item.href.split('/').pop(), label: item.label, href: item.href + themeSuffix }))
+  })
+</div>
+@if(safeMode)
+@component('components/ui/alert', { tone: 'warning', title: 'Güvenli mod', class: 'mb-6' })
+  <p>Yönetim paneli şu an temasız, varsayılan koyu görünümle açılıyor. Kaydettiğiniz ayarlar sitede yine de geçerli olur.</p>
+  <a href="{{ request.url() }}" class="link mt-1 inline-block">Güvenli moddan çık</a>
+@end
+@elseif(!ui('admin_themed') && (themeSection === 'renkler' || themeSection === 'gorunum'))
+@component('components/ui/alert', { tone: 'info', class: 'mb-6' })
+  <p>Yönetim paneli temayı kullanmıyor: kaydettiğiniz renkler yalnız sitede görünür, bu sayfadaki önizleme kaydetmeden önceki hâli gösterir. Değiştirmek için <a href="/admin/tema/goster#flags-effects" class="link">Göster / Gizle → Efektler</a>.</p>
+@end
+@end

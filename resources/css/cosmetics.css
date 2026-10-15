@@ -1,0 +1,457 @@
+/*
+ * Cosmetic content: level badges, online dots, name effects, avatar frames, wallpapers and
+ * collectible cards. These are content, not UI chrome, so they keep their own colours in both
+ * schemes. Class names come from app/services/cosmetic_service.ts and the database; do not
+ * rename them. Looping animations stop under prefers-reduced-motion (base.css).
+ */
+
+/* ---- Level badge: ★ Lv.N, tinted by tier ----------------------------------------------- */
+.lv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  border-radius: 0.375rem;
+  background: #fef3c7;
+  padding: 0 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.125rem;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.lv-badge::before {
+  content: '★';
+  font-size: 0.7rem;
+  color: #eab308;
+}
+
+.lv-badge[data-tier='2'] {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.lv-badge[data-tier='2']::before {
+  color: #16a34a;
+}
+
+.lv-badge[data-tier='3'] {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.lv-badge[data-tier='3']::before {
+  color: #8b5cf6;
+}
+
+.lv-badge[data-tier='4'] {
+  background: linear-gradient(90deg, #fee2e2, #fef3c7);
+  color: #b91c1c;
+}
+
+.lv-badge[data-tier='4']::before {
+  color: #ef4444;
+}
+
+/* Online dot next to names. */
+.presence {
+  display: inline-block;
+  height: 0.5rem;
+  width: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: #6b7280;
+}
+
+.presence[data-online='1'] {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgb(34 197 94 / 0.18);
+}
+
+/* ---- Name effects ----------------------------------------------------------------------- */
+.fx {
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.fx-custom {
+  background-image: var(--fx);
+}
+
+.fx-zumrut {
+  background-image: linear-gradient(90deg, #34d399, #bbf7d0, #10b981);
+  filter: drop-shadow(0 0 6px rgb(16 185 129 / 0.55));
+}
+
+.fx-okyanus {
+  background-image: linear-gradient(90deg, #38bdf8, #1d4ed8, #0ea5e9, #1e3a8a);
+}
+
+.fx-gun-batimi {
+  background-image: linear-gradient(90deg, #fb923c, #ec4899, #facc15);
+}
+
+.fx-sakura {
+  background-image: linear-gradient(90deg, #fbcfe8, #f472b6, #fdf2f8, #f9a8d4);
+  filter: drop-shadow(0 0 5px rgb(244 114 182 / 0.45));
+}
+
+.fx-siyah-beyaz {
+  background-image: linear-gradient(90deg, #fff 0 48%, #111827 52% 100%);
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
+}
+
+.fx-altin {
+  background-image: linear-gradient(90deg, #b45309, #fde68a, #f59e0b, #fef3c7, #b45309);
+  animation: fx-flow 3.5s linear infinite;
+  filter: drop-shadow(0 0 5px rgb(245 158 11 / 0.45));
+}
+
+.fx-buz {
+  background-image: linear-gradient(90deg, #e0f2fe, #7dd3fc, #fff, #bae6fd);
+  filter: drop-shadow(0 0 6px rgb(125 211 252 / 0.6));
+}
+
+.fx.fx-neon {
+  background: none;
+  color: #fdf4ff;
+  -webkit-text-fill-color: #fdf4ff;
+  text-shadow:
+    0 0 4px #f0abfc,
+    0 0 10px #e879f9,
+    0 0 18px #c026d3;
+}
+
+.fx-ates {
+  background-image: linear-gradient(90deg, #7f1d1d, #ef4444, #f97316, #fde047, #f97316, #ef4444, #7f1d1d);
+  animation: fx-flow 2.2s linear infinite;
+  filter: drop-shadow(0 0 6px rgb(249 115 22 / 0.65));
+}
+
+.fx-galaksi {
+  background-image: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #22d3ee, #6366f1);
+  animation: fx-flow 5s linear infinite;
+}
+
+.fx-gokkusagi {
+  background-image: linear-gradient(90deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #6366f1, #d946ef, #ef4444);
+  animation: fx-flow 3s linear infinite;
+}
+
+.fx-kraliyet {
+  background-image: linear-gradient(90deg, #fbbf24, #a78bfa, #fde68a, #7c3aed, #fbbf24);
+  animation: fx-flow 6s linear infinite;
+  filter: drop-shadow(0 0 6px rgb(167 139 250 / 0.55));
+}
+
+.fx-ekip {
+  background-image: linear-gradient(90deg, #34d399, #22d3ee, #34d399);
+  animation: fx-flow 4s linear infinite;
+  filter: drop-shadow(0 0 5px rgb(52 211 153 / 0.5));
+}
+
+@keyframes fx-flow {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* ---- Avatar frames ---------------------------------------------------------------------- */
+.avatar-frame {
+  pointer-events: none;
+  position: absolute;
+  inset: -9%;
+  border-radius: 9999px;
+  box-shadow: var(--glow, none);
+}
+
+.avatar-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--ring, 7%);
+  background: var(--frame, #10b981);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: var(--spin, none);
+}
+
+.avatar-frame::after {
+  position: absolute;
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.avatar-frame-img {
+  pointer-events: none;
+  position: absolute;
+  inset: -20%;
+  height: 140%;
+  width: 140%;
+  max-width: none;
+  object-fit: contain;
+}
+
+.frame-zumrut {
+  --frame: conic-gradient(#10b981, #a7f3d0, #059669, #34d399, #10b981);
+  --glow: 0 0 10px rgb(16 185 129 / 0.55);
+}
+
+.frame-gece {
+  --frame: conic-gradient(#1e1b4b, #6366f1, #0f172a, #818cf8, #1e1b4b);
+  --glow: 0 0 8px rgb(99 102 241 / 0.45);
+}
+
+.frame-gumus {
+  --frame: conic-gradient(#e5e7eb, #6b7280, #f9fafb, #9ca3af, #e5e7eb);
+  --glow: 0 0 6px rgb(229 231 235 / 0.35);
+}
+
+.frame-altin {
+  --frame: conic-gradient(#fde68a, #b45309, #fef3c7, #d97706, #fde68a);
+  --glow: 0 0 10px rgb(245 158 11 / 0.55);
+}
+
+.frame-altin::after {
+  content: '👑';
+  top: -18%;
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+}
+
+.frame-neon {
+  --frame: conic-gradient(#f0abfc, #c026d3, #22d3ee, #f0abfc);
+  --glow:
+    0 0 8px #e879f9,
+    0 0 16px rgb(34 211 238 / 0.5);
+}
+
+.frame-buz {
+  --frame: conic-gradient(#e0f2fe, #38bdf8, #fff, #7dd3fc, #e0f2fe);
+  --glow: 0 0 10px rgb(125 211 252 / 0.6);
+}
+
+.frame-buz::after {
+  content: '❄';
+  right: -2%;
+  bottom: 2%;
+  color: #e0f2fe;
+}
+
+.frame-gokkusagi {
+  --frame: conic-gradient(#ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #6366f1, #d946ef, #ef4444);
+  --spin: frame-spin 4s linear infinite;
+  --glow: 0 0 10px rgb(168 85 247 / 0.45);
+}
+
+.frame-ates {
+  --frame: conic-gradient(#7f1d1d, #f97316, #fde047, #ef4444, #7f1d1d);
+  --spin: frame-spin 2.5s linear infinite;
+  --glow:
+    0 0 10px rgb(249 115 22 / 0.7),
+    0 -4px 14px rgb(239 68 68 / 0.45);
+}
+
+.frame-sadik {
+  --frame: conic-gradient(#f97316, #ef4444, #f59e0b, #f97316);
+  --glow: 0 0 8px rgb(249 115 22 / 0.5);
+}
+
+.frame-sadik::after {
+  content: '🔥';
+  right: -4%;
+  bottom: -2%;
+}
+
+@keyframes frame-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ---- Wallpapers (comment cards, profile header, account menu) --------------------------- */
+.wall {
+  background-position: center;
+  background-size: cover;
+}
+
+.wall-gece-yarisi {
+  background:
+    radial-gradient(rgb(255 255 255 / 0.5) 1px, transparent 1.5px) 0 0 / 38px 38px,
+    radial-gradient(rgb(255 255 255 / 0.25) 1px, transparent 1.5px) 19px 19px / 38px 38px,
+    linear-gradient(135deg, #0f172a, #1e1b4b 60%, #312e81);
+}
+
+.wall-aurora {
+  background:
+    radial-gradient(60% 80% at 15% 0%, rgb(16 185 129 / 0.55), transparent 70%),
+    radial-gradient(50% 70% at 75% 10%, rgb(99 102 241 / 0.55), transparent 70%),
+    radial-gradient(40% 60% at 55% 100%, rgb(14 165 233 / 0.35), transparent 70%),
+    #060b16;
+}
+
+.wall-gun-batimi {
+  background:
+    radial-gradient(40% 50% at 70% 85%, rgb(253 224 71 / 0.6), transparent 70%),
+    linear-gradient(170deg, #f97316 0%, #db2777 45%, #312e81 100%);
+}
+
+.wall-sakura {
+  background:
+    radial-gradient(circle at 20% 30%, rgb(251 207 232 / 0.55) 0 3px, transparent 4px) 0 0 / 60px 60px,
+    radial-gradient(circle at 70% 70%, rgb(244 114 182 / 0.45) 0 2px, transparent 3px) 0 0 / 44px 44px,
+    linear-gradient(160deg, #831843, #3b0a26 70%, #1f0a17);
+}
+
+.wall-derin-okyanus {
+  background:
+    radial-gradient(50% 60% at 50% -10%, rgb(56 189 248 / 0.45), transparent 70%),
+    repeating-radial-gradient(circle at 50% 120%, rgb(14 165 233 / 0.08) 0 2px, transparent 2px 26px),
+    linear-gradient(180deg, #0c4a6e, #082f49 50%, #020617);
+}
+
+.wall-nebula {
+  background:
+    radial-gradient(45% 55% at 25% 30%, rgb(168 85 247 / 0.6), transparent 70%),
+    radial-gradient(40% 50% at 75% 60%, rgb(236 72 153 / 0.5), transparent 70%),
+    radial-gradient(35% 45% at 55% 15%, rgb(59 130 246 / 0.45), transparent 70%),
+    radial-gradient(rgb(255 255 255 / 0.45) 1px, transparent 1.5px) 0 0 / 30px 30px,
+    #0b0217;
+}
+
+.wall-dijital {
+  background:
+    linear-gradient(rgb(34 197 94 / 0.18) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgb(34 197 94 / 0.18) 1px, transparent 1px) 0 0 / 24px 24px,
+    radial-gradient(60% 70% at 50% 50%, rgb(34 197 94 / 0.25), transparent 70%),
+    #02130a;
+}
+
+.wall-lav {
+  background:
+    radial-gradient(40% 50% at 20% 80%, rgb(249 115 22 / 0.7), transparent 70%),
+    radial-gradient(35% 45% at 80% 30%, rgb(239 68 68 / 0.6), transparent 70%),
+    radial-gradient(25% 35% at 55% 60%, rgb(250 204 21 / 0.45), transparent 70%),
+    #1a0500;
+}
+
+.wall-altin-saray {
+  background:
+    repeating-linear-gradient(45deg, rgb(251 191 36 / 0.14) 0 2px, transparent 2px 18px),
+    repeating-linear-gradient(-45deg, rgb(251 191 36 / 0.1) 0 2px, transparent 2px 18px),
+    radial-gradient(60% 70% at 50% 0%, rgb(253 230 138 / 0.4), transparent 70%),
+    linear-gradient(160deg, #3b2506, #1c1305);
+}
+
+/* ---- Collectible cards ------------------------------------------------------------------ */
+.tcg {
+  --rar: #9ca3af;
+  position: relative;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 3px solid var(--rar);
+  background: #111827;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.6),
+    0 8px 22px rgb(0 0 0 / 0.45),
+    0 0 14px color-mix(in srgb, var(--rar) 35%, transparent);
+  transition: transform 0.2s;
+}
+
+.tcg:hover {
+  transform: translateY(-3px) rotate(-0.5deg);
+}
+
+.tcg > img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.tcg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(125deg, transparent 40%, rgb(255 255 255 / 0.18) 50%, transparent 60%);
+  pointer-events: none;
+}
+
+.tcg-letter {
+  position: absolute;
+  left: 0.4rem;
+  top: 0.4rem;
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 2px solid var(--rar);
+  background: rgb(0 0 0 / 0.75);
+  font-family: Georgia, serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.tcg[data-locked='1'] > img {
+  filter: grayscale(1) brightness(0.45) contrast(1.1);
+}
+
+.tcg[data-rarity='D'] {
+  --rar: #22c55e;
+}
+
+.tcg[data-rarity='C'] {
+  --rar: #3b82f6;
+}
+
+.tcg[data-rarity='B'] {
+  --rar: #a855f7;
+}
+
+.tcg[data-rarity='A'] {
+  --rar: #ec4899;
+}
+
+.tcg[data-rarity='S'] {
+  --rar: #f59e0b;
+}
+
+.tcg[data-rarity='R'] {
+  --rar: #ef4444;
+  border-image: linear-gradient(135deg, #ef4444, #f59e0b, #22c55e, #3b82f6, #a855f7) 1;
+}
+
+/* Light scheme: pale name effects (Buz, Siyah-Beyaz …) get a thin outline so they stay legible
+   on paper; their dark-scheme glow would be invisible there anyway. */
+:root[data-theme='light'] .fx {
+  filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.45));
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme='system'] .fx {
+    filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.45));
+  }
+}
+
+/* Neon is white text with a glow: on paper it becomes a deep magenta with the same glow. */
+:root[data-theme='light'] .fx.fx-neon {
+  color: #86198f;
+  -webkit-text-fill-color: #86198f;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme='system'] .fx.fx-neon {
+    color: #86198f;
+    -webkit-text-fill-color: #86198f;
+  }
+}

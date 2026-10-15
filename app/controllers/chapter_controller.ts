@@ -6,18 +6,17 @@ import progress from '#services/progress_service'
 export default class ChapterController {
   async show({ view, params, response, auth }: HttpContext) {
     const { type, slug, chapter: chapterNum } = params
-    if (!Number.isSafeInteger(Number(chapterNum)) || Number(chapterNum) < 0)
-      return response.notFound('Bölüm bulunamadı')
-    const series = await seriesService.getSeriesBySlug(type, slug)
-
-    if (!series) {
-      return response.notFound('Seri bulunamadı')
+    const missing = (what: 'series' | 'chapter') => {
+      response.status(404)
+      return view.render('pages/errors/not_found', { missing: what })
     }
+    if (!Number.isSafeInteger(Number(chapterNum)) || Number(chapterNum) < 0)
+      return missing('chapter')
+    const series = await seriesService.getSeriesBySlug(type, slug)
+    if (!series) return missing('series')
 
     const chapter = await seriesService.getChapter(type, slug, Number(chapterNum))
-    if (!chapter) {
-      return response.notFound('Bölüm bulunamadı')
-    }
+    if (!chapter) return missing('chapter')
 
     let reward = null
     if (auth.user) {

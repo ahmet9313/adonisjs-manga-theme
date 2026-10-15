@@ -1,0 +1,13 @@
+{{--
+  Confirmation dialog for every <form data-confirm="Mesaj"> (optional data-confirm-title,
+  data-confirm-label, data-confirm-tone="danger|accent"). See confirmHost in ui.js.
+--}}
+<div x-data="confirmHost">
+  @component('components/ui/modal', { id: 'confirm', title: 'Emin misiniz?', titleExpr: 'title', size: 'sm', close: 'cancel()' })
+    <p class="text-sm leading-relaxed text-(--t-text-2)" x-text="message"></p>
+    @slot('footer')
+      <button type="button" class="btn btn--secondary btn--md" @click="cancel()" data-autofocus>Vazgeç</button>
+      <button type="button" class="btn btn--md" :class="tone === 'danger' ? 'btn--danger-solid' : 'btn--primary'" @click="accept()" x-text="label">Evet</button>
+    @end
+  @end
+</div>

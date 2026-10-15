@@ -1,12 +1,49 @@
+{{--
+  Registration page (/kayit): a calm card with the registration form; benefits beside it from lg.
+  The form is the shared components/auth/*_form; the link to the other page keeps ?next=.
+--}}
 @component('components/layout/main', { title })
 
 @slot('main')
-  <div class="mx-auto w-full max-w-sm py-8">
-    <div class="rounded-2xl border border-white/10 glass p-6 shadow-xl sm:p-8">
-      <h1 class="mb-1 text-2xl font-bold text-(--t-heading)">Kayıt Ol</h1>
-      <p class="mb-6 text-sm text-gray-400">Birkaç saniyede {{ site.name }} hesabı oluştur.</p>
-      @!component('components/auth/register_form', { prefix: 'page', next })
-      <a href="/giris?next={{ encodeURIComponent(next) }}" class="mt-4 block w-full rounded-lg border border-gray-600 py-2.5 text-center text-sm font-medium text-gray-200 hover:border-emerald-500">Zaten hesabım var</a>
+  <div class="auth-page">
+    <div class="auth-page__grid">
+      <section class="panel auth-card" aria-labelledby="auth-title">
+        @if(site.logo)
+        <img src="{{ site.logo }}" alt="" class="auth-card__logo">
+        @else
+        <span class="auth-card__mark" aria-hidden="true">{{ site.name.charAt(0).toUpperCase() }}</span>
+        @end
+        <h1 id="auth-title" class="t-h1 auth-card__title">Kayıt Ol</h1>
+        <p class="auth-card__lead">Birkaç saniyede ücretsiz hesabını aç; kaydettiğin seriler ve okuma geçmişin her cihazda seninle olsun.</p>
+        <div class="mt-6">
+          @!component('components/auth/register_form', { prefix: 'page', next })
+        </div>
+        <p class="auth-card__switch">
+          Zaten hesabın var mı?
+          <a href="/giris?next={{ encodeURIComponent(next) }}" class="link">Giriş yap</a>
+        </p>
+      </section>
+      <aside class="auth-perks hidden lg:block" aria-labelledby="auth-perks-title">
+        <p class="t-overline">Ücretsiz hesap</p>
+        <h2 id="auth-perks-title" class="t-h2 mt-2">Okuduğun her şey seninle kalsın</h2>
+        <ul class="auth-perks__list">
+          @each(perk in [{ icon: 'bookmark', name: 'Kaydedilenler her cihazda', text: 'Serilerini kaydet; listen telefonda da bilgisayarda da aynı.' }, { icon: 'clock', name: 'Kaldığın yerden devam', text: 'Okuduğun bölümler işaretlenir, kaydettiğin seriye yeni bölüm gelince haber verilir.' }, { icon: 'chat', name: 'Yorum, puan ve inceleme', text: 'Bölümleri tartış, serilere 10 üzerinden puan ver, inceleme yaz.' }, { icon: 'trophy', name: 'Seviye, rozet ve kartlar', text: 'Okudukça EXP kazan; rozet, kart ve kozmetiklerin kilidini aç.' }])
+          <li class="auth-perks__item">
+            <span class="tone-icon" data-tone="accent">
+              @!component('components/icon', { name: perk.icon })
+            </span>
+            <div class="min-w-0">
+              <p class="auth-perks__name">{{ perk.name }}</p>
+              <p class="auth-perks__text">{{ perk.text }}</p>
+            </div>
+          </li>
+          @end
+        </ul>
+        <p class="auth-perks__note">
+          @!component('components/icon', { name: 'check-circle' })
+          Satın alma yok: her şey okuyarak kazanılır.
+        </p>
+      </aside>
     </div>
   </div>
 @end

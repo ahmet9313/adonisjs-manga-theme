@@ -6,10 +6,14 @@
 @let(hue = [...(user.username || 'u')].reduce((sum, char) => sum + char.charCodeAt(0), 0) * 37 % 360)
 @let(frameVisual = $props.get('frame'))
 <span class="relative inline-flex shrink-0 {{ size }}">
-  <span data-user-avatar class="relative inline-flex h-full w-full overflow-hidden rounded-full bg-(--t-field)">
-    <img data-avatar-img src="{{ user.avatar || '' }}" alt="" class="absolute inset-0 h-full w-full object-cover {{ user.avatar ? '' : 'hidden' }}" loading="lazy" decoding="async">
+  <span data-user-avatar class="relative inline-flex h-full w-full overflow-hidden rounded-full bg-(--t-surface-2)">
+    <img data-avatar-img alt="" class="absolute inset-0 h-full w-full object-cover {{ user.avatar ? '' : 'hidden' }}" loading="lazy" decoding="async"
+      @if(user.avatar)
+      src="{{ user.avatar }}"
+      @end
+      >
     <span data-avatar-fallback aria-hidden="true"
-          class="flex h-full w-full items-center justify-center font-bold text-(--t-heading) {{ text }} {{ user.avatar ? 'hidden' : '' }}"
+          class="flex h-full w-full items-center justify-center font-bold text-on-image {{ text }} {{ user.avatar ? 'hidden' : '' }}"
           style="background: linear-gradient(135deg, hsl({{ hue }} 70% 45%), hsl({{ (hue + 50) % 360 }} 70% 35%))">
       {{ (user.fullName || user.username || '?').charAt(0).toUpperCase() }}
     </span>

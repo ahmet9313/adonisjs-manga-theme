@@ -1,0 +1,20 @@
+{{--
+  Statistic tile (class `stat`). Props: label, value, hint, icon, href (whole tile is a link), class.
+--}}
+@let(tag = $props.get('href') ? 'a' : 'div')
+<{{ tag }} class="stat {{ $props.get('class', '') }}"
+  @if($props.get('href'))
+  href="{{ $props.get('href') }}"
+  @end
+  >
+  <span class="stat__label">
+    @if($props.get('icon'))
+    @!component('components/icon', { name: $props.get('icon') })
+    @end
+    {{ $props.get('label', '') }}
+  </span>
+  <span class="stat__value">{{ $props.get('value', 0) }}</span>
+  @if($props.get('hint'))
+  <span class="stat__hint">{{ $props.get('hint') }}</span>
+  @end
+</{{ tag }}>

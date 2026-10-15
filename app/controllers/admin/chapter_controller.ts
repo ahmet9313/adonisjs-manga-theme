@@ -14,7 +14,9 @@ export default class ChapterAdminController {
     const page = pageNumber(request.input('page'))
     const perPage = pageSize(request.input('per_page'))
 
-    let query = Chapter.query().preload('series').orderBy('createdAt', 'desc')
+    let query = Chapter.query()
+      .preload('series', (series) => series.preload('contentType'))
+      .orderBy('createdAt', 'desc')
 
     if (seriesId) {
       query = query.where('seriesId', seriesId)
@@ -25,6 +27,14 @@ export default class ChapterAdminController {
     chapters.queryString({ per_page: perPage, ...(seriesId ? { series_id: seriesId } : {}) })
 
     const seriesList = await SeriesModel.query().orderBy('title', 'asc').select('id', 'title')
+    // The filtered series is shown above the table (cover, type, chapter count, links).
+    const selectedSeries = seriesId
+      ? await SeriesModel.query()
+          .where('id', seriesId)
+          .preload('contentType')
+          .withCount('chapters')
+          .first()
+      : null
 
     return view.render('pages/admin/chapters/index', {
       title: 'Bölümler',
@@ -32,6 +42,7 @@ export default class ChapterAdminController {
       paginator: chapters,
       seriesList,
       selectedSeriesId: seriesId ? Number(seriesId) : null,
+      selectedSeries,
       perPage,
     })
   }

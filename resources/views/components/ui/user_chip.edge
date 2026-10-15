@@ -1,0 +1,50 @@
+{{--
+  Avatar + name (with the equipped frame and name effect), level and role (class `user-chip`).
+  Props: user, look (default lookOf(user)), size sm|md|lg (md), meta (text under the name),
+         href (default the profile; false = no link), showLevel (true), showRole (false),
+         online (adds the presence dot when true/false is given), class.
+  Slot: main (extra content after the meta line).
+--}}
+@let(body = (await $slots.main()).trim())
+@let(look = $props.get('look') || lookOf(user))
+@let(size = $props.get('size', 'md'))
+@let(avatarSize = { sm: 'h-7 w-7', md: 'h-10 w-10', lg: 'h-14 w-14' }[size])
+@let(avatarText = { sm: 'text-[11px]', md: 'text-sm', lg: 'text-lg' }[size])
+@let(href = $props.get('href') === false ? '' : $props.get('href', '/uye/' + user.username))
+<div class="user-chip {{ $props.get('class', '') }}">
+  @if(href)
+  <a href="{{ href }}" class="shrink-0 rounded-full" tabindex="-1" aria-hidden="true">
+    @!component('components/avatar', { user, size: avatarSize, text: avatarText, frame: look.frame })
+  </a>
+  @else
+  @!component('components/avatar', { user, size: avatarSize, text: avatarText, frame: look.frame })
+  @end
+  <div class="min-w-0">
+    <p class="user-chip__name">
+      @if(href)
+      <a href="{{ href }}" class="min-w-0 truncate hover:underline">
+        @!component('components/user_name', { user, look })
+      </a>
+      @else
+      <span class="min-w-0 truncate">
+        @!component('components/user_name', { user, look })
+      </span>
+      @end
+      @if($props.has('online'))
+      <span class="presence" data-online="{{ $props.get('online') ? '1' : '0' }}" title="{{ $props.get('online') ? 'Çevrimiçi' : 'Çevrimdışı' }}"></span>
+      @end
+      @if($props.get('showLevel', true))
+      @!component('components/level_badge', { level: levelOf(user).level })
+      @end
+      @if($props.get('showRole') && user.roleInfo)
+      @!component('components/role_badge', { user })
+      @end
+    </p>
+    @if($props.get('meta'))
+    <p class="user-chip__meta">{{ $props.get('meta') }}</p>
+    @end
+    @if(body)
+    {{{ body }}}
+    @end
+  </div>
+</div>

@@ -1,0 +1,154 @@
+{{--
+  Shared list of the four dictionaries: genres, authors, artists and content types.
+  The controller passes `dictionary` (labels, base URL, catalogue filter, delete texts; see
+  app/controllers/admin/*_controller.ts), the paginated `items` with `series_count`, `perPage`
+  and `search` (?q=). Quick add posts `name` to `<base>/ekle`, like the full form.
+  Genres, authors and artists are detached from their series on delete (cascade); a content type
+  that series use cannot be deleted (restrict), so its button is disabled with the reason.
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(first = items.total ? (items.currentPage - 1) * items.perPage + 1 : 0)
+@let(last = Math.min(items.currentPage * items.perPage, items.total))
+@let(singularLower = dictionary.singular.toLocaleLowerCase('tr'))
+@component('components/layout/admin', { title, description: dictionary.description })
+  @slot('main')
+    <div class="max-w-4xl">
+      <section class="panel panel--tight" aria-labelledby="quick-add-title">
+        <h2 id="quick-add-title" class="sr-only">{{ dictionary.addLabel }}</h2>
+        <form action="{{ dictionary.base }}/ekle" method="POST" class="admin-quickadd" data-submit-once>
+          {{ csrfField() }}
+          @!component('components/ui/field', { name: 'name', id: 'quick-name', label: dictionary.addLabel, required: true, maxlength: dictionary.maxLength, placeholder: dictionary.placeholder, autocomplete: 'off' })
+          <div class="admin-quickadd__submit">
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'plus', block: true })
+              Ekle
+            @end
+          </div>
+        </form>
+      </section>
+
+      <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <form method="GET" action="{{ dictionary.base }}" class="admin-search min-w-0 flex-1" role="search" aria-label="{{ dictionary.label }} içinde ara">
+          <label class="control control--icon">
+            @!component('components/icon', { name: 'search' })
+            <span class="sr-only">{{ dictionary.label }} içinde ara</span>
+            <input type="search" name="q" value="{{ search }}" placeholder="Ada göre ara" autocomplete="off">
+          </label>
+          @if(perPage !== 20)
+          <input type="hidden" name="per_page" value="{{ perPage }}">
+          @end
+          @component('components/ui/button', { type: 'submit' })
+            Ara
+          @end
+          @if(search)
+          @component('components/ui/button', { variant: 'ghost', href: dictionary.base + (perPage !== 20 ? '?per_page=' + perPage : '') })
+            Temizle
+          @end
+          @end
+        </form>
+        <p class="admin-summary m-0">
+          @if(search)
+          <span><strong>{{ number(items.total) }}</strong> sonuç</span>
+          @else
+          <span><strong>{{ number(items.total) }}</strong> {{ singularLower }}</span>
+          @end
+        </p>
+      </div>
+
+      @if(items.length)
+      <div class="table-wrap mt-3">
+        <table class="table table--stack admin-table">
+          <caption class="sr-only">{{ dictionary.label }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Ad</th>
+              <th scope="col">Adres</th>
+              <th scope="col" class="num">Seri</th>
+              <th scope="col"><span class="sr-only">İşlemler</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(item in items)
+            @let(count = Number(item.$extras.series_count || 0))
+            @let(catalogUrl = '/seriler?' + dictionary.catalogParam + '=' + encodeURIComponent(item[dictionary.catalogField]))
+            <tr>
+              <td class="cell-main">
+                <div class="admin-cell__body">
+                  <a href="{{ dictionary.base }}/{{ item.id }}/duzenle" class="admin-title">{{ item.name }}</a>
+                  <p class="admin-cell__meta md:hidden"><span class="admin-mono">{{ item.slug }}</span> · {{ number(count) }} seri</p>
+                </div>
+              </td>
+              <td data-label="Adres" class="max-md:hidden">
+                <span class="admin-mono">{{ item.slug }}</span>
+              </td>
+              <td data-label="Seri" class="num max-md:hidden">
+                @if(count)
+                <a href="{{ catalogUrl }}" class="link" target="_blank" rel="noopener" title="Bu {{ singularLower }} ile katalogda ara (yeni sekme)">{{ number(count) }}</a>
+                @else
+                <span class="text-muted">0</span>
+                @end
+              </td>
+              <td class="actions">
+                <div class="admin-actions">
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: dictionary.base + '/' + item.id + '/duzenle', label: 'Düzenle: ' + item.name, title: 'Düzenle' })
+                  @if(dictionary.restrictDelete && count)
+                  <span class="inline-flex" title="{{ dictionary.restrictNote.replace('{n}', count) }}">
+                    @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'trash', label: 'Silinemez: ' + item.name + '. ' + dictionary.restrictNote.replace('{n}', count), disabled: true })
+                  </span>
+                  @else
+                  <form action="{{ dictionary.base }}/{{ item.id }}/sil" method="POST" data-submit-once
+                        data-confirm="“{{ item.name }}” {{ count ? dictionary.deleteUsed.replace('{n}', count) : dictionary.deleteUnused }}"
+                        data-confirm-title="{{ dictionary.deleteTitle }}" data-confirm-label="Sil">
+                    {{ csrfField() }}
+                    @!component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'trash', label: 'Sil: ' + item.name, title: 'Sil', class: 'admin-danger' })
+                  </form>
+                  @end
+                </div>
+              </td>
+            </tr>
+            @end
+          </tbody>
+        </table>
+      </div>
+
+      <div class="admin-listfoot">
+        <p class="admin-listfoot__info">{{ number(first) }}–{{ number(last) }} / {{ number(items.total) }}</p>
+        @!component('components/ui/pagination', { current: items.currentPage, total: items.lastPage, label: dictionary.label + ' sayfaları' })
+        <form method="GET" action="{{ dictionary.base }}" class="admin-perpage" x-data>
+          @if(search)
+          <input type="hidden" name="q" value="{{ search }}">
+          @end
+          <label for="per-page">Sayfa başına</label>
+          <select id="per-page" name="per_page" class="control control--sm" @change="$el.form.requestSubmit()">
+            @each(size in site.adminPageSizes)
+            <option value="{{ size }}" {{ perPage === size ? 'selected' : '' }}>{{ size }}</option>
+            @end
+          </select>
+          <noscript>
+            <button type="submit" class="btn btn--secondary btn--sm">Uygula</button>
+          </noscript>
+        </form>
+      </div>
+      @elseif(items.total)
+      <div class="mt-3">
+        @component('components/ui/empty_state', { icon: 'list', title: 'Bu sayfada kayıt yok', description: 'İstenen sayfa son sayfadan sonra geliyor.' })
+          @component('components/ui/button', { href: withQuery(request, { page: null }), icon: 'arrow-left' })
+            İlk sayfaya dön
+          @end
+        @end
+      </div>
+      @elseif(search)
+      <div class="mt-3">
+        @component('components/ui/empty_state', { icon: 'search', title: '“' + search + '” ile eşleşen kayıt yok', description: 'Farklı bir yazım deneyin ya da yukarıdaki formdan yeni ' + singularLower + ' ekleyin.' })
+          @component('components/ui/button', { href: dictionary.base, icon: 'x' })
+            Aramayı temizle
+          @end
+        @end
+      </div>
+      @else
+      <div class="mt-3">
+        @!component('components/ui/empty_state', { icon: 'tag', title: dictionary.emptyTitle, description: dictionary.emptyText })
+      </div>
+      @end
+    </div>
+  @end
+@end

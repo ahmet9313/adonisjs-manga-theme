@@ -1,60 +1,71 @@
-@component('components/layout/main', { title })
+{{--
+  Chapter reader: sticky toolbar (banner slot, ui('reader_toolbar')), chapter header, pages or
+  novel text, end-of-chapter card, bottom navigation and the chapter's comments.
+  Hooks: readingTracker + data-chapter (guest history), data-reward-toast (EXP and card drops),
+  reader (reading settings, page states, ← / → keys) and commentSection (loads when visible).
+--}}
+@let(seriesUrl = '/series/' + series.type + '/' + series.slug)
+@let(chapterUrl = (number) => seriesUrl + '/' + number)
+@let(typeLabel = series.type.charAt(0).toUpperCase() + series.type.slice(1))
+@let(pageCount = chapter.pages ? chapter.pages.length : 0)
+@let(isNovel = !pageCount && Boolean(chapter.textContent))
+@let(readMinutes = isNovel ? Math.max(1, Math.round(chapter.textContent.trim().split(/\s+/).length / 200)) : 0)
+@let(navId = 'top')
+@component('components/layout/main', { title, description: series.title + ', Bölüm ' + chapter.number + (chapter.title ? ': ' + chapter.title : '') + '. ' + site.name + ' üzerinde oku.' })
+
+@slot('banner')
+  @if(ui('reader_toolbar'))
+  @include('partials/reader/toolbar')
+  @end
+@end
 
 @slot('main')
   <div x-data="readingTracker" data-chapter="{{ JSON.stringify({ type: series.type, slug: series.slug, number: chapter.number }) }}" hidden></div>
   @if(reward)
-    <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Yeni bölüm okundu: +' + reward.exp + ' EXP', tone: 'success' }) }}"></div>
-    @if(reward.card)
-      <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Kart düştü! ' + reward.card.name + ' (' + reward.card.rarity + ')', tone: 'reward', image: reward.card.image }) }}"></div>
+  <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Yeni bölüm okundu: +' + reward.exp + ' EXP', tone: 'success' }) }}"></div>
+  @if(reward.card)
+  <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Kart düştü! ' + reward.card.name + ' (' + reward.card.rarity + ')', tone: 'reward', image: reward.card.image }) }}"></div>
+  @end
+  @end
+
+  <div class="reader" x-data="reader" data-fit="width" :data-fit="prefs.fit"
+    data-config="{{ JSON.stringify({ base: seriesUrl + '/', prev: prevChapter ? chapterUrl(prevChapter.number) : null, next: nextChapter ? chapterUrl(nextChapter.number) : null }) }}">
+    <header class="reader-head">
+      <a href="{{ seriesUrl }}" class="reader-head__series">
+        @!component('components/icon', { name: 'arrow-left', class: 'h-4 w-4' })
+        {{ series.title }}
+      </a>
+      <h1 class="reader-head__title"><span class="sr-only">{{ series.title }}, </span>Bölüm {{ chapter.number }}<span class="reader-head__name">{{ chapter.title ? ': ' + chapter.title : '' }}</span></h1>
+      <p class="reader-head__meta">
+        @!component('components/ui/badge', { kind: 'type', value: series.type, size: 'sm' })
+        @if(pageCount)
+        <span>{{ pageCount }} sayfa</span>
+        @elseif(isNovel)
+        <span>Yaklaşık {{ readMinutes }} dk okuma</span>
+        @end
+        @if(chapter.timeAgo)
+        <span aria-hidden="true">·</span>
+        <span>{{ chapter.timeAgo }}</span>
+        @end
+      </p>
+    </header>
+
+    @if(!ui('reader_toolbar'))
+    @include('partials/reader/nav')
     @end
-  @end
-  {{-- Header --}}
-  <div class="text-center mb-6">
-    <h1 class="text-xl font-bold text-(--t-heading)">{{ series.title }} {{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</h1>
-    <p class="text-sm text-gray-500 mt-1">
-      Okuduğunuz Seri: <a href="/series/{{ series.type }}/{{ series.slug }}" class="text-emerald-400 hover:text-emerald-300">{{ series.title }}</a>
-    </p>
+
+    <div id="reader-content" class="reader-content">
+      @include('partials/reader/pages')
+    </div>
+
+    @include('partials/reader/end_card')
+
+    @assign(navId = 'bottom')
+    @include('partials/reader/nav')
   </div>
-
-  {{-- Navigation --}}
-  @include('partials/chapter_navigation')
-
-  {{-- Pages (Image) --}}
-  @if(chapter.pages && chapter.pages.length)
-  <div class="flex flex-col items-center gap-0">
-    @each((page, index) in chapter.pages)
-    <img
-      src="{{ page }}"
-      alt="{{ series.title }} bölüm {{ chapter.number }} sayfa {{ index + 1 }}" decoding="async"
-      class="w-full max-w-3xl"
-      loading="lazy"
-    >
-    @end
-  </div>
-  @end
-
-  {{-- Novel Text Content --}}
-  @if(chapter.textContent)
-  <article class="glass max-w-3xl mx-auto rounded-2xl border border-white/10 p-6 md:p-10">
-    <div class="prose prose-invert prose-sm md:prose-base max-w-none text-gray-300 leading-relaxed whitespace-pre-line break-words">{{ chapter.textContent }}</div>
-  </article>
-  @end
-
-  @if(!chapter.pages.length && !chapter.textContent)
-  <div class="text-center text-gray-500 py-12">Bu bölümde içerik bulunamadı.</div>
-  @end
-
-  {{-- End Message --}}
-  <div class="text-center py-8 text-sm text-gray-500">
-    <p><strong class="text-gray-300">{{ series.title }} — Bölüm {{ chapter.number }}</strong> sonuna geldiniz.</p>
-    <p class="mt-1 text-emerald-400">Bir sonraki bölümde görüşmek üzere keyifli okumalar dileriz.</p>
-  </div>
-
-  {{-- Bottom Navigation --}}
-  @include('partials/chapter_navigation')
 
   @if(ui('reader_comments'))
-  <div class="mx-auto max-w-3xl">
+  <div class="reader-comments">
     @include('partials/comments/section')
   </div>
   @end

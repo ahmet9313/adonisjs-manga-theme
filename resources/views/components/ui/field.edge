@@ -1,0 +1,101 @@
+{{--
+  Form field: label, control, hint and validation error (class `field`, see components.css).
+  Props: name (required), label, type text|email|password|number|url|search|date|textarea|select|
+         checkbox|toggle|color|file (text), id ('f-' + name), value, options [{ value, label }]
+         (select), placeholder, hint, required, rows (textarea), class (wrapper), controlClass.
+  The previous input (after a failed submit) wins over `value`, and the first message of
+  inputErrorsBag.<name> is shown with aria-invalid/aria-describedby. Other props are forwarded
+  to the control ('x-model', '@input', autocomplete, min, maxlength …).
+    @!component('components/ui/field', { name: 'title', label: 'Başlık', required: true, value: series ? series.title : '' })
+    @!component('components/ui/field', { name: 'status', label: 'Durum', type: 'select', value: series.status, options: site.statuses.map((s) => ({ value: s, label: s })) })
+    @!component('components/ui/field', { name: 'featured', label: 'Öne çıkar', type: 'toggle', value: series.featured })
+--}}
+@let(name = $props.get('name'))
+@let(id = $props.get('id', 'f-' + name.replace(/[^\w-]/g, '-')))
+@let(type = $props.get('type', 'text'))
+@let(isCheck = type === 'checkbox' || type === 'toggle')
+@let(flashed = flashMessages.has(name))
+@let(value = flashed ? flashMessages.get(name) : $props.get('value', ''))
+@let(checked = isCheck && (flashed ? Boolean(value) : Boolean($props.get('value'))))
+@let(error = flashMessages.has('inputErrorsBag.' + name) ? flashMessages.get('inputErrorsBag.' + name)[0] : '')
+@let(hint = $props.get('hint', ''))
+@let(describedBy = [error ? id + '-error' : '', hint ? id + '-hint' : ''].filter(Boolean).join(' '))
+@let(controlClass = ['control', $props.get('controlClass', '')].filter(Boolean).join(' '))
+@let(rest = $props.except(['name', 'id', 'type', 'label', 'value', 'options', 'hint', 'required', 'class', 'controlClass', 'rows']))
+<div class="field {{ error ? 'field--invalid' : '' }} {{ $props.get('class', '') }}">
+  @if(!isCheck)
+  <label for="{{ id }}" class="field__label">
+    {{ $props.get('label', '') }}
+    @if($props.get('required'))
+    <span class="field__req" aria-hidden="true">*</span>
+    @end
+  </label>
+  @end
+  @if(type === 'textarea')
+  <textarea id="{{ id }}" name="{{ name }}" rows="{{ $props.get('rows', 4) }}" class="{{ controlClass }}"
+    @if($props.get('required'))
+    required
+    @end
+    @if(describedBy)
+    aria-describedby="{{ describedBy }}"
+    @end
+    @if(error)
+    aria-invalid="true"
+    @end
+    {{{ attrs(rest.all()) }}}>{{ value }}</textarea>
+  @elseif(type === 'select')
+  <select id="{{ id }}" name="{{ name }}" class="{{ controlClass }}"
+    @if($props.get('required'))
+    required
+    @end
+    @if(describedBy)
+    aria-describedby="{{ describedBy }}"
+    @end
+    @if(error)
+    aria-invalid="true"
+    @end
+    {{{ attrs(rest.all()) }}}>
+    @each(option in $props.get('options', []))
+    <option value="{{ option.value }}" {{ String(option.value) === String(value) ? 'selected' : '' }}>{{ option.label }}</option>
+    @end
+  </select>
+  @elseif(isCheck)
+  <label class="check" for="{{ id }}">
+    <input type="checkbox" id="{{ id }}" name="{{ name }}" value="on" class="{{ type === 'toggle' ? 'switch' : '' }}"
+      @if(type === 'toggle')
+      role="switch"
+      @end
+      @if(checked)
+      checked
+      @end
+      @if(describedBy)
+      aria-describedby="{{ describedBy }}"
+      @end
+      {{{ attrs(rest.all()) }}}>
+    <span>
+      <span class="field__label text-(--t-text)">{{ $props.get('label', '') }}</span>
+    </span>
+  </label>
+  @else
+  <input type="{{ type }}" id="{{ id }}" name="{{ name }}" class="{{ type === 'file' ? 'block w-full text-sm text-(--t-text-2) file:mr-3 file:rounded-md file:border-0 file:bg-(--t-surface-2) file:px-3 file:py-2 file:text-sm file:font-semibold file:text-(--t-heading) hover:file:bg-(--t-hover)' : controlClass }}"
+    @if(type !== 'file' && type !== 'password')
+    value="{{ value }}"
+    @end
+    @if($props.get('required'))
+    required
+    @end
+    @if(describedBy)
+    aria-describedby="{{ describedBy }}"
+    @end
+    @if(error)
+    aria-invalid="true"
+    @end
+    {{{ attrs(rest.all()) }}}>
+  @end
+  @if(hint)
+  <p id="{{ id }}-hint" class="field__hint">{{ hint }}</p>
+  @end
+  @if(error)
+  <p id="{{ id }}-error" class="field__error" role="alert">{{ error }}</p>
+  @end
+</div>

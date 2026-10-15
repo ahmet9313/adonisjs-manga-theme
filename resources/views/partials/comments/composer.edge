@@ -1,93 +1,105 @@
 {{--
-  Composer bound to `composers[ckey]` ('root' or the parent comment id).
-  Images/GIFs: button, drag and drop onto the box, or paste (Ctrl+V).
+  Comment composer bound to composers[ckey] ('root' or the parent comment id).
+  Images and GIFs: the "Görsel" button, dropping a file on the box or pasting (Ctrl+V).
+  Ctrl/⌘ + Enter sends. Stickers come from the reader's inventory (/envanter).
 --}}
-<form
+<form class="composer" :class="composer(ckey).dragging && 'is-dragging'"
   @submit.prevent="submit(ckey)"
   @dragover.prevent="composer(ckey).dragging = true"
   @dragleave.prevent="if (!$el.contains($event.relatedTarget)) composer(ckey).dragging = false"
-  @drop.prevent="drop(ckey, $event)"
-  class="glass relative rounded-2xl border p-3 transition"
-  :class="composer(ckey).dragging ? 'border-emerald-400 ring-2 ring-emerald-400/40' : 'border-white/10 focus-within:border-emerald-500/70'"
->
-  <div x-show="composer(ckey).dragging" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-emerald-500/10 text-sm font-semibold text-emerald-200">
+  @drop.prevent="drop(ckey, $event)">
+  <div class="composer__drop" x-show="composer(ckey).dragging" x-cloak aria-hidden="true">
+    @!component('components/icon', { name: 'photo', class: 'h-5 w-5' })
     Görseli veya GIF'i buraya bırak
   </div>
-  <label :for="ckey === 'root' ? 'comment-root' : 'reply-' + ckey" class="sr-only" x-text="ckey === 'root' ? 'Yorum yaz' : 'Yanıt yaz'"></label>
+
+  <label :for="ckey === 'root' ? 'comment-root' : 'reply-' + ckey" class="sr-only" x-text="ckey === 'root' ? 'Yorum yaz' : 'Yanıt yaz'">Yorum yaz</label>
   <textarea
     :id="ckey === 'root' ? 'comment-root' : 'reply-' + ckey"
+    class="composer__input"
+    rows="2"
     x-model="composer(ckey).text"
     @input="grow($event)"
     @paste="paste(ckey, $event)"
     @keydown.ctrl.enter.prevent="submit(ckey)"
     @keydown.meta.enter.prevent="submit(ckey)"
-    :placeholder="ckey === 'root' ? 'Ne düşünüyorsun? Görsel veya GIF yapıştırabilirsin.' : 'Yanıtını yaz…'"
-    rows="2"
-    class="block max-h-72 w-full resize-none bg-transparent text-[15px] leading-relaxed text-gray-100 placeholder-gray-500 focus:outline-none"
+    :placeholder="ckey === 'root' ? 'Ne düşünüyorsun? Görsel veya GIF de ekleyebilirsin.' : 'Yanıtını yaz…'"
   ></textarea>
 
-  {{-- Sticker preview --}}
-  <div x-show="composer(ckey).sticker" x-cloak class="relative mt-2 inline-block">
-    <img :src="composer(ckey).sticker && composer(ckey).sticker.visual.img" :alt="composer(ckey).sticker && composer(ckey).sticker.name" class="h-24 w-24 object-contain">
-    <button type="button" @click="composer(ckey).sticker = null" aria-label="Çıkartmayı kaldır" class="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/80 text-(--t-heading) hover:bg-black">
-      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
-  </div>
-
-  {{-- Attachment preview --}}
-  <div x-show="composer(ckey).preview" x-cloak class="relative mt-2 inline-block">
-    <img :src="composer(ckey).preview" alt="Eklenen görsel" class="max-h-56 rounded-lg border border-white/10 object-contain">
-    <span x-show="composer(ckey).file && composer(ckey).file.type === 'image/gif'" class="absolute bottom-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-(--t-heading)">GIF</span>
-    <button type="button" @click="clearImage(ckey)" aria-label="Görseli kaldır" class="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-(--t-heading) hover:bg-black/90">
-      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
-  </div>
-
-  <p x-show="composer(ckey).error" x-cloak x-text="composer(ckey).error" role="alert" class="mt-2 text-sm text-red-400"></p>
-
-  <div class="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-white/10 pt-2">
-    <div class="flex min-w-0 items-center gap-0.5 sm:gap-1">
-      <button type="button" @click="$el.parentElement.querySelector('input[type=file]').click()" title="Görsel veya GIF ekle"
-              class="flex h-9 items-center gap-1.5 rounded-full px-2.5 text-emerald-400 transition hover:bg-emerald-500/10 active:scale-95">
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        <span class="rounded border border-current px-1 text-[10px] font-bold leading-4">GIF</span>
-      </button>
-      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" @change="pick(ckey, $event)">
-      <div class="relative" x-data="{ picker: false }" @click.outside="picker = false" @keydown.escape.stop="picker = false">
-        <button type="button" @click="picker = !picker; if (picker) loadStickers()" :aria-expanded="picker.toString()" title="Çıkartma ekle"
-                class="flex h-9 w-9 items-center justify-center rounded-full text-emerald-400 transition hover:bg-emerald-500/10 active:scale-95">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z"/></svg>
+  <div class="composer__attachments" x-show="composer(ckey).sticker || composer(ckey).preview" x-cloak>
+    <template x-if="composer(ckey).sticker">
+      <div class="composer__thumb">
+        <img :src="composer(ckey).sticker.visual.img" :alt="composer(ckey).sticker.name + ' çıkartması'" class="h-20 w-20 object-contain">
+        <button type="button" class="composer__remove" @click="composer(ckey).sticker = null" aria-label="Çıkartmayı kaldır">
+          @!component('components/icon', { name: 'x', class: 'h-3.5 w-3.5', stroke: 2.2 })
         </button>
-        <div x-cloak x-show="picker" x-transition class="absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[calc(100vw-3rem)] rounded-2xl border border-white/10 bg-(--t-surface-2) p-3 shadow-2xl">
-          <div class="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wide text-gray-400">
-            <span>Çıkartmalarım</span>
-            <a href="/kozmetik/cikartmalar" class="normal-case text-emerald-300 hover:underline">Tümü</a>
+      </div>
+    </template>
+    <template x-if="composer(ckey).preview">
+      <div class="composer__thumb">
+        <img :src="composer(ckey).preview" alt="Eklenen görsel" class="max-h-48 max-w-full border border-(--t-border) object-contain">
+        <span x-show="composer(ckey).file && composer(ckey).file.type === 'image/gif'" class="badge badge--solid badge--sm composer__gif" data-tone="neutral">GIF</span>
+        <button type="button" class="composer__remove" @click="clearImage(ckey)" aria-label="Görseli kaldır">
+          @!component('components/icon', { name: 'x', class: 'h-3.5 w-3.5', stroke: 2.2 })
+        </button>
+      </div>
+    </template>
+  </div>
+
+  <p x-show="composer(ckey).error" x-cloak x-text="composer(ckey).error" role="alert" class="field__error composer__error"></p>
+
+  <div class="composer__bar">
+    <div class="composer__tools">
+      <label class="btn btn--ghost btn--sm composer__file" title="Görsel veya GIF ekle (en fazla 8 MB)">
+        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="sr-only" @change="pick(ckey, $event)">
+        @!component('components/icon', { name: 'photo', class: 'btn__icon' })
+        <span class="sr-only sm:not-sr-only">Görsel</span>
+      </label>
+
+      <div class="relative" x-data="dropdown" @keydown="onKeydown($event)" @click.outside="close()">
+        <button type="button" x-ref="button" class="btn btn--ghost btn--sm" @click="toggle(); if (open) loadStickers()" aria-expanded="false" :aria-expanded="open.toString()" title="Çıkartma ekle">
+          @!component('components/icon', { name: 'smile', class: 'btn__icon' })
+          <span class="sr-only sm:not-sr-only">Çıkartma</span>
+        </button>
+        <div x-ref="panel" x-cloak x-show="open" x-transition.origin.top.left.duration.120ms class="menu sticker-menu absolute left-0 top-full z-20 mt-2">
+          <div class="sticker-menu__head">
+            <p class="menu__label">Çıkartmalarım</p>
+            <a href="/kozmetik/cikartmalar" class="link text-xs">Tümü</a>
           </div>
-          <p x-show="stickers === null" class="py-4 text-center text-sm text-gray-400">Yükleniyor…</p>
-          <p x-show="stickers && !stickers.length" class="py-4 text-center text-sm text-gray-400">Henüz açılmış çıkartman yok.</p>
-          <div class="grid max-h-56 grid-cols-4 gap-2 overflow-y-auto">
+          <div x-show="stickers === null" class="sticker-grid" role="status">
+            <span class="sr-only">Çıkartmalar yükleniyor…</span>
+            <span class="skeleton aspect-square" aria-hidden="true"></span>
+            <span class="skeleton aspect-square" aria-hidden="true"></span>
+            <span class="skeleton aspect-square" aria-hidden="true"></span>
+            <span class="skeleton aspect-square" aria-hidden="true"></span>
+          </div>
+          <p x-show="stickers && !stickers.length" class="sticker-menu__empty">
+            Henüz açılmış çıkartman yok. Seviye atladıkça ve rozet kazandıkça açılır.
+          </p>
+          <div x-show="stickers && stickers.length" class="sticker-grid">
             <template x-for="sticker in stickers || []" :key="sticker.id">
-              <button type="button" @click="composer(ckey).sticker = sticker; picker = false" :title="sticker.name"
-                      class="flex aspect-square items-center justify-center rounded-xl bg-white/5 p-1 transition hover:bg-white/15 active:scale-95">
-                <img :src="sticker.visual.img" :alt="sticker.name" class="max-h-full max-w-full object-contain" loading="lazy">
+              <button type="button" class="sticker-grid__item" @click="composer(ckey).sticker = sticker; close(true)" :title="sticker.name" :aria-label="sticker.name + ' çıkartmasını ekle'">
+                <img :src="sticker.visual.img" alt="" loading="lazy" decoding="async">
               </button>
             </template>
           </div>
         </div>
       </div>
-      <button type="button" @click="composer(ckey).spoiler = !composer(ckey).spoiler" :aria-pressed="composer(ckey).spoiler.toString()" title="Spoiler olarak işaretle"
-              class="flex h-9 items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition active:scale-95"
-              :class="composer(ckey).spoiler ? 'bg-amber-500/15 text-amber-300' : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
-        Spoiler
+
+      <button type="button" class="btn btn--ghost btn--sm composer__spoiler" @click="composer(ckey).spoiler = !composer(ckey).spoiler" aria-pressed="false" :aria-pressed="composer(ckey).spoiler.toString()" title="Spoiler olarak işaretle">
+        @!component('components/icon', { name: 'eye-off', class: 'btn__icon' })
+        <span class="sr-only sm:not-sr-only">Spoiler</span>
       </button>
     </div>
-    <div class="ml-auto flex items-center gap-2 sm:gap-3">
-      <span class="text-xs tabular-nums" :class="composer(ckey).text.length > maxLength ? 'text-red-400' : 'text-gray-500'" x-show="composer(ckey).text.length > maxLength - 200" x-text="maxLength - composer(ckey).text.length"></span>
-      <button type="button" x-show="ckey !== 'root'" @click="replyingTo = null" class="rounded-full px-3 py-1.5 text-sm text-gray-400 hover:text-(--t-heading)">Vazgeç</button>
-      <button type="submit" :disabled="!canSend(ckey)"
-              class="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-bold text-(--t-on-accent) transition hover:bg-emerald-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-              x-text="composer(ckey).busy ? 'Gönderiliyor…' : (ckey === 'root' ? 'Gönder' : 'Yanıtla')"></button>
+
+    <div class="composer__send">
+      <span class="composer__count t-num" x-show="composer(ckey).text.length" x-cloak
+            :data-tone="composer(ckey).text.length > maxLength ? 'danger' : (composer(ckey).text.length > maxLength - 100 ? 'warning' : '')"
+            x-text="composer(ckey).text.length + ' / ' + maxLength"></span>
+      <button type="button" x-show="ckey !== 'root'" class="btn btn--ghost btn--sm" @click="replyingTo = null">Vazgeç</button>
+      <button type="submit" class="btn btn--primary btn--sm" :disabled="!canSend(ckey)" :aria-busy="composer(ckey).busy.toString()" title="Ctrl + Enter ile de gönderebilirsin">
+        <span x-text="composer(ckey).busy ? 'Gönderiliyor' : (ckey === 'root' ? 'Gönder' : 'Yanıtla')">Gönder</span>
+      </button>
     </div>
   </div>
 </form>

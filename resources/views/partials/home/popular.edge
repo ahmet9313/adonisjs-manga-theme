@@ -1,0 +1,33 @@
+{{--
+  "Popüler Seriler" (switch home_popular): the most read and saved series as a ranked rail of
+  compact cards (signed-in readers do not see series they already read). The rank is drawn on
+  the cover with a CSS counter; the <ol> carries the order for assistive technology.
+--}}
+<section class="section" aria-labelledby="home-popular-title" x-data="homeRail">
+  @component('components/ui/section_head', {
+    title: 'Popüler Seriler',
+    id: 'home-popular-title',
+    icon: 'fire',
+    description: signedIn ? 'Henüz okumadığın, en çok okunan seriler' : 'En çok okunan ve kaydedilen seriler',
+    href: '/oneriler?sekme=populer'
+  })
+    @slot('actions')
+    <div class="home-rail-nav">
+      <button type="button" class="btn btn--secondary btn--sm btn--icon" @click="scroll(-1)" :disabled="atStart" aria-label="Önceki seriler">
+        @!component('components/icon', { name: 'chevron-left', class: 'btn__icon' })
+      </button>
+      <button type="button" class="btn btn--secondary btn--sm btn--icon" @click="scroll(1)" :disabled="atEnd" aria-label="Sonraki seriler">
+        @!component('components/icon', { name: 'chevron-right', class: 'btn__icon' })
+      </button>
+    </div>
+    @end
+  @end
+
+  <ol class="rail home-rail home-rank" x-ref="track" @scroll.passive.debounce.60ms="update()">
+    @each(item in popular)
+    <li>
+      @!component('components/series/card', { series: item, layout: 'compact', showStatus: false, meta: item.readers ? item.readers + ' okur' : '' })
+    </li>
+    @end
+  </ol>
+</section>

@@ -1,3 +1,8 @@
+{{-- First validation message of a field. Props: field, id (for aria-describedby), class. --}}
 @if(flashMessages.has('inputErrorsBag.' + field))
-  <p class="mt-1 text-sm text-red-400" role="alert">{{ flashMessages.get('inputErrorsBag.' + field)[0] }}</p>
+  <p class="field__error mt-1 {{ $props.get('class', '') }}" role="alert"
+    @if($props.get('id'))
+    id="{{ $props.get('id') }}"
+    @end
+    >{{ flashMessages.get('inputErrorsBag.' + field)[0] }}</p>
 @end

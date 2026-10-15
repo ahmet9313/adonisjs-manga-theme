@@ -1,0 +1,88 @@
+{{--
+  Profile summary column: level progress and statistics (ui/stat), equipped cosmetics
+  (ui/cosmetic_preview) and earned badges. Comes before the activity in the DOM, so it is on top
+  on small screens; beside the activity (right) from lg.
+--}}
+@let(equipKinds = [
+  { kind: 'frame', label: 'Çerçeve', icon: 'frame' },
+  { kind: 'effect', label: 'Ad efekti', icon: 'sparkles' },
+  { kind: 'wallpaper', label: 'Duvar kağıdı', icon: 'photo' }
+])
+<aside class="profile-aside" aria-label="Profil özeti" x-data>
+  @component('components/ui/panel', { title: 'İstatistikler', id: 'profile-stats', padding: 'tight', class: 'profile-aside__stats' })
+    <div class="profile-level">
+      <div class="profile-level__head">
+        <span class="profile-level__title">Seviye {{ progress.level }}</span>
+        <span class="t-caption t-num">
+          @if(progress.needed)
+          {{ fmt(progress.current) }} / {{ fmt(progress.needed) }} EXP
+          @else
+          En yüksek seviye
+          @end
+        </span>
+      </div>
+      @!component('components/ui/progress', { value: progress.needed ? progress.current : 1, max: progress.needed || 1, label: 'Sonraki seviyeye ilerleme', size: 'sm', valueText: progress.needed ? 'Yüzde ' + progress.progress : 'En yüksek seviye' })
+    </div>
+
+    <div class="profile-stats">
+      @!component('components/ui/stat', { label: 'Okunan bölüm', value: fmt(stats.chapters), icon: 'book-open', class: 'profile-stat' })
+      @!component('components/ui/stat', { label: 'Yorum', value: fmt(stats.roots), icon: 'chat', class: 'profile-stat' })
+      @!component('components/ui/stat', { label: 'Yazdığı yanıt', value: fmt(stats.replies), icon: 'reply', class: 'profile-stat' })
+      @!component('components/ui/stat', { label: 'Aldığı yanıt', value: fmt(stats.repliesReceived), icon: 'inbox', class: 'profile-stat' })
+      @!component('components/ui/stat', { label: 'Aldığı artı oy', value: fmt(stats.likes), icon: 'thumb-up', class: 'profile-stat' })
+      @!component('components/ui/stat', { label: 'İnceleme', value: fmt(stats.reviews), icon: 'pencil', class: 'profile-stat' })
+      @!component('components/ui/stat', { label: 'Ortalama puan', value: stats.ratings ? stats.averageRating.toFixed(1) : '—', hint: stats.ratings ? fmt(stats.ratings) + ' puan' : 'Henüz puan yok', icon: 'star', class: 'profile-stat' })
+      @!component('components/ui/stat', { label: 'Kart', value: fmt(stats.cards), hint: 'Toplam ' + fmt(cardTotal) + ' kart', icon: 'cards', class: 'profile-stat' })
+    </div>
+  @end
+
+  @component('components/ui/panel', { title: 'Kuşanılanlar', id: 'profile-equipped', padding: 'tight', class: 'profile-aside__equipped' })
+    @slot('actions')
+      @if(isOwner)
+      <button type="button" class="btn btn--ghost btn--sm" @click="$dispatch('open-inventory', 'frame')">Değiştir</button>
+      @end
+    @end
+    <ul class="profile-equipped">
+      @each(entry in equipKinds)
+      @let(item = equipped[entry.kind])
+      <li class="profile-equipped__item">
+        @if(item)
+        @!component('components/ui/cosmetic_preview', { kind: entry.kind, visual: item.visual, user: member, size: 'sm', class: 'shrink-0 max-lg:w-full' })
+        @else
+        <span class="profile-equipped__none" aria-hidden="true">
+          @!component('components/icon', { name: entry.icon, class: 'h-5 w-5' })
+        </span>
+        @end
+        <span class="min-w-0">
+          <span class="profile-equipped__kind">{{ entry.label }}</span>
+          <span class="profile-equipped__name {{ item ? '' : 'is-empty' }}">{{ item ? item.name : 'Kuşanılmadı' }}</span>
+        </span>
+      </li>
+      @end
+    </ul>
+  @end
+
+  @component('components/ui/panel', { title: 'Rozetler', id: 'profile-badges', padding: 'tight', class: 'profile-aside__badges' })
+    @slot('actions')
+      <span class="badge" data-tone="neutral" title="Kazanılan rozet">{{ earnedBadges.length }}</span>
+      @if(isOwner)
+      <a href="/rozetler" class="btn btn--ghost btn--sm">Tümü</a>
+      @end
+    @end
+    @if(earnedBadges.length)
+    <ul class="profile-badges">
+      @each(badge in earnedBadges)
+      <li class="profile-badge" title="{{ badge.name }}: {{ badge.description }}">
+        <span class="profile-badge__medal bg-gradient-to-br {{ badge.tone }}" aria-hidden="true">{{ badge.icon }}</span>
+        <span class="profile-badge__name">{{ badge.name }}</span>
+      </li>
+      @end
+    </ul>
+    @else
+    <p class="profile-note">
+      @!component('components/icon', { name: 'trophy', class: 'h-4 w-4 shrink-0' })
+      {{ isOwner ? 'Okudukça, yorum yaptıkça ve her gün uğradıkça rozet kazanırsın.' : 'Henüz rozet kazanılmamış.' }}
+    </p>
+    @end
+  @end
+</aside>

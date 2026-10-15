@@ -1,0 +1,15 @@
+{{--
+  Inline message (class `alert`). Props: tone info|success|warning|danger|accent (info), title,
+  icon (defaults by tone), role (status; 'alert' for errors), class. Slot: main.
+--}}
+@let(tone = $props.get('tone', 'info'))
+@let(icon = $props.get('icon', { success: 'check-circle', warning: 'exclamation', danger: 'exclamation', accent: 'sparkles' }[tone] || 'info'))
+<div class="alert {{ $props.get('class', '') }}" data-tone="{{ tone }}" role="{{ $props.get('role', tone === 'danger' ? 'alert' : 'status') }}">
+  @!component('components/icon', { name: icon })
+  <div class="min-w-0 flex-1">
+    @if($props.get('title'))
+    <p class="alert__title">{{ $props.get('title') }}</p>
+    @end
+    {{{ await $slots.main() }}}
+  </div>
+</div>

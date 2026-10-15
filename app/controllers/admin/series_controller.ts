@@ -1,6 +1,7 @@
-import { now, slugify, pageNumber, pageSize } from '#services/input_service'
+import { now, slugify, pageNumber, pageSize, searchText } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
+import site from '#config/site'
 import SeriesModel from '#models/series'
 import ContentType from '#models/content_type'
 import Genre from '#models/genre'
@@ -10,23 +11,54 @@ import { seriesValidator } from '#validators/admin'
 import { invalidField, imageOptions, saveImage } from '#services/upload_service'
 
 export default class SeriesAdminController {
+  /** Series list with read-only filters: ?search (title, address, alternative titles), ?status, ?type (slug). */
   async index({ view, request }: HttpContext) {
     const page = pageNumber(request.input('page'))
     const perPage = pageSize(request.input('per_page'))
+    const search = searchText(request.input('search'))
+    const status = site.statuses.find((value) => value === request.input('status')) || ''
+    const contentTypes = await ContentType.query().orderBy('name', 'asc')
+    const type = contentTypes.find((item) => item.slug === request.input('type')) || null
+    const like = `%${search}%`
     const seriesList = await SeriesModel.query()
       .preload('contentType')
       .withCount('chapters')
+      .if(search, (query) =>
+        query.where((inner) =>
+          inner
+            .where('title', 'like', like)
+            .orWhere('slug', 'like', like)
+            .orWhere('alternativeTitles', 'like', like)
+        )
+      )
+      .if(status, (query) => query.where('status', status))
+      .if(type, (query) => query.where('contentTypeId', type!.id))
       .orderBy('updatedAt', 'desc')
       .paginate(page, perPage)
 
+    const filtered = Boolean(search || status || type)
     seriesList.baseUrl('/admin/seriler')
-    seriesList.queryString({ per_page: perPage })
+    seriesList.queryString({
+      per_page: perPage,
+      ...(search ? { search } : {}),
+      ...(status ? { status } : {}),
+      ...(type ? { type: type.slug } : {}),
+    })
+    const catalogTotal = filtered
+      ? Number(
+          ((await SeriesModel.query().count('* as total').first()) as any)?.$extras?.total || 0
+        )
+      : seriesList.total
 
     return view.render('pages/admin/series/index', {
       title: 'Seriler',
       seriesList,
       paginator: seriesList,
       perPage,
+      contentTypes,
+      filters: { search, status, type: type?.slug || '' },
+      filtered,
+      catalogTotal,
     })
   }
 
@@ -140,6 +172,7 @@ export default class SeriesAdminController {
       .preload('genres')
       .preload('authors')
       .preload('artists')
+      .withCount('chapters')
       .firstOrFail()
 
     const [contentTypes, genres, authors, artists, allKeywords] = await Promise.all([

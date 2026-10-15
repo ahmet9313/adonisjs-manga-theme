@@ -87,16 +87,31 @@ Görsel yüklemeleri JPG/JPEG, PNG ve WebP ile sınırlıdır; dosya başına 10
 | `app/middleware/{silent_auth,role}_middleware.ts` | Tüm sayfalarda oturum yükleme ve rol bazlı erişim |
 | `app/models/`, `database/migrations/` | Şema, ilişkiler, veri dönüşümleri ve indeksler |
 | `resources/views/components/layout/`, `resources/views/partials/` | Ortak sayfa kabukları ve tekrar kullanılabilir şablonlar |
-| `resources/js/app.js`, `resources/js/components/` | Alpine kayıt noktası; slider, arama, filtre, kaydetme, bölüm listesi/yükleme ve çoklu seçim modülleri |
+| `resources/js/app.js` | Alpine kayıt noktası: `components/*.js` modüllerini toplar, `ui.js` (odak tuzağı, katmanlar, onay penceresi, görsel yedeği) ve şema anahtarını başlatır |
 | `config/rewards.ts`, `config/cosmetics.ts` | EXP miktarları, seviye eğrisi, rozetler, kart nadirlikleri; kozmetik türleri ve hazır CSS stilleri |
 | `app/services/{progress,cosmetic,card,notification,recommendation}_service.ts` | Seviye/günlük giriş/rozet, kozmetik kilitleri ve kuşanma, kart düşmesi/parçalama/üretim, gelen kutusu, öneriler |
-| `resources/js/components/community.js` | Hesap menüsü, gelen kutusu, envanter, bildirim balonları, koleksiyon, kartlar ve profil beğenisi |
+| `resources/js/components/*.js` | Her modül `export const components = { … }` ile Alpine bileşenlerini bildirir; `app.js` hepsini otomatik kaydeder (ör. `account_menu`, `inbox`, `inventory`, `toasts`, `cosmetic_store`, `card_collection`, `profile_like`, `ui`, `theme_switch`, `reader`) |
+| `resources/css/` | Tasarım sistemi: `tokens.css` (iki şema), `base.css`, `components.css`, `layout.css`, `cosmetics.css`, `reader.css`, sayfa dosyaları `pages/*.css` |
+| `resources/views/components/ui/`, `components/series/card.edge` | Ortak Edge bileşenleri (düğme, alan, panel, rozet, pencere, açılır menü, sekmeler, sayfalama, boş durum, seri kartı …) |
 | `scripts/setup-and-start.mjs` | Windows/Linux ortak kurulum ve başlatma |
 | `tests/`, `scripts/check-mobile-nav.mjs` | Birim, HTTP/veritabanı ve tarayıcı kontrolleri |
 
 Yeni sayfalarda ortak layout ve partial'ları kullanın. Karmaşık etkileşimi Edge içine script olarak eklemek yerine bir Alpine bileşenine taşıyın. Dinamik metni JavaScript string'ine yerleştirmeyin; HTML kaçışı yapılan `data-*` JSON verisiyle aktarın. Seri/bölüm ve ilişki güncellemelerini aynı transaction içinde tutun. Listeleme için tüm kayıtları belleğe almak yerine SQL sayfalama kullanın.
 
 Katalogda seri başlığı/alternatif başlık araması, tür/durum/içerik türü filtreleri ve sıralama vardır. Ana sayfa her seri için son üç bölümü toplu getirir; katalog bölüm sayısını ve son bölüm numarasını SQL içinde hesaplar. Okuyucu dikey görselleri veya düz metni gösterir. Kaydedilenler mevcut tarayıcının localStorage alanındadır; hesaplar arasında eşitlenmez.
+
+## Tasarım sistemi: Mürekkep & Kâğıt
+
+Arayüz tek bir tasarım sistemiyle çizilir; yeni bir sayfa yazarken renk veya ölçü uydurmayın, aşağıdaki parçaları kullanın.
+
+- **İki renk şeması:** Koyu (varsayılan, mürekkep) ve açık (kâğıt). `<html data-theme="dark|light|system">` sunucuda `theme` çerezinden seçilir (`schemeOf()`), bu yüzden ilk boyamada yanlış şema görünmez. Ziyaretçi üst menüdeki Koyu / Açık / Sistem anahtarıyla seçer; yönetici varsayılanı Tema → Renkler'de belirler ve Tema → Göster/Gizle'den seçimi kapatabilir.
+- **Token'lar:** `resources/css/tokens.css` iki şemanın bütün renklerini, köşe yarıçaplarını, gölge ve katman sıralarını tanımlar. Stok değerler `config/theme.ts` ile birebir aynıdır (`tests/unit/tokens.spec.ts` bunu doğrular). Yönetici her rengi iki şemada ayrı düzenler: koyu `c.<anahtar>`, açık `cl.<anahtar>` olarak saklanır; yalnız varsayılandan farklı değerler yazılır.
+- **Anlamsal sınıflar:** `bg-surface`, `bg-surface-2`, `bg-field`, `bg-hover`, `border-line`, `text-ink` (başlık), `text-body`, `text-muted`, `text-accent-text`, `bg-accent-strong`, `text-on-accent`, `text-on-image` (görsel üstünde sabit beyaz), `text-success/warning/danger/info`, `shadow-1/2`. Tailwind palet renkleri, `*-white` sınıfları, köşeli parantezli renkler, köşesiz `rounded` ve satır içi olaylar `npm run lint:design` tarafından reddedilir.
+- **Bileşen sınıfları** (`components.css`): `btn` (+ `btn--primary|secondary|ghost|danger`), `panel`, `card`, `badge` + `data-tone`, `chip`, `field`/`control`, `tabs`/`tab`, `segmented`, `menu`, `modal`, `toast`, `alert`, `empty`, `skeleton`, `progress`, `page-head`, `section-head`, `stat`, `table`, `series-card`, `user-chip`. Alpine ile tarayıcıda çizilen listeler (yorumlar, kaydedilenler, gelen kutusu, kozmetikler) da aynı sınıfları kullanır.
+- **Edge bileşenleri** (`resources/views/components/ui/*`, `components/series/card.edge`): düğme, form alanı (eski girdi ve hata mesajı otomatik), panel, rozet, açılır pencere (odak tuzağı, Esc yalnız üstteki katmanı kapatır), açılır menü, sekmeler, sayfalama (sorgu dizesini sunucuda korur), sayfa ve bölüm başlıkları, boş durum, iskelet, ilerleme, istatistik, uyarı, kullanıcı çipi, şema anahtarı, yorum/inceleme/kozmetik önizlemeleri. Bileşen yolu her zaman `components/ui/<ad>` biçimindedir ve Edge etiketleri satır başında olmalıdır.
+- **Davranış:** silme ve geri alınamaz işlemler `<form data-confirm="…">` ile ortak onay penceresini açar; kırık görseller `data-fallback`, çift gönderim `data-submit-once` ile yönetilir; bildirimler `$dispatch('toast', { text, tone })` ile gösterilir, sunucu `session.flash` mesajları JavaScript olmadan da görünür.
+- **Kozmetikler içeriktir:** ad efektleri, çerçeveler, duvar kağıtları, kartlar ve seviye rozeti (`cosmetics.css`) kendi renklerini iki şemada da korur.
+- **Kontroller:** `npm run lint:design`, `npm run lint:contrast`, `npm run test:ui` ve `npm run test:a11y`.
 
 ## Kontroller
 
@@ -132,8 +147,11 @@ npm run test:ui
 | `npm run covers:fetch` | Gerçek kapakları ve alternatif başlıkları AniList'ten indirir (isteğe bağlı) |
 | `npm run admin:promote -- <kullanıcı>` | Kayıtlı hesabı yönetici yapar (ilk üretim yöneticisi) |
 | `npm run lint`, `npm run typecheck` | Kod ve tip kontrolü |
-| `npm run format` | Kaynak biçimlendirme; üretilen klasörler hariç |
+| `npm run lint:design` | Şablon ve tarayıcı bileşenlerinde tasarım kuralı denetimi (palet/sabit renk, `white` sınıfları, köşesiz `rounded`, satır içi olaylar, eski sınıflar) |
+| `npm run lint:contrast` | Tema renklerinin iki şemada ve hazır setlerde WCAG kontrastı |
+| `npm run format` | Kaynak biçimlendirme; üretilen klasörler hariç. `.edge` dosyalarını toplu biçimlendirmeyin (prettier-edge satır başındaki Edge etiketlerini bozabilir) |
 | `npm test`, `npm run test:ui` | Otomatik davranış ve tarayıcı kontrolleri |
+| `npm run test:a11y` | axe-core ile erişilebilirlik taraması (iki şema, telefon ve masaüstü genişliği; `-- <adres> --login kullanıcı:parola --paths /,/seriler`) |
 
 Mevcut doğrulama sonuçları AGENTS.md günlüğündedir. Bu Windows ortamında Linux ve MySQL çalıştırma doğrulaması yapılmadı; ayrı CI matrisi önerilir.
 

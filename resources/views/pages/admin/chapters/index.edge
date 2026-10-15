@@ -1,79 +1,185 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin chapter list: series selector (submits on change), the chosen series' summary, table of
+  chapters (cards on phones), filter-aware empty state, pagination and page size.
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(typeName = (type) => type ? type.name.charAt(0).toLocaleUpperCase('tr') + type.name.slice(1) : 'Tür yok')
+@let(current = selectedSeries)
+@let(currentUrl = current && current.contentType ? '/series/' + current.contentType.slug + '/' + current.slug : '')
+@let(addUrl = '/admin/bolumler/ekle' + (selectedSeriesId ? '?series_id=' + selectedSeriesId : ''))
+@let(seriesOptions = [{ value: '', label: 'Tüm seriler' }].concat(seriesList.map((s) => ({ value: s.id, label: s.title }))))
+@let(first = chapters.total ? (chapters.currentPage - 1) * chapters.perPage + 1 : 0)
+@let(last = Math.min(chapters.currentPage * chapters.perPage, chapters.total))
+@component('components/layout/admin', { title, description: current ? current.title + ' serisinin bölümleri. Yeni eklenen önce.' : 'Tüm serilerin bölümleri, yeni eklenen önce. Bir seri seçerek listeyi daraltın.' })
+  @slot('actions')
+    @component('components/ui/button', { variant: 'primary', href: addUrl, icon: 'plus' })
+      Yeni bölüm
+    @end
+  @end
 
-@slot('main')
-  <div class="flex items-center justify-between mb-6">
-    <h3 class="text-lg font-semibold text-gray-200">Tüm Bölümler</h3>
-    <a href="/admin/bolumler/ekle" class="bg-gradient-to-r from-emerald-500 to-teal-600 text-(--t-on-accent) text-sm font-semibold px-4 py-2 rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all">
-      + Yeni Bölüm Ekle
-    </a>
-  </div>
+  @slot('main')
+    <div hidden x-data="pendingToast"></div>
 
-  {{-- Filter by series --}}
-  <div class="mb-4">
-    <form method="GET" action="/admin/bolumler" class="flex items-center gap-3">
-      <select name="series_id" class="bg-(--t-field) border border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-200 focus:border-emerald-500 focus:outline-none">
-        <option value="">Tüm Seriler</option>
-        @each(s in seriesList)
-          <option value="{{ s.id }}" {{ selectedSeriesId === s.id ? 'selected' : '' }}>{{ s.title }}</option>
-        @end
-      </select>
+    <form method="GET" action="/admin/bolumler" class="panel panel--tight flex flex-wrap items-end gap-3" x-data aria-label="Bölümleri seriye göre süz">
+      @!component('components/ui/field', { name: 'series_id', id: 'filter-series', label: 'Seri', type: 'select', value: selectedSeriesId || '', options: seriesOptions, class: 'min-w-0 flex-1 basis-64', '@change': '$el.form.requestSubmit()' })
+      @if(perPage !== 20)
       <input type="hidden" name="per_page" value="{{ perPage }}">
-      <button type="submit" class="text-sm text-emerald-400 hover:text-emerald-300 px-3 py-2 border border-emerald-800 rounded-lg transition">Filtrele</button>
+      @end
+      <noscript>
+        <button type="submit" class="btn btn--secondary btn--md">Uygula</button>
+      </noscript>
+      @if(selectedSeriesId)
+      @component('components/ui/button', { variant: 'ghost', href: '/admin/bolumler' + (perPage !== 20 ? '?per_page=' + perPage : ''), icon: 'x' })
+        Tüm seriler
+      @end
+      @end
     </form>
-  </div>
 
-  @include('partials/admin/pagination')
+    @if(current)
+    <section class="card mt-4 flex flex-wrap items-center gap-4 p-4" aria-label="Seçili seri">
+      <img src="{{ current.coverImage || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--lg" width="60" height="80" decoding="async" data-fallback="/images/no-cover.svg">
+      <div class="min-w-0 flex-1 basis-48">
+        <p class="t-h3 line-clamp-2">{{ current.title }}</p>
+        <div class="admin-cell__meta mt-1.5">
+          @!component('components/ui/badge', { kind: 'type', value: current.contentType ? current.contentType.slug : '', text: typeName(current.contentType), size: 'sm' })
+          @!component('components/ui/badge', { kind: 'status', value: current.status, size: 'sm' })
+          <span>{{ number(current.$extras.chapters_count) }} bölüm</span>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        @component('components/ui/button', { size: 'sm', href: '/admin/seriler/' + current.id + '/duzenle', icon: 'pencil' })
+          Seriyi düzenle
+        @end
+        @if(currentUrl)
+        @component('components/ui/button', { size: 'sm', variant: 'ghost', href: currentUrl, iconRight: 'external', target: '_blank', rel: 'noopener' })
+          Sitede aç
+        @end
+        @end
+      </div>
+    </section>
+    @end
 
-  <div class="bg-(--t-surface) border border-gray-700 rounded-xl overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    @if(chapters.length)
+    <p class="admin-summary">
+      <span><strong>{{ number(chapters.total) }}</strong> bölüm</span>
+      <span aria-hidden="true">·</span>
+      <span>yeni eklenen önce</span>
+    </p>
+    <div class="table-wrap">
+      <table class="table table--stack admin-table">
+        <caption class="sr-only">{{ current ? current.title + ' bölümleri' : 'Bölümler' }}</caption>
         <thead>
-          <tr class="text-left text-gray-400 border-b border-gray-700">
-            <th class="px-5 py-3 font-medium">Seri</th>
-            <th class="px-5 py-3 font-medium">Bölüm No</th>
-            <th class="px-5 py-3 font-medium">Başlık</th>
-            <th class="px-5 py-3 font-medium">İçerik</th>
-            <th class="px-5 py-3 font-medium">Yayın Tarihi</th>
-            <th class="px-5 py-3 font-medium text-right">İşlemler</th>
+          <tr>
+            <th scope="col">Bölüm</th>
+            @if(!current)
+            <th scope="col">Seri</th>
+            @end
+            <th scope="col">İçerik</th>
+            <th scope="col">Yayın tarihi</th>
+            <th scope="col" class="max-xl:hidden">Eklendi</th>
+            <th scope="col"><span class="sr-only">İşlemler</span></th>
           </tr>
         </thead>
         <tbody>
           @each(chapter in chapters)
-            <tr class="border-b border-gray-700/30 hover:bg-gray-800/30">
-              <td class="px-5 py-3 text-gray-200">{{ chapter.series?.title || '-' }}</td>
-              <td class="px-5 py-3 text-gray-300 font-medium">{{ chapter.number }}</td>
-              <td class="px-5 py-3 text-gray-300">{{ chapter.title ? 'Bölüm ' + chapter.number + ' - ' + chapter.title : 'Bölüm ' + chapter.number }}</td>
-              <td class="px-5 py-3">
-                @if(chapter.content && chapter.content.type === 'text')
-                  <span class="inline-block px-2 py-0.5 rounded text-xs bg-purple-900/50 text-purple-400">Metin</span>
-                @else
-                  <span class="inline-block px-2 py-0.5 rounded text-xs bg-emerald-900/50 text-emerald-400">Resim ({{ chapter.content && chapter.content.pages ? chapter.content.pages.length : 0 }})</span>
+          @let(isText = chapter.content && chapter.content.type === 'text')
+          @let(pageCount = chapter.content && chapter.content.pages ? chapter.content.pages.length : 0)
+          @let(readerUrl = chapter.series && chapter.series.contentType ? '/series/' + chapter.series.contentType.slug + '/' + chapter.series.slug + '/' + chapter.number : '')
+          @let(label = (chapter.series ? chapter.series.title + ' · ' : '') + 'Bölüm ' + chapter.number)
+          <tr>
+            <td class="cell-main">
+              <div class="admin-cell__body">
+                <a href="/admin/bolumler/{{ chapter.id }}/duzenle" class="admin-title">Bölüm {{ chapter.number }}</a>
+                @if(chapter.title)
+                <span class="line-clamp-1 text-xs text-muted">{{ chapter.title }}</span>
                 @end
-              </td>
-              <td class="px-5 py-3 text-gray-400">{{ chapter.publishedAt }}</td>
-              <td class="px-5 py-3 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <a href="/admin/bolumler/{{ chapter.id }}/duzenle" class="text-emerald-400 hover:text-emerald-300 text-xs px-3 py-1 rounded border border-emerald-800 hover:border-emerald-600 transition">Düzenle</a>
-                  <form action="/admin/bolumler/{{ chapter.id }}/sil" method="POST" class="inline"
-                        onsubmit="return confirm('Bu bölümü silmek istediğinize emin misiniz?')">
-                    {{ csrfField() }}
-                    <button type="submit" class="text-red-400 hover:text-red-300 text-xs px-3 py-1 rounded border border-red-800 hover:border-red-600 transition">Sil</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          @end
-          @if(chapters.total === 0)
-            <tr>
-              <td colspan="6" class="px-5 py-8 text-center text-gray-500">Henüz bölüm eklenmemiş</td>
-            </tr>
+                <p class="admin-cell__meta md:hidden">{{ !current && chapter.series ? chapter.series.title + ' · ' : '' }}{{ isText ? 'Metin' : pageCount + ' sayfa' }} · {{ dateOf(chapter.publishedAt) || chapter.publishedAt }}</p>
+              </div>
+            </td>
+            @if(!current)
+            <td data-label="Seri" class="max-w-64 max-md:hidden">
+              @if(chapter.series)
+              <a href="/admin/bolumler?series_id={{ chapter.series.id }}" class="admin-quiet line-clamp-1" title="Yalnız {{ chapter.series.title }} bölümleri">{{ chapter.series.title }}</a>
+              @else
+              <span class="text-muted">—</span>
+              @end
+            </td>
+            @end
+            <td data-label="İçerik" class="max-md:hidden">
+              @if(isText)
+              @!component('components/ui/badge', { kind: 'info', text: 'Metin' })
+              @else
+              @!component('components/ui/badge', { kind: 'neutral', text: pageCount + ' sayfa' })
+              @end
+            </td>
+            <td data-label="Yayın tarihi" class="whitespace-nowrap max-md:hidden">
+              <time datetime="{{ chapter.publishedAt }}">{{ dateOf(chapter.publishedAt) || chapter.publishedAt }}</time>
+            </td>
+            <td data-label="Eklendi" class="whitespace-nowrap text-muted max-xl:hidden">
+              <time datetime="{{ chapter.createdAt }}" title="{{ dateOf(chapter.createdAt) }}">{{ agoOf(chapter.createdAt) }}</time>
+            </td>
+            <td class="actions">
+              <div class="admin-actions">
+                @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: '/admin/bolumler/' + chapter.id + '/duzenle', label: 'Düzenle: ' + label, title: 'Düzenle' })
+                @if(readerUrl)
+                @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'external', href: readerUrl, target: '_blank', rel: 'noopener', label: 'Okuyucuda aç: ' + label, title: 'Okuyucuda aç' })
+                @end
+                <form action="/admin/bolumler/{{ chapter.id }}/sil" method="POST" data-submit-once
+                      data-confirm="{{ label }} ve bu bölüme yazılan yorumlar kalıcı olarak silinecek. Bu işlem geri alınamaz."
+                      data-confirm-title="Bölüm silinsin mi?" data-confirm-label="Bölümü sil">
+                  {{ csrfField() }}
+                  @!component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'trash', label: 'Sil: ' + label, title: 'Sil', class: 'admin-danger' })
+                </form>
+              </div>
+            </td>
+          </tr>
           @end
         </tbody>
       </table>
     </div>
-  </div>
 
-  @include('partials/admin/pagination')
-@end
-
+    <div class="admin-listfoot">
+      <p class="admin-listfoot__info">{{ number(first) }}–{{ number(last) }} / {{ number(chapters.total) }} bölüm</p>
+      @!component('components/ui/pagination', { current: chapters.currentPage, total: chapters.lastPage, label: 'Bölüm sayfaları' })
+      <form method="GET" action="/admin/bolumler" class="admin-perpage" x-data>
+        @if(selectedSeriesId)
+        <input type="hidden" name="series_id" value="{{ selectedSeriesId }}">
+        @end
+        <label for="per-page">Sayfa başına</label>
+        <select id="per-page" name="per_page" class="control control--sm" @change="$el.form.requestSubmit()">
+          @each(size in site.adminPageSizes)
+          <option value="{{ size }}" {{ perPage === size ? 'selected' : '' }}>{{ size }}</option>
+          @end
+        </select>
+        <noscript>
+          <button type="submit" class="btn btn--secondary btn--sm">Uygula</button>
+        </noscript>
+      </form>
+    </div>
+    @elseif(chapters.total)
+    <div class="mt-4">
+      @component('components/ui/empty_state', { icon: 'list', title: 'Bu sayfada kayıt yok', description: 'İstenen sayfa son sayfadan sonra geliyor.' })
+        @component('components/ui/button', { href: withQuery(request, { page: null }), icon: 'arrow-left' })
+          İlk sayfaya dön
+        @end
+      @end
+    </div>
+    @elseif(current)
+    <div class="mt-4">
+      @component('components/ui/empty_state', { icon: 'document', title: 'Bu seride henüz bölüm yok', description: current.title + ' için ilk bölümü ekleyin; seriyi kaydeden okurlara bildirim gider.' })
+        @component('components/ui/button', { variant: 'primary', href: addUrl, icon: 'upload' })
+          İlk bölümü ekle
+        @end
+      @end
+    </div>
+    @else
+    <div class="mt-4">
+      @component('components/ui/empty_state', { icon: 'document', title: 'Henüz bölüm eklenmemiş', description: 'Bir seri seçip ilk bölümün sayfalarını ya da metnini ekleyin.' })
+        @component('components/ui/button', { variant: 'primary', href: addUrl, icon: 'upload' })
+          İlk bölümü ekle
+        @end
+      @end
+    </div>
+    @end
+  @end
 @end

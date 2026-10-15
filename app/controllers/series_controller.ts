@@ -5,6 +5,7 @@ import library from '#services/library_service'
 import reviews, { ratingLabels } from '#services/review_service'
 import Author from '#models/author'
 import Artist from '#models/artist'
+import ContentType from '#models/content_type'
 
 export default class SeriesController {
   async index({ view, request }: HttpContext) {
@@ -23,13 +24,19 @@ export default class SeriesController {
     const page = pageNumber(qs.page)
     const perPage = 24
 
-    const [{ items: results, hasNextPage, totalResults, totalPages }, genres, authors, artists] =
-      await Promise.all([
-        seriesService.filterSeries(filters, page, perPage),
-        seriesService.getAllGenres(),
-        filters.authors.length ? Author.query().whereIn('slug', filters.authors) : [],
-        filters.artists.length ? Artist.query().whereIn('slug', filters.artists) : [],
-      ])
+    const [
+      { items: results, hasNextPage, totalResults, totalPages },
+      genres,
+      authors,
+      artists,
+      contentTypes,
+    ] = await Promise.all([
+      seriesService.filterSeries(filters, page, perPage),
+      seriesService.getAllGenres(),
+      filters.authors.length ? Author.query().whereIn('slug', filters.authors) : [],
+      filters.artists.length ? Artist.query().whereIn('slug', filters.artists) : [],
+      ContentType.query().orderBy('name'),
+    ])
     // Author/artist filters have no dropdown; they are shown as removable chips.
     const chipUrl = (key: 'author' | 'artist', slug: string) => {
       const params = new URLSearchParams()
@@ -64,6 +71,7 @@ export default class SeriesController {
       results,
       filters,
       genres,
+      contentTypes: contentTypes.map((type) => ({ slug: type.slug, name: type.name })),
       people,
       currentPage: page,
       hasNextPage,
@@ -78,7 +86,8 @@ export default class SeriesController {
     const series = await seriesService.getSeriesBySlug(type, slug)
 
     if (!series) {
-      return response.notFound('Seri bulunamadı')
+      response.status(404)
+      return view.render('pages/errors/not_found', { missing: 'series' })
     }
 
     const chapters = await seriesService.getChapters(type, slug)

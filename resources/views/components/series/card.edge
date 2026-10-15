@@ -1,0 +1,57 @@
+{{--
+  Series card (class `series-card`, see components.css).
+  Props: series (presenter output: type, slug, title, coverImage, status, ageRating,
+         ratingAverage, ratingCount, lastChapter?), layout grid|row|compact (grid),
+         priority (eager image for the first visible cards), showStatus (true), level (h3),
+         meta (extra text in the meta line), class.
+  Slot: main (extra content under the meta line, e.g. the latest chapters of a row card).
+  The first link of the card is exactly href="/series/<type>/<slug>" (catalog order tests).
+  Alpine-rendered lists (bookmarks) use the same classes.
+--}}
+@let(body = (await $slots.main()).trim())
+@let(layout = $props.get('layout', 'grid'))
+@let(url = '/series/' + series.type + '/' + series.slug)
+@let(level = $props.get('level', 'h3'))
+@let(priority = $props.get('priority', false))
+<article class="series-card {{ layout === 'grid' ? '' : 'series-card--' + layout }} {{ $props.get('class', '') }}">
+  <a href="{{ url }}" class="series-card__cover" tabindex="-1" aria-hidden="true">
+    <img src="{{ series.coverImage }}" alt="" width="300" height="400" decoding="async" data-fallback="/images/no-cover.svg"
+      @if(priority)
+      loading="eager" fetchpriority="high"
+      @else
+      loading="lazy"
+      @end
+      >
+    @if(layout !== 'row')
+    <span class="series-card__badges">
+      @!component('components/ui/badge', { kind: 'type', value: series.type, solid: true, caps: true, size: 'sm' })
+      @if(series.ageRating)
+      @!component('components/ui/badge', { kind: 'age', value: series.ageRating, solid: true, size: 'sm', title: 'Yaş sınırı ' + series.ageRating })
+      @end
+    </span>
+    @end
+  </a>
+  <div class="series-card__body">
+    <{{ level }} class="series-card__title"><a href="{{ url }}">{{ series.title }}</a></{{ level }}>
+    <p class="series-card__meta">
+      @if(layout === 'row')
+      @!component('components/ui/badge', { kind: 'type', value: series.type, size: 'sm' })
+      @end
+      @if($props.get('showStatus', true) && series.status)
+      @!component('components/ui/badge', { kind: 'status', value: series.status, size: 'sm' })
+      @end
+      @if(series.ratingCount)
+      <span class="series-card__rating" title="{{ series.ratingCount }} puan">★ {{ series.ratingAverage.toFixed(1) }}</span>
+      @end
+      @if(series.lastChapter)
+      <span>Bölüm {{ series.lastChapter }}</span>
+      @end
+      @if($props.get('meta'))
+      <span>{{ $props.get('meta') }}</span>
+      @end
+    </p>
+    @if(body)
+    {{{ body }}}
+    @end
+  </div>
+</article>

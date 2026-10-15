@@ -1,0 +1,25 @@
+{{--
+  Colour scheme switch: Koyu / Açık / Sistem (store `scheme`, theme_switch.js). The server marks
+  the current choice, the cookie keeps it. Hidden when Admin → Tema turns visitor choice off.
+  Props: labels (show the words next to the icons; false = icons only), class.
+--}}
+@if(ui('scheme_switch'))
+@let(current = schemeOf(request))
+@let(showLabels = $props.get('labels', false))
+<div class="segmented {{ showLabels ? '' : 'segmented--icons' }} {{ $props.get('class', '') }}" role="group" aria-label="Renk şeması">
+  @each(option in [{ key: 'dark', label: 'Koyu', icon: 'moon' }, { key: 'light', label: 'Açık', icon: 'sun' }, { key: 'system', label: 'Sistem', icon: 'monitor' }])
+  <button type="button" @click="$store.scheme.set('{{ option.key }}')"
+          aria-pressed="{{ current === option.key ? 'true' : 'false' }}" :aria-pressed="($store.scheme.value === '{{ option.key }}').toString()"
+          title="{{ option.label }} şema"
+          @if(!showLabels)
+          aria-label="{{ option.label }} şema"
+          @end
+          >
+    @!component('components/icon', { name: option.icon })
+    @if(showLabels)
+    <span>{{ option.label }}</span>
+    @end
+  </button>
+  @end
+</div>
+@end

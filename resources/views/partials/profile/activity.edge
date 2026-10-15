@@ -1,0 +1,194 @@
+{{--
+  "Son etkinlik": ui/tabs in panels mode, every panel rendered on the server. `?sekme=` picks the
+  first tab (links such as ?sekme=koleksiyon#etkinlik). Comments use the member's look (their
+  wallpaper behind each card, like in the threads); reviews hide the author (always the member).
+--}}
+@let(tabKeys = ['yorumlar', 'incelemeler', 'kartlar', 'koleksiyon'])
+@let(requestedTab = request.qs().sekme)
+@let(activeTab = tabKeys.includes(requestedTab) ? requestedTab : 'yorumlar')
+@let(collectionGroups = [
+  { key: 'frame', label: 'Avatar çerçeveleri', empty: 'Henüz açılmış avatar çerçevesi yok.' },
+  { key: 'effect', label: 'Ad efektleri', empty: 'Henüz açılmış ad efekti yok.' },
+  { key: 'wallpaper', label: 'Duvar kağıtları', empty: 'Henüz açılmış duvar kağıdı yok.' },
+  { key: 'sticker', label: 'Çıkartmalar', empty: 'Henüz açılmış çıkartma yok.' }
+])
+<section id="etkinlik" class="profile-activity" aria-labelledby="profile-activity-title">
+  @!component('components/ui/section_head', { title: 'Son etkinlik', id: 'profile-activity-title', icon: 'clock', description: 'Yorumlar, puanlar, kartlar ve kozmetik koleksiyonu' })
+
+  @component('components/ui/tabs', {
+    tabs: [
+      { key: 'yorumlar', label: 'Yorumlar', count: fmt(stats.comments) },
+      { key: 'incelemeler', label: 'İncelemeler', count: fmt(stats.ratings) },
+      { key: 'kartlar', label: 'Kart vitrini', count: fmt(stats.cards) },
+      { key: 'koleksiyon', label: 'Koleksiyon', count: fmt(owned) }
+    ],
+    active: activeTab,
+    label: 'Son etkinlik',
+    id: 'profile-activity'
+  })
+    @slot('yorumlar')
+      @if(recentComments.length)
+      <ul class="profile-feed">
+        @each(item in recentComments)
+        <li>
+          @!component('components/ui/comment_preview', { item, showAuthor: false, showKind: true, time: 'date', look })
+        </li>
+        @end
+      </ul>
+      @if(stats.comments > recentComments.length)
+      <p class="profile-feed__more">Son {{ recentComments.length }} yorum ve yanıt gösteriliyor (toplam {{ fmt(stats.comments) }}).</p>
+      @end
+      @else
+      @component('components/ui/empty_state', { icon: 'chat', title: 'Henüz yorum yok', description: isOwner ? 'Okuduğun serilere ve bölümlere yazdığın yorumlar ve yanıtlar burada görünür.' : member.fullName + ' henüz yorum yazmamış.' })
+        @if(isOwner)
+        @component('components/ui/button', { variant: 'secondary', href: '/seriler', icon: 'library' })
+          Serilere göz at
+        @end
+        @end
+      @end
+      @end
+    @end
+
+    @slot('incelemeler')
+      @if(recentReviews.length)
+      <div class="profile-rating">
+        <span class="profile-rating__value t-num">{{ stats.averageRating.toFixed(1) }}</span>
+        <div class="min-w-0">
+          @!component('components/stars', { value: stats.averageRating, size: 'text-lg' })
+          <p class="profile-rating__text">
+            <strong>Ortalama puan</strong>
+            <span aria-hidden="true">·</span>
+            {{ fmt(stats.ratings) }} puan
+            <span aria-hidden="true">·</span>
+            {{ fmt(stats.reviews) }} yazılı inceleme
+          </p>
+        </div>
+      </div>
+      <ul class="profile-feed">
+        @each(item in recentReviews)
+        <li>
+          @!component('components/ui/review_preview', { item, showAuthor: false, time: 'date' })
+        </li>
+        @end
+      </ul>
+      @if(stats.ratings > recentReviews.length)
+      <p class="profile-feed__more">Son {{ recentReviews.length }} puan gösteriliyor (toplam {{ fmt(stats.ratings) }}).</p>
+      @end
+      @else
+      @component('components/ui/empty_state', { icon: 'star', title: 'Henüz puan yok', description: isOwner ? 'Okuduğun serilere 1–10 arası puan ver, istersen kısa bir inceleme yaz. İlk puanın EXP kazandırır.' : member.fullName + ' henüz bir seriye puan vermemiş.' })
+        @if(isOwner)
+        @component('components/ui/button', { variant: 'secondary', href: '/seriler', icon: 'library' })
+          Puanlanacak seri bul
+        @end
+        @end
+      @end
+      @end
+    @end
+
+    @slot('kartlar')
+      @if(showcase.length)
+      <div class="profile-showcase__head">
+        <p class="profile-showcase__count">
+          <strong class="t-num">{{ fmt(stats.cards) }}</strong>
+          <span class="t-num">/ {{ fmt(cardTotal) }}</span>
+          kart toplandı
+        </p>
+        @!component('components/ui/progress', { value: stats.cards, max: cardTotal || 1, label: 'Kart koleksiyonu', size: 'sm', class: 'profile-showcase__progress' })
+        @if(isOwner)
+        @component('components/ui/button', { variant: 'ghost', size: 'sm', href: '/kartlar', iconRight: 'arrow-right' })
+          Tüm kartlar
+        @end
+        @end
+      </div>
+      <ul class="profile-showcase">
+        @each(card in showcase)
+        @let(seriesTitle = card.series && !card.name.startsWith(card.series.title) ? card.series.title : '')
+        <li class="profile-showcase__item">
+          <div class="tcg" data-rarity="{{ card.rarity }}">
+            <img src="{{ card.image }}" alt="" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+            <span class="tcg-letter">{{ card.rarity }}</span>
+          </div>
+          <p class="profile-showcase__name" title="{{ card.name }}">{{ card.name }}</p>
+          @if(seriesTitle || card.count > 1)
+          <p class="profile-showcase__meta">
+            @if(card.count > 1)
+            <span class="t-num">×{{ card.count }}</span>
+            @end
+            @if(seriesTitle)
+            <span class="truncate">{{ seriesTitle }}</span>
+            @end
+          </p>
+          @end
+        </li>
+        @end
+      </ul>
+      @if(stats.cards > showcase.length)
+      <p class="profile-feed__more">En nadir {{ showcase.length }} kart gösteriliyor.</p>
+      @end
+      @else
+      @component('components/ui/empty_state', { icon: 'cards', title: 'Henüz kart yok', description: isOwner ? 'Bölüm okurken kart düşer; her 7. günlük girişte bir kart garanti. Kopyaları parçalayıp yeni kart üretebilirsin.' : member.fullName + ' henüz kart toplamamış.' })
+        @if(isOwner)
+        @component('components/ui/button', { variant: 'secondary', href: '/kartlar', icon: 'cards' })
+          Kart koleksiyonu
+        @end
+        @end
+      @end
+      @end
+    @end
+
+    @slot('koleksiyon')
+      @if(owned)
+      @if(isOwner)
+      <div class="profile-collection__bar">
+        <p>Kuşanmak ya da çıkarmak için envanterini aç.</p>
+        @component('components/ui/button', { variant: 'secondary', size: 'sm', icon: 'archive', '@click': "$dispatch('open-inventory', 'frame')" })
+          Envanteri aç
+        @end
+      </div>
+      @end
+      @each(group in collectionGroups)
+      @let(items = inventory[group.key])
+      <section class="profile-collection" aria-labelledby="koleksiyon-{{ group.key }}" x-data="{ all: false }">
+        <h3 id="koleksiyon-{{ group.key }}" class="profile-collection__title">
+          {{ group.label }}
+          <span class="chip__count">{{ items.length }}</span>
+        </h3>
+        @if(items.length)
+        <ul class="profile-collection__grid">
+          @each((entry, index) in items)
+          <li class="profile-collection__item {{ entry.equipped ? 'is-equipped' : '' }}"
+            @if(index >= 12)
+            x-show="all" x-cloak
+            @end
+            >
+            @!component('components/ui/cosmetic_preview', { kind: group.key, visual: entry.visual, user: member, name: member.fullName })
+            <span class="profile-collection__name" title="{{ entry.name }}">{{ entry.name }}</span>
+            @if(entry.equipped)
+            @!component('components/ui/badge', { kind: 'accent', text: 'Kuşanıldı', size: 'sm' })
+            @end
+          </li>
+          @end
+        </ul>
+        @if(items.length > 12)
+        <button type="button" class="btn btn--ghost btn--sm profile-collection__more" @click="all = !all" aria-expanded="false" :aria-expanded="all.toString()">
+          <span x-show="!all">Tümünü göster ({{ items.length }})</span>
+          <span x-show="all" x-cloak>Daha az göster</span>
+        </button>
+        @end
+        @else
+        <p class="profile-note">{{ group.empty }}</p>
+        @end
+      </section>
+      @end
+      @else
+      @component('components/ui/empty_state', { icon: 'sparkles', title: 'Koleksiyon boş', description: isOwner ? 'Seviye atladıkça ve rozet kazandıkça çerçeve, ad efekti, duvar kağıdı ve çıkartmaların kilidi açılır.' : member.fullName + ' henüz kozmetik açmamış.' })
+        @if(isOwner)
+        @component('components/ui/button', { variant: 'secondary', href: '/kozmetik/cerceveler', icon: 'sparkles' })
+          Kozmetiklere göz at
+        @end
+        @end
+      @end
+      @end
+    @end
+  @end
+</section>

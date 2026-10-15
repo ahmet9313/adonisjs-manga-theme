@@ -20,9 +20,13 @@ const cardValidator = vine.compile(
 )
 
 export default class CardAdminController {
+  private rarityList() {
+    return rarities.map((rarity) => ({ rarity, label: rarityRules[rarity].label }))
+  }
+
   private async formData() {
     return {
-      rarities: rarities.map((rarity) => ({ rarity, label: rarityRules[rarity].label })),
+      rarities: this.rarityList(),
       seriesList: await SeriesModel.query()
         .select('id', 'title', 'coverImage')
         .orderBy('title', 'asc'),
@@ -40,12 +44,19 @@ export default class CardAdminController {
       .from('series')
       .whereNotIn('id', (sub) => sub.from('cards').whereNotNull('series_id').select('series_id'))
       .count('* as total')
+    // Card count of every rarity for the filter.
+    const rows = await db.from('cards').select('rarity').count('* as total').groupBy('rarity')
+    const counts: Record<string, number> = Object.fromEntries(
+      rows.map((entry) => [String(entry.rarity), Number(entry.total)])
+    )
     return view.render('pages/admin/cards/index', {
       title: 'Kartlar',
       items,
       paginator: items,
       rarity,
-      rarities,
+      rarities: this.rarityList(),
+      counts,
+      total: Object.values(counts).reduce((sum, count) => sum + count, 0),
       missingSeries: Number(row.total),
     })
   }

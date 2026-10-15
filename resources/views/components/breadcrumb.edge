@@ -1,14 +1,20 @@
-{{-- Breadcrumb starting at the home page. Props: items = [{ label, href? }]. --}}
-<nav aria-label="Konum" class="mb-4 flex items-center gap-2 text-sm text-gray-400">
-  <a href="/" class="rounded p-0.5 hover:text-(--t-heading)" aria-label="Ana sayfa">
-    @!component('components/icon', { name: 'home', class: 'h-5 w-5' })
-  </a>
-  @each(entry in items)
-    <span aria-hidden="true">/</span>
-    @if(entry.href)
-      <a href="{{ entry.href }}" class="hover:text-(--t-heading)">{{ entry.label }}</a>
-    @else
-      <span class="text-gray-200" aria-current="page">{{ entry.label }}</span>
+{{-- Breadcrumb starting at the home page (class `breadcrumb`). Props: items = [{ label, href? }], home ('/'), class. --}}
+<nav aria-label="Konum" class="breadcrumb mb-4 {{ $props.get('class', '') }}">
+  <ol>
+    <li>
+      <a href="{{ $props.get('home', '/') }}" class="inline-flex items-center gap-1.5">
+        @!component('components/icon', { name: 'home', class: 'h-4 w-4' })
+        <span class="sr-only">Ana sayfa</span>
+      </a>
+    </li>
+    @each(entry in items)
+    <li>
+      @if(entry.href)
+      <a href="{{ entry.href }}">{{ entry.label }}</a>
+      @else
+      <span aria-current="page">{{ entry.label }}</span>
+      @end
+    </li>
     @end
-  @end
+  </ol>
 </nav>

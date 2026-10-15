@@ -1,0 +1,61 @@
+{{--
+  "Son Güncellenenler" (switch home_updates): series with their three newest chapters, paginated
+  with ?page=. The heading text appears only here (tests turn the switch off and look for it).
+--}}
+<section class="section mt-6 sm:mt-8" aria-labelledby="home-updates-title">
+  @!component('components/ui/section_head', {
+    title: 'Son Güncellenenler',
+    id: 'home-updates-title',
+    icon: 'clock',
+    description: currentPage > 1 ? 'Sayfa ' + currentPage + ' / ' + totalPages : 'Yeni bölüm eklenen seriler',
+    href: '/seriler',
+    linkLabel: 'Tüm seriler'
+  })
+
+  @if(recentlyUpdated.length)
+  <ul class="home-updates">
+    @each((item, index) in recentlyUpdated)
+    <li class="home-update">
+      @component('components/series/card', { series: item, layout: 'row', priority: !heroOn && index < 3 })
+        @if(item.latestChapters.length)
+        <ul class="home-chapters" aria-label="{{ item.title }} son bölümleri">
+          @each(chapter in item.latestChapters)
+          <li>
+            <a href="/series/{{ item.type }}/{{ item.slug }}/{{ chapter.number }}" class="home-chapter">
+              <span class="home-chapter__no">Bölüm {{ chapter.number }}</span>
+              @if(chapter.title)
+              <span class="home-chapter__title">{{ chapter.title }}</span>
+              @end
+              @if(chapter.fresh)
+              @!component('components/ui/badge', { kind: 'accent', text: 'Yeni', size: 'sm', class: 'home-chapter__new' })
+              @end
+              <time class="home-chapter__time" datetime="{{ chapter.publishedAt }}" title="{{ dateOf(chapter.publishedAt) }}">{{ chapter.timeAgo }}</time>
+            </a>
+          </li>
+          @end
+        </ul>
+        @else
+        <p class="home-chapters__none">Henüz bölüm yok</p>
+        @end
+      @end
+    </li>
+    @end
+  </ul>
+
+  @!component('components/ui/pagination', { current: currentPage, total: totalPages, label: 'Son güncellenenler sayfaları', class: 'mt-8' })
+  @elseif(currentPage > 1)
+  @component('components/ui/empty_state', { icon: 'book-open', title: 'Bu sayfada seri yok', description: 'Listenin sonuna geldiniz; en yeni güncellemeler ilk sayfada.' })
+    @component('components/ui/button', { variant: 'secondary', href: '/', icon: 'arrow-left' })
+      İlk sayfaya dön
+    @end
+  @end
+  @else
+  @component('components/ui/empty_state', { icon: 'book-open', title: 'Henüz seri eklenmemiş', description: 'Seriler eklendikçe yeni bölüm gelenler burada listelenir.' })
+    @if(auth && auth.user && auth.user.isStaff)
+    @component('components/ui/button', { variant: 'primary', href: '/admin/seriler/ekle', icon: 'plus' })
+      Seri ekle
+    @end
+    @end
+  @end
+  @end
+</section>

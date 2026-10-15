@@ -1,0 +1,17 @@
+{{--
+  Small label (class `badge`, colours from data-tone, see components.css).
+  Props: kind type|status|age|accent|success|warning|danger|info|neutral, value (raw value such as
+         'manga', 'Tamamlandı', '18+'), text (shown text; default value, capitalised for type),
+         tone (override), size sm|md|lg, solid (white text on the colour: covers), caps, class.
+  The text is the direct child of the <span>. Alpine templates use the same markup:
+  <span class="badge" data-tone="…">. Other props (title, style …) are forwarded.
+    @!component('components/ui/badge', { kind: 'type', value: series.type, solid: true, caps: true })
+    @!component('components/ui/badge', { kind: 'status', value: series.status })
+--}}
+@let(kind = $props.get('kind', 'neutral'))
+@let(value = String($props.get('value', '')))
+@let(text = $props.get('text', kind === 'type' ? value.charAt(0).toUpperCase() + value.slice(1) : value))
+@let(tone = $props.get('tone', badgeTone(kind, value)))
+@let(size = $props.get('size', 'md'))
+@let(rest = $props.except(['kind', 'value', 'text', 'tone', 'size', 'solid', 'caps', 'class']))
+<span class="badge {{ size === 'md' ? '' : 'badge--' + size }} {{ $props.get('solid') ? 'badge--solid' : '' }} {{ $props.get('caps') ? 'badge--caps' : '' }} {{ $props.get('class', '') }}" data-tone="{{ tone }}" {{{ attrs(rest.all()) }}}>{{ text }}</span>

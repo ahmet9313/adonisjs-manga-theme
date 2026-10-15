@@ -1,0 +1,105 @@
+{{--
+  Chapter list. Rows are rendered on the server (newest first, the first 10 visible) so the list
+  works before JavaScript; chapterList (chapter_list.js) searches, flips the order, expands the
+  list and marks read chapters (account: data-progress, guest: localStorage).
+--}}
+@let(latestChapter = chapters.length ? chapters[0] : null)
+@let(oldestChapter = chapters.length ? chapters[chapters.length - 1] : null)
+@let(readNumbers = reading && reading.read ? reading.read : [])
+@let(lastRead = reading ? reading.last : null)
+@let(freshSince = Date.now() - 7 * 86400000)
+<section id="bolumler" class="section" aria-labelledby="bolumler-title"
+  x-data="chapterList"
+  data-progress="{{ JSON.stringify({ type: series.type, slug: series.slug, read: reading ? reading.read : null }) }}"
+  data-chapters="{{ JSON.stringify(chapters.map(c => ({ number: c.number, title: c.title ? 'Bölüm ' + c.number + ' - ' + c.title : 'Bölüm ' + c.number, timeAgo: c.timeAgo }))) }}">
+  <div class="section-head">
+    <div class="min-w-0">
+      <h2 id="bolumler-title" class="section-head__title">
+        @!component('components/icon', { name: 'list' })
+        Bölümler
+        <span class="badge" data-tone="neutral">{{ chapters.length }}</span>
+      </h2>
+      @if(latestChapter)
+      <p class="section-head__desc">Son bölüm: Bölüm {{ latestChapter.number }} · {{ latestChapter.timeAgo }}</p>
+      @end
+    </div>
+    @if(chapters.length > 1)
+    <div class="flex flex-wrap gap-1.5">
+      <a href="{{ seriesUrl }}/{{ oldestChapter.number }}" class="btn btn--ghost btn--sm">
+        @!component('components/icon', { name: 'arrow-left', class: 'btn__icon' })
+        <span>İlk bölüm</span>
+      </a>
+      <a href="{{ seriesUrl }}/{{ latestChapter.number }}" class="btn btn--ghost btn--sm">
+        <span>Son bölüm</span>
+        @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+      </a>
+    </div>
+    @end
+  </div>
+
+  @if(chapters.length)
+  <div class="panel panel--flush">
+    <div class="chapters-panel__bar">
+      <label class="control control--icon chapters-panel__search">
+        @!component('components/icon', { name: 'search' })
+        <span class="sr-only">Bölüm ara</span>
+        <input type="search" x-model="search" placeholder="Bölüm ara… (örn. 25)" autocomplete="off" enterkeyhint="search">
+      </label>
+      @if(chapters.length > 1)
+      <div class="segmented shrink-0" role="group" aria-label="Bölüm sıralaması">
+        <button type="button" @click="setOrder(false)" aria-pressed="true" :aria-pressed="(!ascending).toString()" title="Yeniden eskiye">Yeni</button>
+        <button type="button" @click="setOrder(true)" aria-pressed="false" :aria-pressed="ascending.toString()" title="Eskiden yeniye">Eski</button>
+      </div>
+      @end
+    </div>
+
+    <ol id="bolum-listesi" class="chapter-list" :class="ascending && 'is-asc'" aria-labelledby="bolumler-title">
+      @each((chapter, index) in chapters)
+      @let(rowState = lastRead === chapter.number ? 'last' : (readNumbers.includes(chapter.number) ? 'read' : ''))
+      <li x-show="shown({{ index }})"
+        @if(index >= 10)
+        x-cloak
+        @end
+        >
+        <a href="{{ seriesUrl }}/{{ chapter.number }}" class="chapter-row" data-state="{{ rowState }}" :data-state="state({{ index }})">
+          <span class="chapter-row__mark" aria-hidden="true">
+            @!component('components/icon', { name: 'check', class: 'chapter-row__icon-read h-4 w-4', stroke: 2.4 })
+            @!component('components/icon', { name: 'bookmark', class: 'chapter-row__icon-last h-4 w-4', stroke: 2 })
+          </span>
+          <span class="chapter-row__main">
+            <span class="chapter-row__num">Bölüm {{ chapter.number }}</span>
+            @if(chapter.title)
+            <span class="chapter-row__name">{{ chapter.title }}</span>
+            @end
+          </span>
+          @if(new Date(chapter.publishedAt).getTime() > freshSince)
+          <span class="badge badge--sm" data-tone="success">Yeni</span>
+          @end
+          <span class="badge badge--sm chapter-row__current" data-tone="accent">Son okunan</span>
+          <span class="sr-only chapter-row__read-label">, okundu</span>
+          <span class="chapter-row__time">{{ chapter.timeAgo }}</span>
+        </a>
+      </li>
+      @end
+    </ol>
+
+    <p class="sr-only" role="status" aria-live="polite" x-text="search.trim() ? matchCount() + ' bölüm bulundu' : ''"></p>
+    <p x-cloak x-show="search.trim() && !matchCount()" class="chapters-panel__empty">
+      Aramana uygun bölüm bulunamadı.
+      <button type="button" class="btn btn--link btn--sm" @click="search = ''">Aramayı temizle</button>
+    </p>
+
+    @if(chapters.length > 10)
+    <div class="chapters-panel__foot" x-show="!search.trim()">
+      <button type="button" class="btn btn--ghost btn--sm" @click="showAll = !showAll" aria-controls="bolum-listesi" aria-expanded="false" :aria-expanded="showAll.toString()">
+        <span x-show="!showAll">Tümünü göster ({{ chapters.length }})</span>
+        <span x-show="showAll" x-cloak>Daha az göster</span>
+        @!component('components/icon', { name: 'chevron-down', class: 'btn__icon' })
+      </button>
+    </div>
+    @end
+  </div>
+  @else
+  @!component('components/ui/empty_state', { icon: 'book-open', title: 'Henüz bölüm yok', description: 'Bu seriye bölüm eklendiğinde burada listelenecek. Haberdar olmak için seriyi kaydedebilirsin.' })
+  @end
+</section>

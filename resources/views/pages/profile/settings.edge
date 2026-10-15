@@ -1,156 +1,236 @@
+{{--
+  Settings (/ayarlar). Hooks: profileSettings (profile_settings.js) with data-config, the hash
+  tabs #profile / #account / #security, [data-user-avatar] and [data-user-banner] (updated live
+  after an upload), $refs.file / stage / img, and the /ayarlar/* endpoints.
+  A failed form opens its own tab: the account form flashes `email`, the password form only
+  `current_password` (passwords are never flashed).
+--}}
 @component('components/layout/main', { title })
 
 @slot('main')
-  <div
-    class="mx-auto max-w-5xl"
-    x-data="profileSettings"
-    data-config="{{ JSON.stringify({ csrf: csrfToken, avatar: member.avatar, banner: member.banner, name: member.fullName, username: member.username, bio: member.bio || '', tab: flashMessages.has('inputErrorsBag.current_password') || flashMessages.has('inputErrorsBag.password') ? 'security' : flashMessages.has('inputErrorsBag.email') ? 'account' : 'profile' }) }}"
-  >
-    <h1 class="mb-6 text-2xl font-bold text-(--t-heading)">Kullanıcı Ayarları</h1>
+  @let(look = lookOf(member))
+  @let(failed = flashMessages.has('inputErrorsBag'))
+  @let(initialTab = flashMessages.has('email') ? 'account' : (flashMessages.has('inputErrorsBag.current_password') || flashMessages.has('inputErrorsBag.password') || flashMessages.has('inputErrorsBag.password_confirmation')) ? 'security' : 'profile')
+  @let(nameValue = flashMessages.has('full_name') ? String(flashMessages.get('full_name') || '') : member.fullName)
+  @let(bioValue = flashMessages.has('bio') ? String(flashMessages.get('bio') || '') : (member.bio || ''))
+  @let(sections = [{ key: 'profile', label: 'Profil', icon: 'user' }, { key: 'account', label: 'Hesap', icon: 'mail' }, { key: 'security', label: 'Güvenlik', icon: 'lock' }])
+  <div class="settings" x-data="profileSettings"
+       data-config="{{ JSON.stringify({ csrf: csrfToken, avatar: member.avatar, banner: member.banner, name: nameValue, username: member.username, bio: bioValue, tab: initialTab, errors: failed }) }}">
+    @!component('components/ui/page_header', { title: 'Ayarlar', description: 'Profilini, hesap bilgilerini ve parolanı buradan yönet.' })
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div class="settings__layout">
+      {{-- Section tabs: a row on phones and tablets, a vertical list from lg. --}}
+      <div role="tablist" aria-label="Ayar bölümleri" class="tabs settings-tabs" aria-orientation="horizontal" :aria-orientation="vertical ? 'vertical' : 'horizontal'" @keydown="onTabKey($event)">
+        @each(section in sections)
+        <button type="button" role="tab" id="settings-tab-{{ section.key }}" data-tab="{{ section.key }}" aria-controls="settings-panel-{{ section.key }}"
+                aria-selected="{{ section.key === initialTab ? 'true' : 'false' }}" tabindex="{{ section.key === initialTab ? 0 : -1 }}"
+                :aria-selected="(tab === '{{ section.key }}').toString()" :tabindex="tab === '{{ section.key }}' ? 0 : -1"
+                @click="select('{{ section.key }}')" class="tab">
+          @!component('components/icon', { name: section.icon })
+          <span>{{ section.label }}</span>
+        </button>
+        @end
+      </div>
+
       <div class="min-w-0">
-        {{-- Tabs --}}
-        <div class="mb-4 flex gap-1 overflow-x-auto border-b border-white/10" role="tablist">
-          <template x-for="item in [['profile','Profilim'],['account','Hesap'],['security','Güvenlik']]" :key="item[0]">
-            <button type="button" role="tab" @click="tab = item[0]" :aria-selected="(tab === item[0]).toString()"
-                    class="-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition"
-                    :class="tab === item[0] ? 'border-emerald-400 text-(--t-heading)' : 'border-transparent text-gray-400 hover:text-gray-200'"
-                    x-text="item[1]"></button>
-          </template>
-        </div>
+        {{-- Profile: live card (avatar and cover change at once) and the name/bio form --}}
+        <div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile" class="settings-panel" :hidden="tab !== 'profile'"
+          @if(initialTab !== 'profile')
+          hidden
+          @end
+          >
+          <section class="profile-card" aria-labelledby="profile-card-title">
+            <h2 id="profile-card-title" class="sr-only">Profil kartı önizlemesi</h2>
+            @if(look.wallpaper)
+            <div class="profile-card__wall wall {{ look.wallpaper.cls || '' }}" style="{{ visualStyle(look.wallpaper) }}" aria-hidden="true"></div>
+            @end
 
-        {{-- Profile --}}
-        <form x-show="tab === 'profile'" action="/ayarlar/profil" method="POST" class="space-y-5 rounded-2xl border border-white/10 glass p-5 sm:p-6">
-          {{ csrfField() }}
-          <div>
-            <label for="full_name" class="mb-1 block text-sm font-medium text-gray-300">Görünen ad</label>
-            <input type="text" id="full_name" name="full_name" required minlength="2" maxlength="40" x-model="name"
-                   class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-            @!component('components/field_error', { field: 'full_name' })
-          </div>
-          <div>
-            <label for="bio" class="mb-1 block text-sm font-medium text-gray-300">Hakkında</label>
-            <textarea id="bio" name="bio" rows="4" maxlength="300" x-model="bio"
-                      class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
-            <div class="mt-1 text-right text-xs text-gray-500"><span x-text="bio.length"></span>/300</div>
-            @!component('components/field_error', { field: 'bio' })
-          </div>
-          <div class="rounded-lg border border-white/10 bg-(--t-field) p-4 text-sm text-gray-400">
-            Profil resmi ve bannerı sağdaki kartın üzerinden değiştirebilirsin: resme tıkla, bir görsel seç, kaydırıp yakınlaştırarak kırp.
-          </div>
-          <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
-        </form>
-
-        {{-- Account --}}
-        <form x-cloak x-show="tab === 'account'" action="/ayarlar/hesap" method="POST" class="space-y-5 rounded-2xl border border-white/10 glass p-5 sm:p-6">
-          {{ csrfField() }}
-          <div>
-            <label class="mb-1 block text-sm font-medium text-gray-300">Kullanıcı adı</label>
-            <input type="text" value="{{ member.username }}" disabled class="w-full cursor-not-allowed rounded-lg border border-white/10 bg-(--t-field) px-4 py-2.5 text-gray-500">
-          </div>
-          @!component('components/auth/field', { id: 'account-email', name: 'email', type: 'email', label: 'E-posta', value: flashMessages.get('email') || member.email, autocomplete: 'email' })
-          @!component('components/auth/field', { id: 'account-current', name: 'current_password', type: 'password', label: 'Mevcut parola (onay için)', value: '', autocomplete: 'current-password' })
-          <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) hover:from-emerald-600 hover:to-teal-700">E-postayı Güncelle</button>
-        </form>
-
-        {{-- Security --}}
-        <form x-cloak x-show="tab === 'security'" action="/ayarlar/parola" method="POST" class="space-y-5 rounded-2xl border border-white/10 glass p-5 sm:p-6">
-          {{ csrfField() }}
-          @!component('components/auth/field', { id: 'security-current', name: 'current_password', type: 'password', label: 'Mevcut parola', value: '', autocomplete: 'current-password' })
-          @!component('components/auth/field', { id: 'security-new', name: 'password', type: 'password', label: 'Yeni parola (en az 8 karakter)', value: '', autocomplete: 'new-password' })
-          @!component('components/auth/field', { id: 'security-confirm', name: 'password_confirmation', type: 'password', label: 'Yeni parola (tekrar)', value: '', autocomplete: 'new-password' })
-          <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) hover:from-emerald-600 hover:to-teal-700">Parolayı Değiştir</button>
-        </form>
-      </div>
-
-      {{-- Live profile card (Discord style): click the banner or avatar to change them --}}
-      <aside aria-label="Profil önizlemesi" class="lg:sticky lg:top-24 lg:self-start">
-        <div class="overflow-hidden rounded-2xl border border-white/10 glass shadow-xl">
-          <div class="relative">
-            <div class="h-24 w-full bg-gradient-to-r from-emerald-600/60 via-sky-700/50 to-teal-700/60">
-              <img x-show="banner" :src="banner" alt="" class="h-full w-full object-cover">
-            </div>
-            {{-- Banner dropdown --}}
-            <div class="absolute right-2 top-2" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
-              <button type="button" @click="open = !open" :aria-expanded="open.toString()" aria-haspopup="menu" aria-label="Banner seçenekleri"
-                      class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-(--t-heading) hover:bg-black/75">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              </button>
-              <div x-cloak x-show="open" x-transition role="menu" class="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-lg border border-white/10 bg-(--t-field) py-1 shadow-2xl">
-                <button type="button" role="menuitem" @click="open = false; pick('banner')" class="block w-full px-4 py-2.5 text-left text-sm text-gray-200 hover:bg-white/5">Banner yükle</button>
-                <button type="button" role="menuitem" x-show="banner" @click="open = false; remove('banner')" class="block w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-900/20">Bannerı kaldır</button>
-              </div>
-            </div>
-            {{-- Avatar dropdown --}}
-            <div class="absolute -bottom-10 left-4" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
-              <button type="button" @click="open = !open" :aria-expanded="open.toString()" aria-haspopup="menu" aria-label="Profil resmi seçenekleri" class="group relative block rounded-full ring-4 ring-black/40">
-                <span class="relative inline-flex h-20 w-20 overflow-hidden rounded-full bg-(--t-field)">
-                  <img x-show="avatar" :src="avatar" alt="" class="absolute inset-0 h-full w-full object-cover">
-                  <span x-show="!avatar" class="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-600 to-teal-700 text-3xl font-bold text-(--t-on-accent)" x-text="(name || username).charAt(0).toUpperCase()"></span>
-                </span>
-                @if(lookOf(member).frame && lookOf(member).frame.img)
-                  <img src="{{ lookOf(member).frame.img }}" alt="" class="avatar-frame-img">
-                @elseif(lookOf(member).frame)
-                  <span class="avatar-frame {{ lookOf(member).frame.cls }}"></span>
+            <div class="profile-card__banner" data-art="{{ look.wallpaper ? 'wall' : 'plain' }}">
+              <img data-user-banner alt="" width="1500" height="500" decoding="async" class="{{ member.banner ? '' : 'hidden' }}"
+                @if(member.banner)
+                src="{{ member.banner }}"
                 @end
-                <span class="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 text-[10px] font-bold uppercase tracking-wide text-(--t-heading) opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">Değiştir</span>
-              </button>
-              <div x-cloak x-show="open" x-transition role="menu" class="absolute left-0 top-full z-20 mt-2 w-52 overflow-hidden rounded-lg border border-white/10 bg-(--t-field) py-1 shadow-2xl">
-                <button type="button" role="menuitem" @click="open = false; pick('avatar')" class="block w-full px-4 py-2.5 text-left text-sm text-gray-200 hover:bg-white/5">Profil resmi yükle</button>
-                <button type="button" role="menuitem" x-show="avatar" @click="open = false; remove('avatar')" class="block w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-900/20">Profil resmini kaldır</button>
+                >
+            </div>
+            <div class="profile-card__cover">
+              @component('components/ui/dropdown', { id: 'cover-menu', label: 'Kapağı değiştir', icon: 'camera', align: 'right', width: 'w-60', buttonClass: 'btn btn--sm max-sm:h-10 profile-card__cover-btn' })
+                <button type="button" class="menu__item" @click="close(true); pick('banner')">
+                  @!component('components/icon', { name: 'upload' })
+                  Yeni kapak görseli yükle
+                </button>
+                <button type="button" class="menu__item menu__item--danger" x-cloak x-show="banner" :disabled="removing === 'banner'" @click="close(true); remove('banner')">
+                  @!component('components/icon', { name: 'trash' })
+                  Kapak görselini kaldır
+                </button>
+              @end
+            </div>
+
+            <div class="profile-card__body {{ look.wallpaper ? 'wall-veil' : '' }}">
+              <div class="profile-card__avatar">
+                @component('components/ui/dropdown', { id: 'avatar-menu', label: 'Profil resmini değiştir', iconOnly: true, width: 'w-60', buttonClass: 'profile-card__avatar-btn' })
+                  @slot('trigger')
+                    @!component('components/avatar', { user: member, size: 'h-20 w-20 sm:h-24 sm:w-24', text: 'text-3xl sm:text-4xl', frame: look.frame })
+                    <span class="profile-card__avatar-badge" aria-hidden="true">
+                      @!component('components/icon', { name: 'camera', class: 'h-4 w-4' })
+                    </span>
+                  @end
+                  <button type="button" class="menu__item" @click="close(true); pick('avatar')">
+                    @!component('components/icon', { name: 'upload' })
+                    Yeni profil resmi yükle
+                  </button>
+                  <button type="button" class="menu__item menu__item--danger" x-cloak x-show="avatar" :disabled="removing === 'avatar'" @click="close(true); remove('avatar')">
+                    @!component('components/icon', { name: 'trash' })
+                    Profil resmini kaldır
+                  </button>
+                @end
+              </div>
+
+              <div class="profile-card__actions">
+                @component('components/ui/button', { variant: 'secondary', href: '/uye/' + member.username, icon: 'user', class: 'profile-card__action' })
+                  <span class="max-sm:sr-only">Profilini gör</span>
+                @end
+                @component('components/ui/button', { variant: 'secondary', icon: 'archive', class: 'profile-card__action', '@click': "$dispatch('open-inventory', 'frame')" })
+                  <span class="max-sm:sr-only">Envanter</span>
+                @end
+              </div>
+
+              <div class="profile-card__identity">
+                <p class="profile-card__title">
+                  <span class="profile-card__name {{ look.effect && look.effect.cls ? look.effect.cls : '' }}" style="{{ visualStyle(look.effect) }}" x-text="name.trim() || username">{{ nameValue }}</span>
+                  @!component('components/level_badge', { level: member.level })
+                  @if(member.role !== 'member')
+                  @!component('components/role_badge', { user: member })
+                  @end
+                </p>
+                <p class="profile-card__handle">&#64;{{ member.username }}</p>
+                <p class="profile-card__bio" x-show="bio.trim()" x-text="bio">{{ bioValue }}</p>
+                <p class="profile-card__bio profile-card__bio--empty" x-cloak x-show="!bio.trim()">Henüz bir tanıtım yazın yok. Aşağıdaki Hakkında alanına yazdıkların burada görünür.</p>
               </div>
             </div>
-          </div>
-          <div class="px-4 pb-5 pt-12">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="break-all text-lg font-bold text-(--t-heading) {{ lookOf(member).effect ? lookOf(member).effect.cls : '' }}" style="{{ visualStyle(lookOf(member).effect) }}" x-text="name || username"></span>
-              @!component('components/level_badge', { level: member.level })
-              @!component('components/role_badge', { user: member })
-            </div>
-            <div class="text-sm text-gray-400">&#64;{{ member.username }}</div>
-            <p x-show="bio" class="mt-3 whitespace-pre-line break-words border-t border-white/5 pt-3 text-sm text-gray-300" x-text="bio"></p>
-            <div class="mt-4 flex flex-wrap gap-2">
-              <a href="/uye/{{ member.username }}" class="btn-soft">Profili gör</a>
-              <button type="button" @click="$dispatch('open-inventory', 'frame')" class="btn-soft">
-                @!component('components/icon', { name: 'stack', class: 'h-4 w-4' })
-                Envanter
-              </button>
-            </div>
-          </div>
-        </div>
-        <p x-show="message" x-cloak x-text="message" role="status" class="mt-3 rounded-lg border px-3 py-2 text-sm" :class="failed ? 'border-red-600 bg-red-900/40 text-red-300' : 'border-green-600 bg-green-900/40 text-green-300'"></p>
-      </aside>
-    </div>
+          </section>
+          <p class="settings-note">
+            @!component('components/icon', { name: 'info' })
+            <span>Profil resmi ve kapak görseli seçtiğin anda kaydedilir. Görünen ad ve hakkında yazısı için formu kaydet.</span>
+          </p>
 
-    <input type="file" x-ref="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="hidden" @change="chosen($event)">
+          <form action="/ayarlar/profil" method="POST" class="panel panel--flush settings-form" aria-labelledby="profile-form-title" data-submit-once @submit="rememberTab()">
+            {{ csrfField() }}
+            <div class="settings-form__body">
+              <div class="panel__head">
+                <div class="min-w-0">
+                  <h2 id="profile-form-title" class="panel__title">Profil bilgileri</h2>
+                  <p class="panel__desc">Herkese açık profilinde, yorumlarında ve incelemelerinde görünür.</p>
+                </div>
+              </div>
+              <div class="settings-form__fields">
+                @!component('components/ui/field', { name: 'full_name', id: 'full_name', label: 'Görünen ad', value: nameValue, required: true, minlength: 2, maxlength: 40, autocomplete: 'nickname', 'x-model': 'name', hint: '2–40 karakter. Kullanıcı adın (@' + member.username + ') değişmez.' })
+                <div class="relative">
+                  @!component('components/ui/field', { name: 'bio', id: 'bio', type: 'textarea', label: 'Hakkında', value: bioValue, rows: 4, maxlength: 300, 'x-model': 'bio', placeholder: 'Sevdiğin türler, favori serilerin, okuma alışkanlıkların…', hint: 'En fazla 300 karakter. Satır sonları korunur.' })
+                  <span class="settings-counter t-num" aria-hidden="true" x-text="bio.length + ' / 300'">{{ bioValue.length }} / 300</span>
+                </div>
+              </div>
+            </div>
+            <div class="settings-form__foot">
+              <p class="t-caption">Değişiklikler kaydettiğinde yayınlanır.</p>
+              <button type="submit" class="btn btn--primary btn--md">Kaydet</button>
+            </div>
+          </form>
+        </div>
 
-    {{-- Crop dialog --}}
-    <div x-cloak x-show="editor.open" x-transition.opacity class="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4" @keydown.escape.window="closeEditor()">
-      <div role="dialog" aria-modal="true" aria-label="Görseli düzenle" class="w-full max-w-lg rounded-2xl border border-white/10 glass p-5 shadow-2xl">
-        <h2 class="mb-1 text-lg font-bold text-(--t-heading)" x-text="editor.kind === 'avatar' ? 'Profil resmini düzenle' : 'Banner’ı düzenle'"></h2>
-        <p class="mb-4 text-sm text-gray-400">Konumlandırmak için sürükle, yakınlaştırmak için kaydırıcıyı veya fare tekerini kullan.</p>
-        <div class="mx-auto overflow-hidden rounded-lg bg-black" :style="`width:${frame.w}px`">
-          <div x-ref="stage" class="relative touch-none select-none overflow-hidden" :style="`width:${frame.w}px;height:${frame.h}px`"
-               @pointerdown="dragStart($event)" @pointermove="dragMove($event)" @pointerup="dragEnd()" @pointercancel="dragEnd()" @wheel.prevent="wheel($event)"
-               :class="dragging ? 'cursor-grabbing' : 'cursor-grab'">
-            <img x-ref="img" :src="editor.src" alt="" draggable="false" class="pointer-events-none absolute max-w-none"
-                 :style="`width:${view.nw * view.scale}px;height:${view.nh * view.scale}px;left:${view.x}px;top:${view.y}px`">
-            <div class="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_2px_rgba(34,211,238,.7)]" :class="editor.kind === 'avatar' ? 'rounded-full shadow-[0_0_0_999px_rgba(0,0,0,.6),inset_0_0_0_2px_rgba(34,211,238,.9)]' : ''"></div>
-          </div>
+        {{-- Account: e-mail address --}}
+        <div role="tabpanel" id="settings-panel-account" aria-labelledby="settings-tab-account" class="settings-panel" :hidden="tab !== 'account'"
+          @if(initialTab !== 'account')
+          hidden
+          @end
+          >
+          <form action="/ayarlar/hesap" method="POST" class="panel panel--flush settings-form" aria-labelledby="account-form-title" data-submit-once @submit="rememberTab()">
+            {{ csrfField() }}
+            <div class="settings-form__body">
+              <div class="panel__head">
+                <div class="min-w-0">
+                  <h2 id="account-form-title" class="panel__title">Hesap bilgileri</h2>
+                  <p class="panel__desc">Giriş yaparken kullanıcı adını ya da e-posta adresini kullanabilirsin.</p>
+                </div>
+              </div>
+              <div class="settings-form__fields">
+                @!component('components/ui/field', { name: 'username', id: 'account-username', label: 'Kullanıcı adı', value: member.username, disabled: true, hint: 'Kullanıcı adı değiştirilemez. Profil adresin: /uye/' + member.username })
+                @!component('components/ui/field', { name: 'email', id: 'account-email', type: 'email', label: 'E-posta adresi', value: member.email, required: true, maxlength: 255, autocomplete: 'email', spellcheck: 'false' })
+                @!component('components/auth/password', { id: 'account-current', name: 'current_password', label: 'Mevcut parola', autocomplete: 'current-password', hint: 'E-posta adresini değiştirmek için mevcut parolanı gir.' })
+              </div>
+            </div>
+            <div class="settings-form__foot">
+              <p class="t-caption">Bildirimler ve giriş için bu adres kullanılır.</p>
+              <button type="submit" class="btn btn--primary btn--md">E-postayı güncelle</button>
+            </div>
+          </form>
         </div>
-        <div class="mt-4 flex items-center gap-3">
-          <svg class="h-4 w-4 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16"/></svg>
-          <input type="range" min="1" max="4" step="0.01" :value="view.zoom" @input="zoom(Number($event.target.value))" aria-label="Yakınlaştırma" class="w-full accent-emerald-500">
-          <svg class="h-6 w-6 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16"/></svg>
-        </div>
-        <p x-show="editor.error" x-cloak x-text="editor.error" role="alert" class="mt-3 text-sm text-red-400"></p>
-        <div class="mt-5 flex justify-end gap-2">
-          <button type="button" @click="closeEditor()" :disabled="editor.busy" class="rounded-lg border border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-200 hover:border-gray-400 disabled:opacity-50">Vazgeç</button>
-          <button type="button" @click="apply()" :disabled="editor.busy" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-(--t-on-accent) disabled:opacity-60" x-text="editor.busy ? 'Yükleniyor…' : 'Uygula'"></button>
+
+        {{-- Security: password --}}
+        <div role="tabpanel" id="settings-panel-security" aria-labelledby="settings-tab-security" class="settings-panel" :hidden="tab !== 'security'"
+          @if(initialTab !== 'security')
+          hidden
+          @end
+          >
+          <form action="/ayarlar/parola" method="POST" class="panel panel--flush settings-form" aria-labelledby="security-form-title" data-submit-once @submit="rememberTab()">
+            {{ csrfField() }}
+            <div class="settings-form__body">
+              <div class="panel__head">
+                <div class="min-w-0">
+                  <h2 id="security-form-title" class="panel__title">Parolayı değiştir</h2>
+                  <p class="panel__desc">Başka sitelerde kullanmadığın, en az 8 karakterli bir parola seç.</p>
+                </div>
+              </div>
+              <div class="settings-form__fields">
+                @!component('components/auth/password', { id: 'security-current', name: 'current_password', label: 'Mevcut parola', autocomplete: 'current-password' })
+                @!component('components/auth/password', { id: 'security-new', name: 'password', label: 'Yeni parola', autocomplete: 'new-password', minlength: 8, hint: 'En az 8 karakter. Harf, rakam ve sembolleri karıştırmak parolanı güçlendirir.' })
+                @!component('components/auth/password', { id: 'security-confirm', name: 'password_confirmation', label: 'Yeni parola (tekrar)', autocomplete: 'new-password' })
+              </div>
+            </div>
+            <div class="settings-form__foot">
+              <p class="t-caption">Parolan değiştikten sonra bu cihazda oturumun açık kalır.</p>
+              <button type="submit" class="btn btn--primary btn--md">Parolayı değiştir</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
+
+    <input type="file" x-ref="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="hidden" tabindex="-1" aria-hidden="true" @change="chosen($event)">
+
+    {{-- Crop dialog: drag, wheel or the slider; arrow keys move the image, + / − zoom, 0 resets. --}}
+    @component('components/ui/modal', { id: 'crop', title: 'Görseli düzenle', titleExpr: "editor.kind === 'avatar' ? 'Profil resmini düzenle' : 'Kapak görselini düzenle'", description: 'Sürükleyerek ya da ok tuşlarıyla konumlandır; fare tekeri, kaydırıcı veya + / − tuşlarıyla yakınlaştır, 0 ile baştan al.', size: 'md', open: 'editor.open', close: 'closeEditor()' })
+      <div class="crop">
+        <div x-ref="stage" class="crop__stage" tabindex="0" data-autofocus role="application" aria-roledescription="kırpma alanı" aria-label="Görselin konumu" aria-describedby="crop-desc"
+             :class="{ 'is-dragging': dragging }" :style="`width:${frame.w}px;height:${frame.h}px`"
+             @pointerdown="dragStart($event)" @pointermove="dragMove($event)" @pointerup="dragEnd()" @pointercancel="dragEnd()" @lostpointercapture="dragEnd()"
+             @wheel.prevent="wheel($event)" @keydown="onCropKey($event)">
+          <img x-ref="img" :src="editor.src || null" alt="" draggable="false" class="crop__img"
+               :style="`width:${view.nw * view.scale}px;height:${view.nh * view.scale}px;left:${view.x}px;top:${view.y}px`">
+          <span class="crop__mask" :class="{ 'crop__mask--round': editor.kind === 'avatar' }" aria-hidden="true"></span>
+        </div>
+      </div>
+      <div class="crop__zoom">
+        <button type="button" class="btn btn--ghost btn--sm btn--icon" @click="zoomOut()" :disabled="view.zoom <= 1" aria-label="Uzaklaştır">
+          @!component('components/icon', { name: 'minus', class: 'btn__icon' })
+        </button>
+        <input type="range" min="1" max="4" step="0.01" class="crop__range" :value="view.zoom" @input="zoom(Number($event.target.value))"
+               aria-label="Yakınlaştırma" :aria-valuetext="'%' + Math.round(view.zoom * 100)">
+        <button type="button" class="btn btn--ghost btn--sm btn--icon" @click="zoomIn()" :disabled="view.zoom >= 4" aria-label="Yakınlaştır">
+          @!component('components/icon', { name: 'plus', class: 'btn__icon' })
+        </button>
+      </div>
+      <p x-cloak x-show="editor.error" x-text="editor.error" role="alert" class="field__error mt-3 text-center"></p>
+      @slot('footer')
+        <button type="button" class="btn btn--ghost btn--md mr-auto" @click="reset()" :disabled="editor.busy">
+          @!component('components/icon', { name: 'refresh', class: 'btn__icon' })
+          <span>Sıfırla</span>
+        </button>
+        <button type="button" class="btn btn--secondary btn--md" @click="closeEditor()" :disabled="editor.busy">Vazgeç</button>
+        <button type="button" class="btn btn--primary btn--md" @click="apply()" :disabled="editor.busy" aria-busy="false" :aria-busy="editor.busy.toString()">
+          <span x-text="editor.busy ? 'Yükleniyor…' : 'Kaydet'">Kaydet</span>
+        </button>
+      @end
+    @end
   </div>
 @end
 

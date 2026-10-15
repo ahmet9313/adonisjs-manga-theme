@@ -1,0 +1,21 @@
+{{--
+  Progress bar with role="progressbar" (class `progress`).
+  Props: value, max (100), label (accessible name, required), size md|sm, tone accent|success,
+         showValue (prints "value / max" under the bar), valueText (custom aria-valuetext), class.
+--}}
+@let(max = Number($props.get('max', 100)) || 100)
+@let(value = Math.max(0, Math.min(max, Number($props.get('value', 0)) || 0)))
+@let(percent = Math.round((value / max) * 100))
+<div class="{{ $props.get('class', '') }}">
+  <div class="progress {{ $props.get('size') === 'sm' ? 'progress--sm' : '' }}" role="progressbar" aria-label="{{ $props.get('label', '') }}"
+       aria-valuemin="0" aria-valuemax="{{ max }}" aria-valuenow="{{ value }}"
+       @if($props.get('valueText'))
+       aria-valuetext="{{ $props.get('valueText') }}"
+       @end
+       data-tone="{{ $props.get('tone', 'accent') }}">
+    <div class="progress__bar" style="width: {{ percent }}%"></div>
+  </div>
+  @if($props.get('showValue'))
+  <p class="t-caption t-num mt-1">{{ value }} / {{ max }}</p>
+  @end
+</div>

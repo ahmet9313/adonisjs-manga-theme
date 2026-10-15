@@ -1,58 +1,184 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin card form (create and edit) with a live card preview (Alpine `cardForm`,
+  resources/js/components/admin_community.js): image, rarity and name update as you type.
+  Posted fields are unchanged: name, rarity, series_id, image, active. Without a new image the
+  stored image stays; a new card without an image uses the linked series' cover.
+--}}
+@let(isEdit = Boolean(card))
+@let(sent = flashMessages.has('rarity'))
+@let(rarityValue = sent && rarities.some((entry) => entry.rarity === flashMessages.get('rarity')) ? flashMessages.get('rarity') : isEdit ? card.rarity : rarities[0].rarity)
+@let(seriesValue = sent ? flashMessages.get('series_id') || '' : isEdit && card.seriesId ? card.seriesId : '')
+@let(active = sent ? flashMessages.has('active') : (isEdit ? card.active : true))
+@let(covers = Object.fromEntries(seriesList.filter((series) => series.coverImage).map((series) => [String(series.id), series.coverImage])))
+@let(config = { name: sent ? flashMessages.get('name') || '' : isEdit ? card.name : '', rarity: rarityValue, seriesId: String(seriesValue), covers, image: isEdit ? card.image : '' })
+@let(hide = (visible) => visible ? '' : 'display: none')
+@let(errorBag = flashMessages.get('inputErrorsBag') || {})
+@let(formErrors = Object.entries(errorBag))
+@let(fieldLabels = { name: 'Ad', rarity: 'Nadirlik', series_id: 'Seri', image: 'Görsel' })
+@let(rarityOptions = rarities.map((entry) => ({ value: entry.rarity, label: entry.rarity + ' — ' + entry.label })))
+@let(seriesOptions = [{ value: '', label: '— Seriden bağımsız —' }].concat(seriesList.map((series) => ({ value: series.id, label: series.title }))))
+@component('components/layout/admin', {
+  title: isEdit ? card.name : title,
+  description: isEdit ? 'Kartın adını, nadirliğini, serisini ve görselini düzenleyin. Önizleme siz değiştirdikçe güncellenir.' : 'Bir karakter ya da sahne kartı ekleyin. Görsel seçmezseniz bağlı serinin kapağı kullanılır.',
+  crumbs: [{ label: 'Kartlar', href: '/admin/kartlar' }, { label: isEdit ? 'Düzenle' : 'Yeni kart' }]
+})
+  @slot('main')
+    <div class="ac-page ac-editor ac-editor--card" x-data="cardForm" data-config="{{ JSON.stringify(config) }}">
+      <div class="ac-editor__main">
+        <form id="card-form" action="{{ isEdit ? '/admin/kartlar/' + card.id + '/duzenle' : '/admin/kartlar/ekle' }}" method="POST" enctype="multipart/form-data"
+              class="grid gap-6" data-submit-once @input="dirty = true" @change="dirty = true">
+          {{ csrfField() }}
 
-@slot('main')
-  @let(field = 'w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500')
-  <div class="max-w-3xl space-y-4">
-    <a href="/admin/kartlar" class="text-sm text-gray-400 hover:text-gray-200">← Kartlara dön</a>
-    <form action="{{ card ? '/admin/kartlar/' + card.id + '/duzenle' : '/admin/kartlar/ekle' }}" method="POST" enctype="multipart/form-data" class="grid gap-6 rounded-xl border border-gray-700 bg-(--t-surface) p-6 sm:grid-cols-[10rem_minmax(0,1fr)]">
-      {{ csrfField() }}
-      <div>
-        @if(card)
-          <div class="tcg" data-rarity="{{ card.rarity }}">
-            <img src="{{ card.image }}" alt="">
-            <span class="tcg-letter">{{ card.rarity }}</span>
+          @if(formErrors.length)
+          @component('components/ui/alert', { tone: 'danger', title: 'Kart kaydedilemedi' })
+            <p>Aşağıdaki alanları düzeltip yeniden kaydedin. Seçtiğiniz görsel güvenlik nedeniyle yeniden seçilmelidir.</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              @each(entry in formErrors)
+              @let(label = fieldLabels[entry[0]] || entry[0])
+              @if(String(entry[1][0]).startsWith(label))
+              <li><a href="#f-{{ entry[0] }}" class="link">{{ entry[1][0] }}</a></li>
+              @else
+              <li><a href="#f-{{ entry[0] }}" class="link">{{ label }}</a>: {{ entry[1][0] }}</li>
+              @end
+              @end
+            </ul>
+          @end
+          @end
+
+          @component('components/ui/panel', { title: 'Kart bilgileri', id: 'card-info' })
+            <div class="grid gap-5">
+              @!component('components/ui/field', { name: 'name', label: 'Karakter / kart adı', required: true, value: isEdit ? card.name : '', maxlength: 80, autocomplete: 'off', placeholder: 'Örn. Naruto Uzumaki', 'x-model': 'name' })
+              <div class="grid gap-5 sm:grid-cols-2">
+                @!component('components/ui/field', { name: 'rarity', label: 'Nadirlik', type: 'select', value: rarityValue, options: rarityOptions, hint: 'Nadir kartlar daha seyrek düşer.', 'x-model': 'rarity' })
+                @!component('components/ui/field', { name: 'series_id', label: 'Seri', type: 'select', value: seriesValue, options: seriesOptions, hint: 'Kart, seri kapağını yedek görsel olarak kullanabilir.', 'x-model': 'seriesId' })
+              </div>
+
+              <div class="field">
+                <span id="f-image-label" class="field__label">Görsel</span>
+                <label class="dropzone ac-drop {{ isEdit ? 'has-image' : '' }}" :class="{ 'is-over': over, 'has-image': Boolean(imageUrl) }"
+                       @dragover.prevent="over = true" @dragleave="if (!$el.contains($event.relatedTarget)) over = false" @drop.prevent="dropFile($event)">
+                  <input type="file" id="f-image" name="image" accept="image/png,image/webp,image/gif,image/jpeg" class="sr-only" x-ref="file"
+                         aria-labelledby="f-image-label" aria-describedby="f-image-hint{{ errorBag.image ? ' f-image-error' : '' }}" @change="pickFile($event)"
+                    @if(errorBag.image)
+                    aria-invalid="true"
+                    @end
+                    >
+                  <span class="ac-drop__thumb ac-drop__thumb--card" x-show="imageUrl" style="{{ hide(isEdit) }}">
+                    <img alt="" :src="imageUrl || null"
+                      @if(isEdit)
+                      src="{{ card.image }}"
+                      @end
+                      >
+                  </span>
+                  <span class="ac-drop__text">
+                    @!component('components/icon', { name: 'photo' })
+                    <span class="ac-drop__cta" x-show="imageUrl" style="{{ hide(isEdit) }}">Görseli değiştir</span>
+                    <span class="ac-drop__cta" x-show="!imageUrl" style="{{ hide(!isEdit) }}">Görsel seçin</span>
+                    <span>veya buraya sürükleyip bırakın</span>
+                  </span>
+                </label>
+                <div class="ac-file" x-show="fileName" x-cloak aria-live="polite">
+                  @!component('components/icon', { name: 'check-circle' })
+                  <span class="min-w-0 flex-1 truncate"><span x-text="fileName"></span> · <span x-text="fileSize"></span></span>
+                  <button type="button" class="btn btn--link btn--sm shrink-0" @click="resetFile()">Seçimi geri al</button>
+                </div>
+                <p class="field__error" role="alert" x-show="fileError === 'type'" x-cloak>Yalnız PNG, WebP, GIF veya JPG görseli seçin.</p>
+                <p class="field__error" role="alert" x-show="fileError === 'size'" x-cloak>Görsel 6 MB sınırını aşıyor; daha küçük bir dosya seçin.</p>
+                <p class="field__error" role="alert" x-show="fileError === 'drop'" x-cloak>Tarayıcınız sürükle bırakı desteklemiyor; görseli tıklayarak seçin.</p>
+                <p id="f-image-hint" class="field__hint">Dikey 5:7 oran önerilir; PNG, WebP, GIF veya JPG, en fazla 6 MB. {{ isEdit ? 'Yeni görsel seçmezseniz mevcut görsel kalır.' : 'Görsel seçmezseniz bağlı serinin kapağı kullanılır.' }}</p>
+                @!component('components/field_error', { field: 'image', id: 'f-image-error' })
+              </div>
+
+              @!component('components/ui/field', { name: 'active', label: 'Aktif', type: 'toggle', value: active, hint: 'Pasif kartlar okurken düşmez ve parçalardan üretilemez; sahip olanlarda kalır.' })
+            </div>
+          @end
+
+          <div class="savebar">
+            <p class="ac-savebar__status" aria-live="polite">
+              <span x-show="!dirty">
+                @if(isEdit)
+                Son güncelleme {{ agoOf(card.updatedAt) }}.
+                @else
+                <span class="text-danger" aria-hidden="true">*</span> işaretli alanlar zorunludur.
+                @end
+              </span>
+              <span x-show="dirty" x-cloak class="inline-flex items-center gap-2 font-semibold text-warning">
+                <span class="h-2 w-2 rounded-full bg-warning" aria-hidden="true"></span>
+                Kaydedilmemiş değişiklikler var
+              </span>
+            </p>
+            <div class="form-actions">
+              @component('components/ui/button', { variant: 'ghost', href: '/admin/kartlar' })
+                Vazgeç
+              @end
+              @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+                {{ isEdit ? 'Değişiklikleri kaydet' : 'Kartı ekle' }}
+              @end
+            </div>
           </div>
-        @else
-          <div class="flex aspect-[5/7] items-center justify-center rounded-xl border-2 border-dashed border-gray-600 text-center text-xs text-gray-500">Görsel seçmezsen seri kapağı kullanılır</div>
+        </form>
+
+        @if(isEdit)
+        <section class="panel ac-danger-zone" aria-labelledby="delete-title">
+          <div class="panel__head">
+            <div class="min-w-0">
+              <h2 id="delete-title" class="panel__title">Kartı sil</h2>
+              <p class="panel__desc">Kart, sahip olan okurların koleksiyonundan da çıkar; okurların parçaları korunur. Geri alınamaz.</p>
+            </div>
+          </div>
+          <form action="/admin/kartlar/{{ card.id }}/sil" method="POST" data-submit-once
+                data-confirm="“{{ card.name }}” kartı kalıcı olarak silinecek ve sahip olan okurların koleksiyonundan çıkar. Okurların parçaları korunur. Bu işlem geri alınamaz."
+                data-confirm-title="Kart silinsin mi?" data-confirm-label="Kartı sil">
+            {{ csrfField() }}
+            @component('components/ui/button', { type: 'submit', variant: 'danger', icon: 'trash' })
+              Kartı sil
+            @end
+          </form>
+        </section>
         @end
       </div>
-      <div class="space-y-4">
-        <h3 class="text-lg font-semibold text-gray-200">{{ card ? 'Kart düzenle' : 'Yeni kart' }}</h3>
-        <div>
-          <label for="name" class="mb-1 block text-sm font-medium text-gray-300">Karakter / kart adı</label>
-          <input id="name" name="name" required maxlength="80" value="{{ flashMessages.get('name') || (card ? card.name : '') }}" class="{{ field }}">
-          @!component('components/field_error', { field: 'name' })
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label for="rarity" class="mb-1 block text-sm font-medium text-gray-300">Nadirlik</label>
-            <select id="rarity" name="rarity" class="{{ field }}">
-              @each(entry in rarities)
-                <option value="{{ entry.rarity }}" {{ card && card.rarity === entry.rarity ? 'selected' : '' }}>{{ entry.rarity }} — {{ entry.label }}</option>
-              @end
-            </select>
-          </div>
-          <div>
-            <label for="series_id" class="mb-1 block text-sm font-medium text-gray-300">Seri</label>
-            <select id="series_id" name="series_id" class="{{ field }}">
-              <option value="">— Seriden bağımsız —</option>
-              @each(series in seriesList)
-                <option value="{{ series.id }}" {{ card && card.seriesId === series.id ? 'selected' : '' }}>{{ series.title }}</option>
-              @end
-            </select>
-            @!component('components/field_error', { field: 'series_id' })
-          </div>
-        </div>
-        <div>
-          <label for="image" class="mb-1 block text-sm font-medium text-gray-300">Görsel (dikey 5:7 önerilir)</label>
-          <input type="file" id="image" name="image" accept="image/png,image/webp,image/gif,image/jpeg" class="block w-full text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-700 file:px-3 file:py-2 file:text-gray-200">
-          @!component('components/field_error', { field: 'image' })
-        </div>
-        <label class="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" name="active" {{ !card || card.active ? 'checked' : '' }} class="accent-emerald-500"> Aktif (düşebilir ve üretilebilir)</label>
-        <button type="submit" class="rounded-lg bg-emerald-600 px-6 py-2.5 font-semibold text-(--t-on-accent) hover:bg-emerald-500">{{ card ? 'Güncelle' : 'Ekle' }}</button>
-      </div>
-    </form>
-  </div>
-@end
 
+      <aside class="ac-editor__aside" aria-labelledby="preview-title">
+        <div class="panel ac-preview">
+          <div class="panel__head">
+            <div class="min-w-0">
+              <h2 id="preview-title" class="panel__title">Önizleme</h2>
+              <p class="panel__desc">Okurun koleksiyonunda böyle görünür.</p>
+            </div>
+          </div>
+          <div class="ac-card-stage">
+            <div class="tcg ac-card-stage__card" data-rarity="{{ rarityValue }}" :data-rarity="rarity">
+              <img alt="" :src="previewImage || null" x-show="previewImage" style="{{ hide(isEdit) }}"
+                @if(isEdit)
+                src="{{ card.image }}"
+                @end
+                >
+              <span class="ac-card-stage__empty" x-show="!previewImage" style="{{ hide(!isEdit) }}">Görsel seçin ya da kapağı olan bir seri bağlayın</span>
+              <span class="tcg-letter" x-text="rarity">{{ rarityValue }}</span>
+            </div>
+            <p class="ac-card-stage__name" x-text="name || 'Adsız kart'">{{ config.name || 'Adsız kart' }}</p>
+          </div>
+          <dl class="ac-facts">
+            <div>
+              <dt>Nadirlik</dt>
+              <dd>
+                @each(entry in rarities)
+                <span x-show="rarity === '{{ entry.rarity }}'" style="{{ hide(rarityValue === entry.rarity) }}">{{ entry.rarity }} · {{ entry.label }}</span>
+                @end
+              </dd>
+            </div>
+            <div>
+              <dt>Görsel</dt>
+              <dd>
+                <span x-show="source === 'file'" x-cloak>Yeni seçilen dosya</span>
+                <span x-show="source === 'stored'" style="{{ hide(isEdit) }}">Kayıtlı görsel</span>
+                <span x-show="source === 'cover'" x-cloak>Seri kapağı</span>
+                <span x-show="source === 'none'" style="{{ hide(!isEdit) }}" class="text-warning">Yok</span>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </aside>
+    </div>
+  @end
 @end

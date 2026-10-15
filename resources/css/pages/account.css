@@ -1,0 +1,586 @@
+/*
+ * Account pages: sign-in and registration (/giris, /kayit), settings (/ayarlar: section tabs,
+ * live profile card, crop dialog) and saved series (/kaydedilenler, rendered by Alpine with the
+ * series-card classes). Colours come from tokens (var(--t-*)) only; the black scrims sit over
+ * images, and cosmetic content (frames, name effects, wallpapers) keeps its own classes.
+ */
+
+@layer components {
+  /* ---- Sign-in and registration ---------------------------------------------------------- */
+  .auth-page {
+    display: grid;
+    justify-items: center;
+    padding-block: 0.25rem 1rem;
+  }
+
+  @media (width >= 640px) {
+    .auth-page {
+      padding-block: 2rem 2.5rem;
+    }
+  }
+
+  .auth-page__grid {
+    display: grid;
+    width: 100%;
+    max-width: 28rem;
+    align-items: center;
+    gap: 2.5rem;
+  }
+
+  @media (width >= 1024px) {
+    .auth-page__grid {
+      max-width: 58rem;
+      grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
+      gap: 4.5rem;
+    }
+  }
+
+  .auth-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  @media (width >= 640px) {
+    .auth-card {
+      padding: 2.25rem 2rem 2rem;
+    }
+  }
+
+  .auth-card__mark {
+    display: grid;
+    height: 2.75rem;
+    width: 2.75rem;
+    place-items: center;
+    border-radius: var(--radius-card);
+    background: var(--t-accent-strong);
+    color: var(--t-on-accent);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    box-shadow: var(--t-shadow-1);
+  }
+
+  .auth-card__logo {
+    height: 2.75rem;
+    width: auto;
+  }
+
+  .auth-card__title {
+    margin-top: 1.25rem;
+  }
+
+  .auth-card__lead {
+    margin-top: 0.375rem;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--t-muted);
+  }
+
+  .auth-card__switch {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--t-border);
+    padding-top: 1.25rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+
+  /* Benefits next to the card (lg and up). */
+  .auth-perks__list {
+    margin-top: 1.5rem;
+    display: grid;
+    gap: 1.375rem;
+  }
+
+  .auth-perks__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+  }
+
+  .auth-perks__name {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .auth-perks__text {
+    margin-top: 0.125rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--t-muted);
+  }
+
+  .auth-perks__note {
+    margin-top: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background: var(--t-success-soft);
+    padding: 0.375rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    color: var(--t-success);
+  }
+
+  .auth-perks__note > svg {
+    height: 1rem;
+    width: 1rem;
+  }
+
+  /* ---- Settings: layout and section tabs ------------------------------------------------- */
+  .settings {
+    margin-inline: auto;
+    max-width: 64rem;
+  }
+
+  .settings__layout {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .settings-tabs .tab {
+    flex: 1 0 auto;
+    justify-content: center;
+  }
+
+  .settings-tabs .tab > svg {
+    height: 1.125rem;
+    width: 1.125rem;
+    flex-shrink: 0;
+  }
+
+  .settings-tabs .tab[aria-selected='true'] > svg {
+    color: var(--t-accent);
+  }
+
+  @media (width >= 1024px) {
+    .settings__layout {
+      grid-template-columns: 12.5rem minmax(0, 1fr);
+      align-items: start;
+      gap: 2.5rem;
+    }
+
+    .settings-tabs {
+      position: sticky;
+      top: 5.5rem;
+      flex-direction: column;
+      gap: 0.25rem;
+      overflow: visible;
+      border-bottom: 0;
+    }
+
+    .settings-tabs .tab {
+      flex: none;
+      justify-content: flex-start;
+      gap: 0.75rem;
+      margin: 0;
+      border: 0;
+      border-radius: var(--radius-control);
+      padding: 0.625rem 0.75rem;
+    }
+
+    .settings-tabs .tab:hover {
+      background: var(--t-hover);
+    }
+
+    .settings-tabs .tab[aria-selected='true'] {
+      background: var(--t-accent-soft);
+      color: var(--t-accent-text);
+    }
+  }
+
+  .settings-panel > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .settings-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--t-muted);
+  }
+
+  .settings-panel > .settings-note {
+    margin-top: 0.75rem;
+  }
+
+  .settings-note > svg {
+    margin-top: 0.125rem;
+    height: 1rem;
+    width: 1rem;
+    flex-shrink: 0;
+    color: var(--t-accent);
+  }
+
+  /* Form cards: fields on the surface, the hint and the submit button in a footer bar. */
+  .settings-form__body {
+    padding: 1.25rem;
+  }
+
+  @media (width >= 768px) {
+    .settings-form__body {
+      padding: 1.5rem;
+    }
+  }
+
+  .settings-form__fields {
+    display: grid;
+    max-width: 36rem;
+    gap: 1.25rem;
+  }
+
+  .settings-form__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    border-top: 1px solid var(--t-border);
+    background: var(--t-surface-2);
+    padding: 0.875rem 1.25rem;
+  }
+
+  @media (width >= 768px) {
+    .settings-form__foot {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  .settings-form__foot > .t-caption {
+    min-width: 0;
+    flex: 1 1 14rem;
+  }
+
+  .settings-form__foot > .btn {
+    margin-left: auto;
+  }
+
+  /* Character counter on the label row of the bio field. */
+  .settings-counter {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 0.75rem;
+    line-height: 1.3rem;
+    color: var(--t-muted);
+  }
+
+  /* ---- Settings: live profile card (mirrors the public profile hero) --------------------- */
+  .profile-card {
+    position: relative;
+    z-index: 1;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-panel);
+    background: var(--t-surface);
+  }
+
+  /* No overflow clipping on the card itself: the avatar and cover menus open over its edges. */
+  .profile-card__wall {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+  }
+
+  .profile-card__banner {
+    position: relative;
+    height: 7.5rem;
+    overflow: hidden;
+    border-radius: calc(var(--radius-panel) - 1px) calc(var(--radius-panel) - 1px) 0 0;
+    background:
+      radial-gradient(color-mix(in oklab, var(--t-heading) 10%, transparent) 1px, transparent 1.6px) 0 0 / 12px 12px,
+      radial-gradient(130% 170% at 0% 0%, color-mix(in oklab, var(--t-accent) 46%, transparent), transparent 62%),
+      radial-gradient(100% 150% at 100% 100%, color-mix(in oklab, var(--t-accent-strong) 34%, transparent), transparent 64%),
+      var(--t-accent-soft);
+  }
+
+  .profile-card__banner[data-art='wall'] {
+    background: none;
+  }
+
+  .profile-card__banner > img {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  @media (width >= 640px) {
+    .profile-card__banner {
+      height: 9.5rem;
+    }
+  }
+
+  @media (width >= 1024px) {
+    .profile-card__banner {
+      height: 11rem;
+    }
+  }
+
+  .profile-card__cover {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  /* "Kapağı değiştir" sits on the art: dark scrim, white text in both schemes. */
+  .profile-card__cover-btn {
+    border-color: rgb(255 255 255 / 0.22);
+    background: rgb(0 0 0 / 0.52);
+    color: var(--color-on-image);
+  }
+
+  .profile-card__cover-btn:hover {
+    background: rgb(0 0 0 / 0.7);
+  }
+
+  /* Small screens: avatar and actions on one row under the cover, the name and bio below. */
+  .profile-card__body {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'avatar actions'
+      'identity identity';
+    column-gap: 1rem;
+    border-radius: 0 0 calc(var(--radius-panel) - 1px) calc(var(--radius-panel) - 1px);
+    padding: 0 1rem 1.25rem;
+  }
+
+  @media (width >= 640px) {
+    .profile-card__body {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  .profile-card__avatar {
+    grid-area: avatar;
+    align-self: start;
+    margin-top: -2.75rem;
+  }
+
+  @media (width >= 640px) {
+    .profile-card__avatar {
+      margin-top: -3.25rem;
+    }
+  }
+
+  /* The avatar is the menu button; the surface ring separates it from the cover art. */
+  .profile-card__avatar-btn {
+    position: relative;
+    display: block;
+    border-radius: 9999px;
+    background: var(--t-surface);
+    padding: 0.25rem;
+    line-height: 0;
+  }
+
+  .profile-card__avatar-badge {
+    position: absolute;
+    right: 0.125rem;
+    bottom: 0.125rem;
+    z-index: 1;
+    display: grid;
+    height: 1.875rem;
+    width: 1.875rem;
+    place-items: center;
+    border: 2px solid var(--t-surface);
+    border-radius: 9999px;
+    background: var(--t-accent-strong);
+    color: var(--t-on-accent);
+    box-shadow: var(--t-shadow-1);
+    transition: background-color var(--dur-1);
+  }
+
+  .profile-card__avatar-btn:hover .profile-card__avatar-badge,
+  .profile-card__avatar-btn[aria-expanded='true'] .profile-card__avatar-badge {
+    background: color-mix(in oklab, var(--t-accent-strong) 84%, var(--t-overlay));
+  }
+
+  .profile-card__actions {
+    grid-area: actions;
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+  }
+
+  /* Icon-only on phones (the label stays for screen readers), 40px touch targets. */
+  @media (width < 640px) {
+    .profile-card__action {
+      width: var(--btn-h);
+      gap: 0;
+      padding: 0;
+    }
+  }
+
+  .profile-card__identity {
+    grid-area: identity;
+    min-width: 0;
+    margin-top: 0.75rem;
+  }
+
+  .profile-card__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.625rem;
+  }
+
+  .profile-card__name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--t-heading);
+  }
+
+  .profile-card__handle {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--t-text-2);
+  }
+
+  .profile-card__bio {
+    margin-top: 0.75rem;
+    max-width: 68ch;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--t-text);
+  }
+
+  .profile-card__bio--empty {
+    color: var(--t-muted);
+  }
+
+  /* ---- Settings: crop dialog ------------------------------------------------------------- */
+  .crop {
+    display: flex;
+    justify-content: center;
+  }
+
+  .crop__stage {
+    position: relative;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-control);
+    background: var(--t-surface-2);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .crop__stage.is-dragging {
+    cursor: grabbing;
+  }
+
+  .crop__stage:focus-visible {
+    outline: 2px solid var(--t-accent);
+    outline-offset: 3px;
+  }
+
+  .crop__img {
+    pointer-events: none;
+    position: absolute;
+    max-width: none;
+  }
+
+  /* The kept area: the full frame for covers, a circle for avatars (the rest is dimmed). */
+  .crop__mask {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 2px var(--t-accent);
+  }
+
+  .crop__mask--round {
+    border-radius: 9999px;
+    box-shadow:
+      0 0 0 999px rgb(0 0 0 / 0.55),
+      inset 0 0 0 2px var(--t-accent);
+  }
+
+  .crop__zoom {
+    margin: 1rem auto 0;
+    display: flex;
+    max-width: 22rem;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .crop__range {
+    min-width: 0;
+    flex: 1;
+  }
+
+  /* ---- Saved series (Alpine grid; same classes as components/series/card) ----------------- */
+  .bookmark-card__flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  /* "YENİ" on the cover: the strong accent keeps white text readable in both schemes. */
+  .bookmark-card__new {
+    --badge-c: var(--t-accent-strong);
+  }
+
+  .bookmark-card__remove {
+    position: absolute;
+    top: 0.375rem;
+    right: 0.375rem;
+    z-index: 1;
+    box-shadow: var(--t-shadow-1);
+  }
+
+  /* With a mouse the remove button appears on hover or keyboard focus; touch screens always show it. */
+  @media (hover: hover) and (pointer: fine) {
+    .bookmark-card__remove {
+      opacity: 0;
+      transition:
+        opacity var(--dur-1),
+        background-color var(--dur-1),
+        border-color var(--dur-1);
+    }
+
+    .bookmark-card:hover .bookmark-card__remove,
+    .bookmark-card:focus-within .bookmark-card__remove {
+      opacity: 1;
+    }
+  }
+
+  /* Equal-height cards in a row: the button sits at the bottom even under a two-line title. */
+  .bookmark-card > .series-card__body {
+    flex: 1;
+  }
+
+  .bookmark-card .series-card__meta {
+    margin-bottom: 0.375rem;
+  }
+
+  .bookmark-card__cta {
+    margin-top: auto;
+    height: auto;
+    min-height: 2.25rem;
+    padding-block: 0.4375rem;
+    padding-inline: 0.5rem;
+    line-height: 1.25;
+    white-space: normal;
+    text-align: center;
+    text-wrap: balance;
+  }
+}

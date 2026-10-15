@@ -1,0 +1,799 @@
+/*
+ * Page styles: admin content pages (dashboard, series, chapters, dictionaries). Tokens and
+ * component classes only; text over images keeps a fixed white on a dark scrim (content).
+ */
+@layer components {
+  /* ---- Lists: filters, thumbnails, row actions, footer ----------------------------------- */
+  /* Search on its own row on phones, the two selects side by side; one row from 768px. */
+  .admin-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: end;
+  }
+
+  .admin-filters > :first-child,
+  .admin-filters > .admin-filters__actions {
+    grid-column: 1 / -1;
+  }
+
+  @media (width >= 768px) {
+    .admin-filters {
+      grid-template-columns: minmax(0, 1fr) repeat(2, minmax(0, 11.5rem)) auto;
+    }
+
+    .admin-filters > :first-child,
+    .admin-filters > .admin-filters__actions {
+      grid-column: auto;
+    }
+  }
+
+  .admin-filters__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .admin-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.75rem;
+    margin: 1.25rem 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  .admin-summary strong {
+    font-weight: 700;
+    color: var(--t-heading);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-thumb {
+    width: 2.5rem;
+    flex-shrink: 0;
+    aspect-ratio: 3 / 4;
+    border-radius: var(--radius-sm);
+    background: var(--t-surface-2);
+    object-fit: cover;
+    outline: 1px solid color-mix(in oklab, var(--t-overlay) 9%, transparent);
+    outline-offset: -1px;
+  }
+
+  .admin-thumb--sm {
+    width: 2rem;
+  }
+
+  .admin-thumb--lg {
+    width: 3.75rem;
+    border-radius: var(--radius-md);
+  }
+
+  /* Secondary row links: body text, accent on hover. */
+  .admin-quiet {
+    border-radius: 0.25rem;
+    font-weight: 550;
+    color: var(--t-text-2);
+    transition: color var(--dur-1);
+  }
+
+  .admin-quiet:hover {
+    color: var(--t-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .admin-cell {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .admin-cell__body {
+    display: grid;
+    min-width: 0;
+    gap: 0.3125rem;
+  }
+
+  .admin-cell__meta {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .admin-title {
+    overflow: hidden;
+    border-radius: 0.25rem;
+    font-weight: 650;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    color: var(--t-heading);
+    transition: color var(--dur-1);
+  }
+
+  a.admin-title:hover {
+    color: var(--t-accent-text);
+  }
+
+  .admin-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .admin-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.125rem;
+  }
+
+  .admin-actions form {
+    display: contents;
+  }
+
+  .btn.admin-danger {
+    color: var(--t-danger);
+  }
+
+  .btn.admin-danger:hover:not(:disabled, [aria-disabled='true']) {
+    background: var(--t-danger-soft);
+    color: var(--t-danger);
+  }
+
+  /*
+   * Phones: admin table rows become compact cards. The main cell carries a summary line
+   * (`md:hidden`), secondary cells are hidden (`max-md:hidden`) and the actions sit on the
+   * right of the row (or wrap under it) with 40px touch targets.
+   */
+  @media (width < 768px) {
+    .admin-table.table--stack tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.75rem;
+    }
+
+    .admin-table.table--stack td.cell-main {
+      min-width: 0;
+      flex: 1 1 10rem;
+      width: auto;
+      padding: 0;
+    }
+
+    .admin-table.table--stack td.actions {
+      flex: 0 0 auto;
+      width: auto;
+      margin-left: auto;
+      padding: 0;
+    }
+
+    .admin-actions .btn {
+      --btn-h: 2.5rem;
+    }
+  }
+
+  .admin-listfoot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.25rem;
+    margin-top: 1rem;
+  }
+
+  .admin-listfoot__info {
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-perpage {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  .admin-perpage select.control {
+    width: auto;
+  }
+
+  @media (width < 640px) {
+    .admin-listfoot {
+      justify-content: center;
+    }
+
+    .admin-listfoot__info {
+      width: 100%;
+      text-align: center;
+    }
+  }
+
+  /* ---- Dashboard ---------------------------------------------------------------------- */
+  .admin-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  @media (width >= 768px) {
+    .admin-stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (width >= 1280px) {
+    .admin-stats {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  .admin-stats .stat {
+    padding: 1rem 1.125rem;
+  }
+
+  .admin-stats .stat__value {
+    margin-top: 0.25rem;
+    font-size: 1.75rem;
+  }
+
+  .admin-quick {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  @media (width >= 768px) {
+    .admin-quick {
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    }
+  }
+
+  .admin-quick__item {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.875rem;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-card);
+    background: var(--t-surface);
+    padding: 0.875rem 1rem;
+    transition:
+      border-color var(--dur-1),
+      background-color var(--dur-1);
+  }
+
+  .admin-quick__item:hover {
+    border-color: var(--t-accent-line);
+    background: color-mix(in oklab, var(--t-accent) 5%, var(--t-surface));
+  }
+
+  .admin-quick__icon {
+    display: grid;
+    height: 2.5rem;
+    width: 2.5rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: var(--radius-control);
+    background: var(--t-accent-soft);
+    color: var(--t-accent-text);
+  }
+
+  .admin-quick__icon > svg {
+    height: 1.25rem;
+    width: 1.25rem;
+  }
+
+  .admin-quick__title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .admin-quick__desc {
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--t-muted);
+  }
+
+  .admin-quick__arrow {
+    margin-left: auto;
+    height: 1.125rem;
+    width: 1.125rem;
+    flex-shrink: 0;
+    color: var(--t-subtle);
+    transition:
+      color var(--dur-1),
+      transform var(--dur-1);
+  }
+
+  .admin-quick__item:hover .admin-quick__arrow {
+    color: var(--t-accent-text);
+    transform: translateX(2px);
+  }
+
+  .admin-recent {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (width >= 1280px) {
+    .admin-recent {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .admin-recent .panel__head {
+    margin: 0;
+    border-bottom: 1px solid var(--t-border);
+    padding: 1rem 1.25rem;
+  }
+
+  /* ---- Forms -------------------------------------------------------------------------- */
+  /* Explicit minmax(0, 1fr) tracks: long unbreakable content never widens the page. */
+  .admin-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  @media (width >= 1024px) {
+    .admin-form--split {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+    }
+  }
+
+  .admin-form__col {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .admin-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  @media (width >= 640px) {
+    .admin-fields--2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-fields--3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-fields--number {
+      grid-template-columns: 11rem minmax(0, 1fr);
+    }
+  }
+
+  @media (width >= 1280px) {
+    .admin-fields--3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .admin-fields .field--wide {
+    grid-column: 1 / -1;
+  }
+
+  /*
+   * `.check > input` (components.css) also sizes the switch of ui/field type "toggle" to 1rem;
+   * restore the switch inside these forms (reported for components.css).
+   */
+  .admin-form .check > input.switch {
+    margin-top: 0;
+    height: 1.375rem;
+    width: 2.5rem;
+  }
+
+  .admin-form .check:has(> input.switch) {
+    align-items: center;
+  }
+
+  .admin-facts {
+    display: grid;
+    gap: 0.625rem;
+    font-size: 0.8125rem;
+  }
+
+  .admin-facts > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .admin-facts dt {
+    color: var(--t-muted);
+  }
+
+  .admin-facts dd {
+    text-align: right;
+    font-weight: 650;
+    color: var(--t-heading);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-danger-zone {
+    border-color: color-mix(in oklab, var(--t-danger) 32%, var(--t-border));
+  }
+
+  .admin-savebar__status {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 15rem;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  .admin-savebar__status .progress {
+    flex: 1;
+  }
+
+  .savebar .form-actions {
+    margin-left: auto;
+  }
+
+  /* ---- Image drop zones (components/ui/dropzone) --------------------------------------- */
+  /* Cover and banner side by side while the form is one column but wide enough. */
+  @media (640px <= width < 1024px) {
+    .admin-images {
+      grid-template-columns: 13.5rem minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+
+  .admin-drop {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .admin-drop--cover {
+    max-width: 13.5rem;
+    aspect-ratio: 3 / 4;
+  }
+
+  .admin-drop--banner {
+    aspect-ratio: 3 / 1;
+    padding: 0.75rem;
+  }
+
+  .admin-drop > img {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  .admin-drop.has-image {
+    border-style: solid;
+    border-color: var(--t-border);
+  }
+
+  .admin-drop__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    line-height: 1.4;
+  }
+
+  .admin-drop__empty > svg {
+    height: 1.75rem;
+    width: 1.75rem;
+    color: var(--t-accent);
+  }
+
+  .admin-drop__cta {
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .admin-drop__overlay {
+    position: absolute;
+    inset: auto 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    background: linear-gradient(transparent, rgb(0 0 0 / 0.72));
+    padding: 1.5rem 0.5rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    opacity: 0;
+    transition: opacity var(--dur-1);
+  }
+
+  .admin-drop__overlay > svg {
+    height: 1rem;
+    width: 1rem;
+  }
+
+  .admin-drop:hover .admin-drop__overlay,
+  .admin-drop:focus-within .admin-drop__overlay,
+  .admin-drop.is-over .admin-drop__overlay {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .admin-drop.has-image .admin-drop__overlay {
+      opacity: 1;
+    }
+  }
+
+  .admin-file {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--t-text-2);
+  }
+
+  .admin-file > svg {
+    height: 1rem;
+    width: 1rem;
+    flex-shrink: 0;
+    color: var(--t-success);
+  }
+
+  /* ---- Comboboxes: tag input suggestions, multi-select, series picker ------------------- */
+  .admin-combo {
+    position: relative;
+  }
+
+  .admin-combo__list {
+    position: absolute;
+    top: calc(100% + 0.375rem);
+    right: 0;
+    left: 0;
+    max-height: 17rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .admin-combo__search {
+    position: sticky;
+    top: -0.375rem;
+    z-index: 1;
+    margin: -0.375rem -0.375rem 0.375rem;
+    border-bottom: 1px solid var(--t-border);
+    background: var(--t-surface);
+    padding: 0.5rem;
+  }
+
+  .admin-option {
+    cursor: pointer;
+  }
+
+  /* Chosen options show a check; the background marks only the active (keyboard) option. */
+  .admin-option[aria-selected='true'] {
+    background: transparent;
+    color: var(--t-heading);
+  }
+
+  .admin-option:hover,
+  .admin-option.is-active,
+  .admin-option.is-active[aria-selected='true'] {
+    background: var(--t-hover);
+    color: var(--t-heading);
+  }
+
+  .admin-option.is-chosen {
+    font-weight: 700;
+    color: var(--t-accent-text);
+  }
+
+  .admin-option__check {
+    display: grid;
+    height: 1.125rem;
+    width: 1.125rem;
+    flex-shrink: 0;
+    place-items: center;
+    border: 1.5px solid var(--t-border-strong);
+    border-radius: 0.3125rem;
+    color: transparent;
+  }
+
+  .admin-option__check > svg {
+    height: 0.75rem;
+    width: 0.75rem;
+    stroke-width: 3;
+  }
+
+  .admin-option[aria-selected='true'] .admin-option__check {
+    border-color: transparent;
+    background: var(--t-accent-strong);
+    color: var(--t-on-accent);
+  }
+
+  .admin-option__hint {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .admin-picker {
+    cursor: text;
+  }
+
+  .admin-picker__caret,
+  .control--icon > .admin-picker__caret {
+    margin-left: auto;
+    height: 1rem;
+    width: 1rem;
+    flex-shrink: 0;
+    color: var(--t-muted);
+  }
+
+  .tag-input > input.admin-picker__entry {
+    min-width: 6rem;
+  }
+
+  .admin-popular {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .admin-popular .link-chip {
+    cursor: pointer;
+  }
+
+  /* ---- Chapter pages -------------------------------------------------------------------- */
+  .admin-pages {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+    gap: 1rem 0.875rem;
+  }
+
+  .admin-page {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.375rem;
+    border-radius: var(--radius-card);
+    transition: opacity var(--dur-1);
+  }
+
+  .admin-page.is-dragging {
+    opacity: 0.4;
+  }
+
+  .admin-page.is-target .admin-page__thumb {
+    outline: 2px solid var(--t-accent);
+    outline-offset: 2px;
+  }
+
+  .admin-page__thumb {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-control);
+    background: var(--t-surface-2);
+    cursor: grab;
+  }
+
+  .admin-page__thumb > img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  .admin-page__num {
+    position: absolute;
+    top: 0.375rem;
+    left: 0.375rem;
+    display: grid;
+    height: 1.5rem;
+    min-width: 1.5rem;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: rgb(0 0 0 / 0.72);
+    padding: 0 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 750;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-page__flag {
+    position: absolute;
+    top: 0.375rem;
+    right: 0.375rem;
+  }
+
+  .admin-page__grip {
+    position: absolute;
+    right: 0.375rem;
+    bottom: 0.375rem;
+    display: grid;
+    height: 1.5rem;
+    width: 1.5rem;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: rgb(0 0 0 / 0.6);
+    color: #fff;
+  }
+
+  .admin-page__grip > svg {
+    height: 0.875rem;
+    width: 0.875rem;
+  }
+
+  .admin-page__name {
+    overflow: hidden;
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--t-muted);
+  }
+
+  .admin-page__tools {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.25rem;
+  }
+
+  @media (width < 768px) {
+    .admin-page__tools .btn {
+      --btn-h: 2.5rem;
+    }
+  }
+
+  .admin-novel {
+    min-height: 28rem;
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+
+  /* ---- Dictionaries --------------------------------------------------------------------- */
+  .admin-quickadd {
+    display: grid;
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  /* The button lines up with the input (label line + field gap), also when an error shows. */
+  @media (width >= 640px) {
+    .admin-quickadd {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .admin-quickadd__submit {
+      margin-top: calc(0.8125rem * 1.6 + 0.375rem);
+    }
+  }
+
+  .admin-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-search .control--icon {
+    flex: 1 1 14rem;
+  }
+}

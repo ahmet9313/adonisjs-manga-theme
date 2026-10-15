@@ -1,0 +1,25 @@
+{{-- Live search results (inside a role="listbox" owned by a `navSearch` component). --}}
+<template x-if="loading">
+  <p class="px-3 py-3 text-sm text-(--t-muted)" role="status">Aranıyor…</p>
+</template>
+<template x-if="!loading && searched && !results.length">
+  <p class="px-3 py-3 text-sm text-(--t-muted)">Bu aramayla eşleşen seri yok.</p>
+</template>
+<template x-for="(item, index) in results" :key="item.type + '/' + item.slug">
+  <a :href="'/series/' + item.type + '/' + item.slug" :id="prefix + '-result-' + index" role="option"
+     :aria-selected="(active === index).toString()" @mouseenter="active = index" class="menu__item">
+    <img :src="item.coverImage" alt="" width="36" height="48" loading="lazy" data-fallback="/images/no-cover.svg" class="h-12 w-9 shrink-0 rounded-md object-cover">
+    <span class="min-w-0 flex-1">
+      <span class="block truncate font-semibold text-(--t-heading)" x-text="item.title"></span>
+      <span class="block truncate text-xs text-(--t-muted)" x-text="describe(item)"></span>
+    </span>
+  </a>
+</template>
+<template x-if="query.trim().length >= 2">
+  <a :href="'/seriler?search=' + encodeURIComponent(query.trim())" :id="prefix + '-result-all'" role="option"
+     :aria-selected="(active === results.length).toString()" @mouseenter="active = results.length"
+     class="menu__item mt-1 border-t border-(--t-border) text-(--t-accent-text)">
+    @!component('components/icon', { name: 'search' })
+    <span class="min-w-0 truncate">Tüm sonuçlar: <strong x-text="query.trim()"></strong></span>
+  </a>
+</template>

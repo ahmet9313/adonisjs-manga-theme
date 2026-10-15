@@ -1,36 +1,121 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin → Tema → Genel: site_name (2–40), site_description (≤200), logo_url (/yol or http(s)://).
+  The preview shows the wordmark in the header, the browser tab and a search result; it reads
+  the fields as you type (values are never written into scripts).
+--}}
+@let(name = flashMessages.get('site_name') ?? values.site_name)
+@let(description = flashMessages.get('site_description') ?? values.site_description)
+@let(logo = flashMessages.get('logo_url') ?? values.logo_url)
+@component('components/layout/admin', {
+  title,
+  description: 'Site adı, açıklama ve logo; menüde, alt bilgide, sekme başlığında ve arama sonuçlarında kullanılır.',
+  crumbs: [{ label: 'Tema', href: '/admin/tema/genel' }, { label: 'Genel' }]
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/', iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Siteyi aç<span class="sr-only"> (yeni sekmede)</span>
+    @end
+  @end
 
-@slot('main')
-  <div class="max-w-2xl rounded-xl border border-gray-700 bg-(--t-surface) p-6">
-    <h3 class="mb-1 text-lg font-semibold text-gray-200">Genel</h3>
-    <p class="mb-6 text-sm text-gray-500">Site adı, açıklama ve logo menüde, altbilgide ve sekme başlığında kullanılır.</p>
+  @slot('main')
+    @include('partials/admin/theme_nav')
 
-    <form action="/admin/tema/genel" method="POST" class="space-y-5">
-      {{ csrfField() }}
-      <div>
-        <label for="site_name" class="mb-1 block text-sm font-medium text-gray-300">Site adı</label>
-        <input id="site_name" name="site_name" type="text" required minlength="2" maxlength="40"
-               value="{{ flashMessages.get('site_name') || values.site_name }}"
-               class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-        @!component('components/field_error', { field: 'site_name' })
-      </div>
-      <div>
-        <label for="site_description" class="mb-1 block text-sm font-medium text-gray-300">Açıklama</label>
-        <textarea id="site_description" name="site_description" rows="3" maxlength="200"
-                  class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">{{ flashMessages.get('site_description') || values.site_description }}</textarea>
-        @!component('components/field_error', { field: 'site_description' })
-      </div>
-      <div>
-        <label for="logo_url" class="mb-1 block text-sm font-medium text-gray-300">Logo adresi <span class="font-normal text-gray-500">(isteğe bağlı)</span></label>
-        <input id="logo_url" name="logo_url" type="text" maxlength="300" placeholder="/images/logo.png veya https://…"
-               value="{{ flashMessages.get('logo_url') || values.logo_url }}"
-               class="w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-        <p class="mt-1 text-xs text-gray-500">Boş bırakırsanız yalnızca site adı gösterilir.</p>
-        @!component('components/field_error', { field: 'logo_url' })
-      </div>
-      <button type="submit" class="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
-    </form>
-  </div>
-@end
+    <div class="te-page"
+         x-data="{ name: '', desc: '', logo: '', broken: false }"
+         x-init="name = $el.querySelector('#f-site_name').value; desc = $el.querySelector('#f-site_description').value; logo = $el.querySelector('#f-logo_url').value.trim()">
+      <section class="panel" aria-labelledby="identity-preview-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="identity-preview-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'eye' })
+              Önizleme
+            </h2>
+            <p class="panel__desc">Siz yazdıkça güncellenir; sitede Kaydet'ten sonra görünür.</p>
+          </div>
+        </div>
+        <div class="te-identity" aria-hidden="true">
+          <div class="te-browser">
+            <div class="te-tabstrip">
+              <span class="te-tab">
+                <img src="/favicon.svg" alt="">
+                <span><span x-text="name.trim() || 'Site adı'">{{ name }}</span></span>
+              </span>
+            </div>
+            <div class="te-mini-header">
+              <span class="logo">
+                <img src="{{ logo || '' }}" alt="" class="logo__img" x-show="logo && !broken" :src="logo || null"
+                     x-on:error="broken = true" x-on:load="broken = false"
+                     @if(!logo)
+                     style="display: none"
+                     @end
+                     >
+                <span class="logo__mark" x-show="!logo || broken" x-text="(name.trim().charAt(0) || '?').toUpperCase()"
+                      @if(logo)
+                      style="display: none"
+                      @end
+                      >{{ (name || '?').charAt(0).toUpperCase() }}</span>
+                @if(ui('logo_text'))
+                <span class="logo__text" x-text="name.trim() || 'Site adı'">{{ name }}</span>
+                @end
+              </span>
+              <span class="te-mini-nav">
+                <span class="is-active">Ana Sayfa</span>
+                <span>Seri Listesi</span>
+              </span>
+            </div>
+            <div class="te-browser__page">
+              <span class="te-skel te-skel--title"></span>
+              <span class="te-skel w-11/12"></span>
+              <span class="te-skel w-2/3"></span>
+            </div>
+          </div>
+          <div class="te-serp">
+            <div class="te-serp__site">
+              <img src="/favicon.svg" alt="">
+              <div class="min-w-0">
+                <strong class="block truncate" x-text="name.trim() || 'Site adı'">{{ name }}</strong>
+                <span class="block truncate">https://{{ request.host() }}</span>
+              </div>
+            </div>
+            <p class="te-serp__title" x-text="name.trim() || 'Site adı'">{{ name }}</p>
+            <p class="te-serp__desc" x-text="desc.trim() || 'Açıklama boşsa varsayılan açıklama kullanılır.'">{{ description }}</p>
+          </div>
+        </div>
+        @if(!ui('logo_text'))
+        <p class="field__hint mt-3">Site adı yazısı menüde gizli (<a href="/admin/tema/goster#flags-header" class="link">Göster / Gizle → Üst menü</a>); yalnız logo görünür.</p>
+        @end
+      </section>
 
+      <section class="panel" aria-labelledby="identity-form-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="identity-form-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'globe' })
+              Site kimliği
+            </h2>
+            <p class="panel__desc">Menüde, alt bilgide, tarayıcı sekmesinde ve arama motorlarında görünen bilgiler.</p>
+          </div>
+        </div>
+        <form action="/admin/tema/genel" method="POST" class="grid gap-5" data-submit-once>
+          {{ csrfField() }}
+          <div class="te-counted">
+            @!component('components/ui/field', { name: 'site_name', label: 'Site adı', value: name, required: true, minlength: 2, maxlength: 40, autocomplete: 'off', hint: 'Menüde, alt bilgide ve sekme başlığında görünür.', 'x-on:input': 'name = $event.target.value' })
+            <span class="te-counter" aria-hidden="true"><span x-text="name.length">{{ (name || '').length }}</span> / 40</span>
+          </div>
+          <div class="te-counted">
+            @!component('components/ui/field', { name: 'site_description', label: 'Açıklama', type: 'textarea', rows: 3, value: description, maxlength: 200, hint: 'Arama sonuçlarında ve alt bilgide görünür. Boş bırakırsanız varsayılan açıklama kullanılır.', 'x-on:input': 'desc = $event.target.value' })
+            <span class="te-counter" aria-hidden="true"><span x-text="desc.length">{{ (description || '').length }}</span> / 200</span>
+          </div>
+          @!component('components/ui/field', { name: 'logo_url', label: 'Logo adresi (isteğe bağlı)', value: logo, maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '/images/logo.png veya https://…', hint: 'Yatay ya da kare bir görsel (SVG, PNG, WebP). Boş bırakırsanız site adının baş harfi gösterilir.', 'x-on:input': 'logo = $event.target.value.trim(); broken = false' })
+          <p class="field__hint -mt-3" x-show="logo && broken" x-cloak role="status">Bu adresteki görsel yüklenemedi; adresi kontrol edin.</p>
+          <div class="te-form-foot">
+            <p>Kaydettiğinizde tüm sayfalarda hemen güncellenir.</p>
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+              Kaydet
+            @end
+          </div>
+        </form>
+      </section>
+    </div>
+  @end
 @end

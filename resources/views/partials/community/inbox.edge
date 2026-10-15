@@ -1,61 +1,75 @@
-{{-- "Gelen Kutusu" dialog. Opened with $dispatch('open-inbox'). --}}
-<div x-data="inbox" @open-inbox.window="show()" @keydown.escape.window="close()">
-  <div x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-[85] flex items-start justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-6" @click.self="close()">
-    <div role="dialog" aria-modal="true" aria-labelledby="inbox-title" class="glass-strong relative my-6 w-full max-w-2xl rounded-3xl border border-white/10 p-5 shadow-2xl sm:p-7">
-      <button type="button" @click="close()" class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-white/10 hover:text-(--t-heading)" aria-label="Kapat">
-        @!component('components/icon', { name: 'x', class: 'h-5 w-5' })
-      </button>
-      <h2 id="inbox-title" class="mb-4 text-2xl font-bold text-(--t-heading) sm:text-3xl">Gelen Kutusu</h2>
-
-      <div class="flex flex-wrap gap-2" role="tablist" aria-label="Bildirim türü">
-        <template x-for="tab in tabs" :key="tab.key">
-          <button type="button" role="tab" @click="setFilter(tab.key)" :aria-selected="(filter === tab.key).toString()" class="pill" :class="filter === tab.key && 'pill-active'">
-            <span x-text="tab.label"></span>
-            <span x-show="tab.key === 'unread' && unread" class="rounded-full bg-black/25 px-1.5 text-[11px]" x-text="unread"></span>
-          </button>
-        </template>
-      </div>
-
-      <div class="mt-4 flex flex-wrap justify-end gap-2">
-        <button type="button" @click="readAll()" :disabled="!unread || busy" class="btn-soft">Tümünü okundu işaretle</button>
-        <button type="button" @click="removeAll()" :disabled="!items.length || busy" class="btn-soft" :class="confirmClear && '!border-red-500/60 !bg-red-500/20 !text-red-200'" x-text="confirmClear ? 'Emin misin? Tekrar bas' : 'Tümünü sil'"></button>
-      </div>
-
-      <p x-show="error" x-cloak x-text="error" role="alert" class="mt-3 text-sm text-red-400"></p>
-
-      <ul class="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1" aria-live="polite">
-        <template x-for="item in items" :key="item.id">
-          <li class="relative overflow-hidden rounded-2xl border border-white/10 transition"
-              :class="item.read ? 'bg-white/[0.035]' : 'bg-gradient-to-r from-rose-950/50 to-white/[0.04]'">
-            <span x-show="!item.read" class="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-rose-400 to-emerald-400"></span>
-            <div class="flex gap-3 p-4">
-              <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg" :class="tone(item.category)" x-text="emoji(item.category)" aria-hidden="true"></span>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start gap-2">
-                  <span x-show="!item.read" class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-400" aria-label="Okunmamış"></span>
-                  <a :href="item.link || '#'" @click="follow(item, $event)" class="min-w-0 flex-1 font-bold text-(--t-heading) hover:underline" x-text="item.title"></a>
-                  <time class="shrink-0 text-xs text-gray-400" :datetime="item.createdAt" x-text="ago(item.createdAt)"></time>
-                </div>
-                <p class="mt-1 break-words text-sm text-gray-300" x-text="item.body"></p>
-              </div>
-            </div>
-            <div class="absolute bottom-2 right-2" x-data="{ menu: false }" @click.outside="menu = false">
-              <button type="button" @click="menu = !menu" class="flex h-8 w-10 items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-white/20" aria-label="Bildirim seçenekleri" :aria-expanded="menu.toString()">
-                @!component('components/icon', { name: 'dots', class: 'h-5 w-5' })
-              </button>
-              <div x-cloak x-show="menu" x-transition class="absolute bottom-full right-0 z-10 mb-1 w-48 overflow-hidden rounded-xl border border-white/10 bg-(--t-surface-2) py-1 shadow-2xl">
-                <button type="button" @click="menu = false; toggleRead(item)" class="block w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-white/5" x-text="item.read ? 'Okunmadı işaretle' : 'Okundu işaretle'"></button>
-                <button type="button" @click="menu = false; remove(item)" class="block w-full px-4 py-2 text-left text-sm text-red-300 hover:bg-red-500/10">Sil</button>
-              </div>
-            </div>
-          </li>
-        </template>
-      </ul>
-      <p x-show="!loading && !items.length" x-cloak class="py-12 text-center text-gray-400">Burada henüz bir şey yok.</p>
-      <p x-show="loading" class="py-6 text-center text-sm text-gray-400" role="status">Yükleniyor…</p>
-      <div class="mt-3 flex justify-center" x-show="hasMore && !loading" x-cloak>
-        <button type="button" @click="load()" class="btn-soft">Daha fazla</button>
-      </div>
+{{-- "Gelen Kutusu" drawer. Opened with $dispatch('open-inbox'). --}}
+<div x-data="inbox" @open-inbox.window="show()">
+  @component('components/ui/modal', { id: 'inbox', title: 'Gelen Kutusu', size: 'drawer', close: 'close()' })
+    @slot('head')
+      <p class="modal__desc" x-text="unread ? unread + ' okunmamış bildirim' : 'Hepsi okundu'"></p>
+    @end
+    <div class="flex flex-wrap gap-1.5" role="group" aria-label="Bildirim türü">
+      <template x-for="tab in tabs" :key="tab.key">
+        <button type="button" class="chip" @click="setFilter(tab.key)" :aria-pressed="(filter === tab.key).toString()">
+          <span x-text="tab.label"></span>
+          <span x-show="tab.key === 'unread' && unread" class="chip__count" x-text="unread"></span>
+        </button>
+      </template>
     </div>
-  </div>
+
+    <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
+      <button type="button" @click="readAll()" :disabled="!unread || busy" class="btn btn--ghost btn--sm">
+        @!component('components/icon', { name: 'check', class: 'btn__icon' })
+        Tümünü okundu say
+      </button>
+      <button type="button" @click="removeAll()" :disabled="!items.length || busy" class="btn btn--sm" :class="confirmClear ? 'btn--danger-solid' : 'btn--ghost'">
+        @!component('components/icon', { name: 'trash', class: 'btn__icon' })
+        <span x-text="confirmClear ? 'Emin misin? Tekrar bas' : 'Tümünü sil'">Tümünü sil</span>
+      </button>
+    </div>
+
+    <p x-show="error" x-cloak x-text="error" role="alert" class="field__error mt-3"></p>
+
+    <ul class="mt-3 space-y-2" aria-live="polite">
+      <template x-for="item in items" :key="item.id">
+        <li class="card relative flex gap-3 p-3 transition-colors" :class="item.read ? '' : 'border-(--t-accent-line) bg-(--t-accent-soft)'">
+          <span class="tone-icon" :data-tone="tone(item.category)" aria-hidden="true">
+            <span x-text="emoji(item.category)"></span>
+          </span>
+          <div class="min-w-0 flex-1 pr-8">
+            <div class="flex items-start gap-2">
+              <span x-show="!item.read" class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-(--t-accent)"></span>
+              <a :href="item.link || '#'" @click="follow(item, $event)" class="min-w-0 flex-1 text-sm font-bold text-(--t-heading) hover:underline" x-text="item.title"></a>
+            </div>
+            <p class="mt-0.5 break-words text-sm text-(--t-text-2)" x-text="item.body"></p>
+            <p class="mt-1 text-xs text-(--t-muted)">
+              <time :datetime="item.createdAt" x-text="ago(item.createdAt)"></time>
+              <span x-show="!item.read" class="sr-only">, okunmamış</span>
+            </p>
+          </div>
+          <div class="absolute right-2 top-2" x-data="dropdown" @keydown="onKeydown($event)" @click.outside="close()">
+            <button type="button" x-ref="button" @click="toggle()" class="btn btn--ghost btn--sm btn--icon" aria-label="Bildirim seçenekleri" aria-expanded="false" :aria-expanded="open.toString()">
+              @!component('components/icon', { name: 'dots', class: 'btn__icon' })
+            </button>
+            <div x-ref="panel" x-cloak x-show="open" x-transition.origin.top.right.duration.120ms class="menu absolute right-0 top-full z-10 mt-1 w-52">
+              <button type="button" class="menu__item" @click="close(); toggleRead(item)">
+                @!component('components/icon', { name: 'check' })
+                <span x-text="item.read ? 'Okunmadı say' : 'Okundu say'"></span>
+              </button>
+              <button type="button" class="menu__item menu__item--danger" @click="close(); remove(item)">
+                @!component('components/icon', { name: 'trash' })
+                Sil
+              </button>
+            </div>
+          </div>
+        </li>
+      </template>
+    </ul>
+    <div x-show="loading" class="mt-3" role="status">
+      <span class="sr-only">Yükleniyor…</span>
+      @!component('components/ui/skeleton', { variant: 'row', count: 3 })
+    </div>
+    <div x-show="!loading && !items.length" x-cloak class="mt-4">
+      @!component('components/ui/empty_state', { icon: 'inbox', title: 'Burada henüz bir şey yok', description: 'Yanıtlar, ödüller ve kaydettiğin serilerin yeni bölümleri burada görünür.' })
+    </div>
+    <div class="mt-4 flex justify-center" x-show="hasMore && !loading" x-cloak>
+      <button type="button" @click="load()" class="btn btn--secondary btn--md">Daha fazla göster</button>
+    </div>
+  @end
 </div>

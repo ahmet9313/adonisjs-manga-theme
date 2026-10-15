@@ -1,46 +1,178 @@
-@component('components/layout/admin', { title })
+{{--
+  Admin → Tema → Düzen ve Görünüm: width, corners, type, header blur and background image
+  (themeEditor in "looks" mode previews every change on this page). Every look of config.looks
+  is rendered on the server as an `l_<key>` field, so all of them are always submitted; a look
+  missing from the sections below lands in "Diğer ayarlar".
+--}}
+@let(sections = [
+  { key: 'layout', title: 'Yerleşim', icon: 'grid', description: 'İçeriğin ne kadar geniş olacağı ve köşelerin ne kadar yuvarlak görüneceği.', keys: ['container', 'radius'], specimen: 'shapes' },
+  { key: 'type', title: 'Yazı', icon: 'document', description: 'Tüm sitenin yazı tipi ve temel yazı boyutu.', keys: ['font', 'font_scale'], specimen: 'type' },
+  { key: 'header', title: 'Üst menü', icon: 'menu', description: 'Menünün arkasındaki içeriğin bulanıklığı.', keys: ['blur'], specimen: 'blur' },
+  { key: 'background', title: 'Arka plan görseli', icon: 'photo', description: 'Sayfa zemininin arkasında gösterilecek isteğe bağlı görsel.', keys: ['bg_image', 'bg_size'], specimen: 'image' }
+])
+@let(knownKeys = sections.reduce((all, section) => all.concat(section.keys), []))
+@let(otherLooks = config.looks.filter((look) => !knownKeys.includes(look.key)))
+@let(lookHints = { container: 'Sitedeki sayfaların en fazla genişliği. Yönetim paneli her zaman tam genişliktedir.', bg_size: 'Görselin ekrana nasıl yerleşeceği.' })
+@let(lookErrors = config.looks.map((look) => flashMessages.get('inputErrorsBag.l_' + look.key)).filter(Boolean).map((messages) => messages[0]))
+@component('components/layout/admin', {
+  title,
+  description: 'İçerik genişliği, köşeler, yazı tipi ve arka plan görseli. Değişiklikler bu sayfada anında görünür.',
+  crumbs: [{ label: 'Tema', href: '/admin/tema/genel' }, { label: 'Düzen ve Görünüm' }]
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/', iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Siteyi aç<span class="sr-only"> (yeni sekmede)</span>
+    @end
+  @end
 
-@slot('main')
-  <div x-data="themeEditor" data-config="{{ JSON.stringify(config) }}" class="max-w-3xl">
-    <form action="/admin/tema/gorunum" method="POST" class="rounded-xl border border-gray-700 bg-(--t-surface) p-6">
-      {{ csrfField() }}
-      <h3 class="text-lg font-semibold text-gray-200">Düzen ve görünüm</h3>
-      <p class="mb-6 text-sm text-gray-500">Genişlik, köşeler, yazı ve arka plan görseli. Değişiklikler bu sayfada anında görünür; kalıcı olması için Kaydet'e basın.</p>
+  @slot('main')
+    @include('partials/admin/theme_nav')
 
-      <div class="space-y-6">
-        <template x-for="look in looks" :key="look.key">
-          <div>
-            <div class="flex items-center justify-between gap-2">
-              <label :for="'l_' + look.key" class="text-sm font-medium text-gray-300" x-text="look.label"></label>
-              <span x-show="look.type === 'range'" class="text-sm tabular-nums text-gray-400" x-text="lookValues[look.key] + look.unit"></span>
+    <div x-data="themeEditor" data-config="{{ JSON.stringify(config) }}" class="te-looks te-page">
+      <form action="/admin/tema/gorunum" method="POST" data-submit-once>
+        {{ csrfField() }}
+
+        @if(lookErrors.length)
+        @component('components/ui/alert', { tone: 'danger', title: 'Ayarlar kaydedilmedi' })
+          @each(message in lookErrors)
+          <p>{{ message }}</p>
+          @end
+        @end
+        @end
+
+        @each(section in sections.concat(otherLooks.length ? [{ key: 'other', title: 'Diğer ayarlar', icon: 'sliders', description: '', keys: otherLooks.map((look) => look.key), specimen: '' }] : []))
+        @let(items = config.looks.filter((look) => section.keys.includes(look.key)))
+        @if(items.length)
+        <section class="panel" aria-labelledby="look-{{ section.key }}-title">
+          <div class="panel__head">
+            <div class="min-w-0">
+              <h2 id="look-{{ section.key }}-title" class="panel__title te-title">
+                @!component('components/icon', { name: section.icon })
+                {{ section.title }}
+              </h2>
+              @if(section.description)
+              <p class="panel__desc">{{ section.description }}</p>
+              @end
             </div>
-            <p x-show="look.hint" class="mb-1 text-xs text-gray-500" x-text="look.hint"></p>
-
-            <template x-if="look.type === 'range'">
-              <input type="range" :id="'l_' + look.key" :name="'l_' + look.key" :min="look.min" :max="look.max" :step="look.step" :value="lookValues[look.key]"
-                     @input="setLook(look.key, $event.target.value)" class="mt-1 w-full accent-emerald-500">
-            </template>
-            <template x-if="look.type === 'select'">
-              <select :id="'l_' + look.key" :name="'l_' + look.key" @change="setLook(look.key, $event.target.value)"
-                      class="mt-1 w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none">
-                <template x-for="choice in look.choices" :key="choice.value">
-                  <option :value="choice.value" :selected="lookValues[look.key] === choice.value" x-text="choice.label"></option>
-                </template>
-              </select>
-            </template>
-            <template x-if="look.type === 'url'">
-              <input type="text" :id="'l_' + look.key" :name="'l_' + look.key" :value="lookValues[look.key]" maxlength="300" placeholder="/content/arka-plan.jpg veya https://…"
-                     @input="setLook(look.key, $event.target.value.trim())"
-                     class="mt-1 w-full rounded-lg border border-gray-600 bg-(--t-field) px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:outline-none">
-            </template>
           </div>
-        </template>
-      </div>
+          <div class="{{ section.specimen ? 'te-look-panel' : '' }}">
+            <div class="te-look-fields">
+              @each(look in items)
+              @let(fieldId = 'l_' + look.key)
+              @let(error = flashMessages.has('inputErrorsBag.' + fieldId) ? flashMessages.get('inputErrorsBag.' + fieldId)[0] : '')
+              @let(hint = look.hint || lookHints[look.key] || '')
+              @let(describedBy = [hint ? fieldId + '-hint' : '', error ? fieldId + '-error' : ''].filter(Boolean).join(' '))
+              <div class="field {{ error ? 'field--invalid' : '' }}">
+                <div class="te-field-head">
+                  <label for="{{ fieldId }}" class="field__label">{{ look.label }}</label>
+                  <button type="button" class="btn btn--ghost btn--sm" x-show="String(lookValues['{{ look.key }}']) !== String(lookOf('{{ look.key }}').default)" x-cloak
+                          x-on:click="setLook('{{ look.key }}', String(lookOf('{{ look.key }}').default))">
+                    @!component('components/icon', { name: 'refresh', class: 'btn__icon' })
+                    Varsayılan
+                  </button>
+                </div>
+                @if(look.type === 'range')
+                <div class="te-range__row">
+                  <input type="range" id="{{ fieldId }}" name="{{ fieldId }}" min="{{ look.min }}" max="{{ look.max }}" step="{{ look.step }}" value="{{ config.lookValues[look.key] }}"
+                         :value="lookValues['{{ look.key }}']" x-on:input="setLook('{{ look.key }}', $event.target.value)"
+                         @if(describedBy)
+                         aria-describedby="{{ describedBy }}"
+                         @end
+                         >
+                  <output for="{{ fieldId }}" class="te-range__value" x-text="lookValues['{{ look.key }}'] + (lookOf('{{ look.key }}').unit || '×')">{{ config.lookValues[look.key] }}{{ look.unit || '×' }}</output>
+                </div>
+                <div class="te-range__scale" aria-hidden="true">
+                  <span>{{ look.min }}{{ look.unit || '×' }}</span>
+                  <span>{{ look.max }}{{ look.unit || '×' }}</span>
+                </div>
+                @elseif(look.type === 'select')
+                <select id="{{ fieldId }}" name="{{ fieldId }}" class="control" :value="lookValues['{{ look.key }}']" x-on:change="setLook('{{ look.key }}', $event.target.value)"
+                        @if(describedBy)
+                        aria-describedby="{{ describedBy }}"
+                        @end
+                        >
+                  @each(choice in look.choices)
+                  <option value="{{ choice.value }}" {{ String(config.lookValues[look.key]) === choice.value ? 'selected' : '' }}>{{ choice.label }}</option>
+                  @end
+                </select>
+                @else
+                <input type="text" id="{{ fieldId }}" name="{{ fieldId }}" class="control" inputmode="url" maxlength="300" autocomplete="off" spellcheck="false"
+                       placeholder="/content/arka-plan.jpg veya https://…" value="{{ flashMessages.get(fieldId) ?? config.lookValues[look.key] }}"
+                       x-on:input="setLook('{{ look.key }}', $event.target.value.trim())" :value="lookValues['{{ look.key }}']"
+                       @if(describedBy)
+                       aria-describedby="{{ describedBy }}"
+                       @end
+                       @if(error)
+                       aria-invalid="true"
+                       @end
+                       >
+                @end
+                @if(hint)
+                <p id="{{ fieldId }}-hint" class="field__hint">{{ hint }}</p>
+                @end
+                @if(error)
+                <p id="{{ fieldId }}-error" class="field__error" role="alert">{{ error }}</p>
+                @end
+              </div>
+              @end
+            </div>
 
-      @!component('components/field_error', { field: 'l_bg_image' })
-      <button type="submit" class="mt-8 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-2.5 font-semibold text-(--t-on-accent) transition-all hover:from-emerald-600 hover:to-teal-700">Kaydet</button>
-    </form>
-  </div>
-@end
+            @if(section.specimen === 'shapes')
+            <div class="te-specimen" aria-hidden="true">
+              <p class="t-overline">Örnek</p>
+              <div class="te-specimen__shapes">
+                <span class="btn btn--primary btn--sm">Düğme</span>
+                <span class="badge" data-tone="accent">Rozet</span>
+              </div>
+              <span class="control control--sm block text-(--t-muted)">Arama alanı</span>
+              <div class="te-specimen__card">
+                <strong>Kart</strong>
+                Köşeler bu ayarla birlikte değişir.
+              </div>
+            </div>
+            @elseif(section.specimen === 'type')
+            <div class="te-specimen" aria-hidden="true">
+              <p class="t-overline">Örnek</p>
+              <p class="te-type__big">Aa Ğğ Şş</p>
+              <p class="te-type__body">Manga okumanın en keyifli hâli: büyük kapaklar, sade sayfalar. İıÖöÜüÇç 0123</p>
+            </div>
+            @elseif(section.specimen === 'blur')
+            <div class="te-specimen" aria-hidden="true">
+              <p class="t-overline">Örnek</p>
+              <div class="te-blur">
+                <div class="te-blur__bar">
+                  <span class="logo__mark">{{ site.name.charAt(0).toUpperCase() }}</span>
+                  {{ site.name }}
+                </div>
+              </div>
+            </div>
+            @elseif(section.specimen === 'image')
+            <div class="te-specimen" aria-hidden="true">
+              <p class="t-overline">Önizleme</p>
+              <div class="te-bgthumb">
+                <span x-show="!lookValues.bg_image">Görsel yok</span>
+              </div>
+            </div>
+            @end
+          </div>
+        </section>
+        @end
+        @end
 
+        <div class="savebar te-savebar">
+          <div class="te-savebar__status">
+            <span class="te-dot" data-tone="success" :data-tone="dirty ? 'warning' : 'success'" aria-hidden="true"></span>
+            <p class="te-savebar__title" aria-live="polite" x-text="dirty ? 'Kaydedilmemiş değişiklikler var' : 'Tüm değişiklikler kayıtlı'">Değişiklikleri kaydetmeyi unutmayın</p>
+          </div>
+          <div class="te-savebar__actions">
+            <a href="{{ request.url(true) }}" class="btn btn--ghost btn--md" x-show="dirty" x-cloak title="Kaydedilmemiş değişiklikleri at">Vazgeç</a>
+            <button type="submit" class="btn btn--primary btn--md">
+              @!component('components/icon', { name: 'check', class: 'btn__icon' })
+              Kaydet
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  @end
 @end
