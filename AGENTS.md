@@ -25,6 +25,13 @@ Başlatıcı Node.js 24+ sürümünü kontrol eder, mümkünse işletim sistemin
 
 ## Güncelleme günlüğü
 
+### 2026-10-16 — README: daha fazla ekran görüntüsü, yönetim paneli ve güncel açıklamalar
+
+- Özet: README'nin başı yeniden yazıldı: kısa tanıtım, sürüm (0.8.2 yerine 0.10.0-beta.1) ve teknoloji satırı, "Öne çıkanlar" listesi ve açıklamalı galeri. Galeriye 32 görüntü daha eklendi (toplam 43): okuma ve keşif (incelemeler, okuma ayarları, arama, öneriler, açık şemada seri sayfası), topluluk ve hesap (hesap menüsü, gelen kutusu, ödüller, rozetler, kartlar, kozmetikler, geçmiş, kaydedilenler, ayarlar, profil koleksiyonu), **yönetim paneli** (panel, seriler, seri formu, bölümler, bölüm formu, sözlük, tema renkler / göster-gizle / gelişmiş, roller, kozmetikler, kartlar, açık şema) ve telefonda 7 görünüm. Eski "İncelemede proje kapsamında…" paragrafı kaldırıldı; güncelliğini yitirmiş açıklamalar düzeltildi: şema tabloları, kaydedilenlerin yalnız tarayıcıda olduğu ifadesi, tema hazır setleri ve iki şemalı renk düzenleme, `tokens.css`/`cosmetics.css` yolları, Windows'a özgü doğrulama cümlesi; "Lisans" sona taşındı.
+- Görüntüler: Önceki kayıttaki gibi oluşturulmuş SVG kapaklara döndürülmüş veritabanı **kopyasında** alındı. Üye ve yönetim sayfaları için yalnız kopyada demo hesap `editor_mehmet` yönetici yapıldı ve onunla giriş yapıldı; gerçek hesapların ve e-postaların göründüğü `/admin/kullanicilar` alınmadı. Her görüntü tek tek gözden geçirildi (gerçek hesap adı/e-posta yok), çekimde JS hatası yok. `/bildirimler` JSON döndürdüğü için yerine gelen kutusu penceresi alındı.
+- Etkilenen dosyalar: `README.md`, `docs/screenshots/*.webp` (32 yeni, toplam ~2,2 MB), `AGENTS.md`.
+- Doğrulama: Yalnız belge ve görsel değişikliği; kurulum/çalışma biçimi değişmedi. README'deki 43 görsel bağlantısının hepsinin dosyası var ve klasörde kullanılmayan görsel yok.
+
 ### 2026-10-16 — README'ye ekran görüntüleri
 
 - Özet: GitHub ana sayfasında görünmesi için README'nin başına "Ekran görüntüleri" bölümü eklendi: ana sayfa (koyu/açık), Son Güncellenenler, seri sayfası, yorumlar, katalog, profil, okuyucu ve üç mobil görünüm (11 WebP, toplam ~540 KB, `docs/screenshots/`). AniList kapakları yayıncılara ait olduğundan ve README "yayımlamayın" dediğinden görüntüler, `covers:fetch --restore` ile oluşturulmuş SVG kapaklara döndürülmüş bir veritabanı **kopyasında** (anonim, 1440×900 ve 390×844 @2x) alındı; gerçek veritabanı değişmedi.
