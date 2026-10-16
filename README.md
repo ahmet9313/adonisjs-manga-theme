@@ -4,6 +4,26 @@ Güncel sürüm: **0.8.2** — [Sürüm notları](AGENTS.md#2026-09-11--v082-sü
 
 AdonisJS 7, Lucid, Edge, Alpine.js 3 ve Tailwind CSS 4 üzerinde çalışan Türkçe manga / manhwa / manhua / webtoon / novel okuma ve yönetim uygulaması. Node.js 24+, npm 11+ gerekir. Varsayılan veritabanı SQLite; MySQL 8 isteğe bağlıdır. Paket sürümlerinin kaynağı `package.json` ve `package-lock.json` dosyalarıdır.
 
+## Ekran görüntüleri
+
+![Ana sayfa (koyu şema)](docs/screenshots/ana-sayfa.webp)
+
+| Açık şema | Son Güncellenenler |
+| --- | --- |
+| ![Ana sayfa, açık şema](docs/screenshots/ana-sayfa-acik.webp) | ![Son Güncellenenler listesi](docs/screenshots/son-guncellenenler.webp) |
+| **Seri sayfası** | **Yorumlar** |
+| ![Seri sayfası](docs/screenshots/seri.webp) | ![Seri yorumları](docs/screenshots/seri-yorumlar.webp) |
+| **Katalog** | **Profil** |
+| ![Seri kataloğu ve filtreler](docs/screenshots/katalog.webp) | ![Üye profili](docs/screenshots/profil.webp) |
+| **Okuyucu** | |
+| ![Bölüm okuyucu](docs/screenshots/okuyucu.webp) | |
+
+| Mobil: ana sayfa | Mobil: seri | Mobil: katalog (açık) |
+| --- | --- | --- |
+| ![Mobil ana sayfa](docs/screenshots/mobil-ana-sayfa.webp) | ![Mobil seri sayfası](docs/screenshots/mobil-seri.webp) | ![Mobil katalog, açık şema](docs/screenshots/mobil-katalog.webp) |
+
+Görüntüler demo verisiyle (`npm run seed:demo`) ve oluşturulmuş SVG kapaklarla alındı; kullanıcılar, yorumlar ve kapaklar örnektir.
+
 ## Belgelerin tek giriş noktası
 
 | Belge | Sorumluluğu |

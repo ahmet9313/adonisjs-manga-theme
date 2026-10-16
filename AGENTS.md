@@ -25,6 +25,12 @@ Başlatıcı Node.js 24+ sürümünü kontrol eder, mümkünse işletim sistemin
 
 ## Güncelleme günlüğü
 
+### 2026-10-16 — README'ye ekran görüntüleri
+
+- Özet: GitHub ana sayfasında görünmesi için README'nin başına "Ekran görüntüleri" bölümü eklendi: ana sayfa (koyu/açık), Son Güncellenenler, seri sayfası, yorumlar, katalog, profil, okuyucu ve üç mobil görünüm (11 WebP, toplam ~540 KB, `docs/screenshots/`). AniList kapakları yayıncılara ait olduğundan ve README "yayımlamayın" dediğinden görüntüler, `covers:fetch --restore` ile oluşturulmuş SVG kapaklara döndürülmüş bir veritabanı **kopyasında** (anonim, 1440×900 ve 390×844 @2x) alındı; gerçek veritabanı değişmedi.
+- Etkilenen dosyalar: `README.md`, `docs/screenshots/*.webp`, `AGENTS.md`.
+- Doğrulama: Yalnız belge ve görsel değişikliği; kurulum/çalışma biçimi değişmedi. Görüntüler tek tek gözden geçirildi, çekim sırasında JS hatası yok.
+
 ### 2026-10-16 — Son Güncellenenler: sayfa değiştirirken iskelet ve sayfa yenilenmeden yükleme
 
 - Özet: "Son Güncellenenler" sayfa bağlantıları (numaralar, Önceki/Sonraki, boş sayfadaki "İlk sayfaya dön") artık sayfayı yenilemez. Tıklanınca liste, mevcut satır sayısı kadar gerçek satırlarla aynı boyda iskelet satırına döner (kapak, başlık, rozetler, üç bölüm satırı), bölüm üstü görünüm dışındaysa ona kaydırılır ve sayfalama yüklenirken pasifleşir. Sunucu `X-Fragment: home-updates` başlığıyla yalnız bu bölümü (`partials/home/updates`) döndürür; diğer ana sayfa bölümleri sorgulanmaz. Adres çubuğu `?page=N#home-updates` olur; yenileme, paylaşma ve geri/ileri çalışır (geri/ileri de listeyi yerinde değiştirir). Ekran okuyuculara "Sayfa yükleniyor…" / "Sayfa N yüklendi" duyurulur, odak bölüm başlığına taşınır. İstek başarısız olursa normal sayfa yüklemesine düşer; JavaScript yoksa bağlantılar önceki gibi çalışır. Aynı adres iki farklı yanıt verdiğinden ana sayfa `Vary: X-Fragment`, parça yanıtı `Cache-Control: no-store` gönderir.
