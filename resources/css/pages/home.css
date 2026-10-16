@@ -13,6 +13,19 @@
     height: 28rem;
     overflow: hidden;
     background: var(--t-surface-2);
+    /* Horizontal drags belong to the carousel, vertical scrolling to the page. */
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+  }
+
+  .home-hero.is-dragging {
+    cursor: grabbing;
+  }
+
+  .home-hero img {
+    -webkit-user-drag: none;
   }
 
   @media (width >= 640px) {
@@ -382,21 +395,10 @@
     box-shadow: var(--t-shadow-1);
   }
 
-  /* Slide change: a short cross-fade (x-transition classes). */
-  .home-hero-enter {
-    transition: opacity 0.45s var(--ease-out);
-  }
-
-  .home-hero-leave {
-    transition: opacity 0.25s ease-in;
-  }
-
-  .home-hero-hidden {
-    opacity: 0;
-  }
-
-  .home-hero-shown {
-    opacity: 1;
+  /* Slides lie side by side; hero_slider.js moves them with transforms (swipe and slide). */
+  .home-hero__slide {
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
   /* ---- Latest updates ---------------------------------------------------------------------- */
@@ -423,8 +425,24 @@
     padding: 1rem 0 1.125rem;
   }
 
+  /* The cover fills the row's height (title, badges and three chapters), about 2:3 like a real
+     cover; rows without chapters keep a cover-sized minimum. */
+  .home-update .series-card--row {
+    align-items: stretch;
+  }
+
   .home-update .series-card--row .series-card__cover {
-    width: 5.25rem;
+    width: 6rem;
+    aspect-ratio: auto;
+    min-height: 9rem;
+  }
+
+  /* Very narrow phones: leave the chapter rows room for their dates. */
+  @media (width < 380px) {
+    .home-update .series-card--row .series-card__cover {
+      width: 5rem;
+      min-height: 7.5rem;
+    }
   }
 
   .home-update .series-card__title {
@@ -434,6 +452,8 @@
   .home-chapters {
     margin-top: 0.25rem;
     display: grid;
+    /* The longest row must not widen the list: chapter titles shorten with an ellipsis instead. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .home-chapter {
@@ -498,6 +518,22 @@
     margin-top: 0.25rem;
     font-size: 0.8125rem;
     color: var(--t-muted);
+  }
+
+  /* Placeholder rows while another page of the list loads (same size as the real rows). */
+  .home-update--skeleton .series-card__cover::after {
+    content: none;
+  }
+
+  .home-chapter--skeleton,
+  .home-chapter--skeleton:hover {
+    background: none;
+  }
+
+  /* Page links do nothing while a page is loading. */
+  #home-updates[aria-busy='true'] .pagination {
+    pointer-events: none;
+    opacity: 0.6;
   }
 
   /* ---- Rails: popular (ranked) and the completed shelf ---------------------------------------- */
@@ -589,6 +625,8 @@
   /* ---- Genres ------------------------------------------------------------------------------ */
   /* Two swipeable rows on phones, wrapped chips from 640px. */
   .home-genres {
+    /* Contains the chips' .sr-only text, so off-screen chips do not widen the page (see .rail). */
+    position: relative;
     display: grid;
     grid-auto-columns: max-content;
     grid-auto-flow: column;
@@ -623,6 +661,8 @@
   /* ---- Community --------------------------------------------------------------------------- */
   .home-community {
     display: grid;
+    /* minmax(0, …): a long name or quote shortens instead of widening the page on phones. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 2.5rem 2rem;
   }
 
@@ -634,6 +674,7 @@
 
   .home-stack {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;
   }
 

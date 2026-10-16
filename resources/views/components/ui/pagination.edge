@@ -1,17 +1,19 @@
 {{--
   Page links that keep the rest of the query string (built on the server, no JavaScript).
   Props: current, total (number of pages), pages (optional; pagesOf(current, total)),
-         label (aria-label, 'Sayfalama'), class. The query parameter is `page`.
+         label (aria-label, 'Sayfalama'), hash (optional element id the links jump to), class.
+         The query parameter is `page`.
     @!component('components/ui/pagination', { current: currentPage, total: totalPages })
     @!component('components/ui/pagination', { current: paginator.currentPage, total: paginator.lastPage })
 --}}
 @let(current = Number($props.get('current', 1)))
 @let(total = Number($props.get('total', 1)))
 @let(pages = $props.get('pages') || pagesOf(current, total))
+@let(hash = $props.get('hash') ? '#' + $props.get('hash') : '')
 @if(total > 1)
 <nav class="pagination {{ $props.get('class', '') }}" aria-label="{{ $props.get('label', 'Sayfalama') }}">
   @if(current > 1)
-  <a href="{{ withQuery(request, { page: current - 1 }) }}" class="pagination__item" rel="prev">
+  <a href="{{ withQuery(request, { page: current - 1 }) + hash }}" class="pagination__item" rel="prev">
     @!component('components/icon', { name: 'chevron-left', class: 'h-4 w-4' })
     <span class="hidden sm:inline">Önceki</span>
     <span class="sr-only sm:hidden">Önceki sayfa</span>
@@ -26,13 +28,13 @@
     @if(page === '...')
     <span class="pagination__gap" aria-hidden="true">…</span>
     @elseif(page === current)
-    <a href="{{ withQuery(request, { page: page }) }}" class="pagination__item" aria-current="page" aria-label="Sayfa {{ page }}">{{ page }}</a>
+    <a href="{{ withQuery(request, { page: page }) + hash }}" class="pagination__item" aria-current="page" aria-label="Sayfa {{ page }}">{{ page }}</a>
     @else
-    <a href="{{ withQuery(request, { page: page }) }}" class="pagination__item" aria-label="Sayfa {{ page }}">{{ page }}</a>
+    <a href="{{ withQuery(request, { page: page }) + hash }}" class="pagination__item" aria-label="Sayfa {{ page }}">{{ page }}</a>
     @end
   @end
   @if(current < total)
-  <a href="{{ withQuery(request, { page: current + 1 }) }}" class="pagination__item" rel="next">
+  <a href="{{ withQuery(request, { page: current + 1 }) + hash }}" class="pagination__item" rel="next">
     <span class="hidden sm:inline">Sonraki</span>
     <span class="sr-only sm:hidden">Sonraki sayfa</span>
     @!component('components/icon', { name: 'chevron-right', class: 'h-4 w-4' })

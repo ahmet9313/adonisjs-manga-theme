@@ -11,16 +11,44 @@ import theme from '#services/theme_service'
 /** Chapters published in the last three days carry a "Yeni" label. */
 const freshFor = 3 * 86_400_000
 
+/** Marks the chapters published in the last three days (`fresh`). */
+function withFreshness<T extends { latestChapters: { publishedAt: string }[] }>(items: T[]) {
+  const now = Date.now()
+  return items.map((item) => ({
+    ...item,
+    latestChapters: item.latestChapters.map((chapter) => ({
+      ...chapter,
+      fresh: now - parseTimestamp(chapter.publishedAt) < freshFor,
+    })),
+  }))
+}
+
 export default class HomeController {
   /**
-   * Home page. Page 1: hero, latest updates and the discovery/community sections, each behind
-   * its Admin → Tema → Göster/Gizle switch (hidden sections are not queried). From page 2 on
-   * (?page=) only the latest updates list is shown.
+   * Home page: hero, latest updates and the discovery/community sections, each behind its
+   * Admin → Tema → Göster/Gizle switch (hidden sections are not queried). ?page= only pages the
+   * latest updates list; every page is still the full home page. The list's page links load the
+   * next page in place: they send `X-Fragment: home-updates` and get only that section back.
    */
-  async index({ view, request, auth }: HttpContext) {
+  async index({ view, request, response, auth }: HttpContext) {
     const page = pageNumber(request.input('page'))
     const perPage = 12
-    const shown = (key: string) => page === 1 && theme.flag(key)
+    const shown = (key: string) => theme.flag(key)
+    // The same URL answers with the whole page or one section: caches must keep them apart.
+    response.header('Vary', 'X-Fragment')
+
+    if (request.header('x-fragment') === 'home-updates') {
+      if (!shown('home_updates')) return response.notFound('')
+      const updates = await seriesService.getRecentlyUpdated(page, perPage)
+      response.header('Cache-Control', 'no-store')
+      return view.render('partials/home/updates', {
+        recentlyUpdated: withFreshness(updates.items),
+        currentPage: page,
+        totalPages: updates.totalPages,
+        // Not the first screen: no eager cover images.
+        heroOn: true,
+      })
+    }
 
     const [featured, updates, popular, genres, latestComments, topReviews, readers, completed] =
       await Promise.all([
@@ -41,14 +69,7 @@ export default class HomeController {
           : [],
       ])
 
-    const now = Date.now()
-    const recentlyUpdated = updates.items.map((item) => ({
-      ...item,
-      latestChapters: item.latestChapters.map((chapter) => ({
-        ...chapter,
-        fresh: now - parseTimestamp(chapter.publishedAt) < freshFor,
-      })),
-    }))
+    const recentlyUpdated = withFreshness(updates.items)
 
     return view.render('pages/home', {
       featured,

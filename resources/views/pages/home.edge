@@ -1,7 +1,7 @@
 {{--
   Home page. Page 1: featured carousel (layout banner slot, full width), then "Son Güncellenenler",
   "Popüler Seriler", "Türlere Göre Keşfet", the community block, "Ayın Okurları" and
-  "Tamamlanan Seriler". From page 2 on (?page=) only the latest updates list is shown.
+  "Tamamlanan Seriler". ?page= pages the latest updates list only; every page is the full home page.
   Every section follows its Admin → Tema → Göster/Gizle switch (ui('home_*')); the controller does
   not query hidden sections, and sections without data are left out.
   The page's only <h1> is visually hidden: in front of the carousel when it is shown, else at the
@@ -28,7 +28,6 @@
   @include('partials/home/updates')
   @end
 
-  @if(currentPage === 1)
   @if(ui('home_popular') && popular.length)
   @include('partials/home/popular')
   @end
@@ -47,7 +46,6 @@
 
   @if(ui('home_completed') && completed.length)
   @include('partials/home/completed')
-  @end
   @end
 @end
 

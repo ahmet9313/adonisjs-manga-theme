@@ -242,12 +242,31 @@ test.group('Home page sections', (group) => {
     assert.notInclude(readers, '/uye/ev_eski_okur')
   })
 
-  test('from page 2 only the latest updates list is shown', async ({ assert }) => {
+  test('page 2 of the updates list is still the full home page', async ({ assert }) => {
     const html = await textOf(client().request('/?page=2'))
-    assert.include(html, 'Son Güncellenenler')
     assert.equal(html.match(/<h1[\s>]/g)?.length, 1)
-    for (const [key, text] of Object.entries(sections))
-      if (key !== 'home_updates') assert.notInclude(html, text)
+    for (const text of Object.values(sections)) assert.include(html, text)
+    assert.include(html, 'id="home-updates"')
+  })
+
+  test('the updates list pages load in place as a fragment', async ({ assert }) => {
+    const full = await client().request('/?page=2')
+    assert.include(full.headers.get('vary') || '', 'X-Fragment')
+
+    const response = await client().request('/?page=2', {
+      headers: { 'x-fragment': 'home-updates' },
+    })
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    const html = await response.text()
+    assert.include(html, 'data-updates-content')
+    assert.include(html, 'data-updates-skeleton')
+    assert.include(html, 'Son Güncellenenler')
+    assert.notInclude(html, '<html')
+    assert.notInclude(html, '<h1')
+    assert.notInclude(html, sections.home_popular)
+    // Page links keep pointing at the section, without the fragment header leaking into them.
+    assert.notMatch(html, /href="[^"]*fragment/i)
   })
 
   test('each Göster/Gizle switch removes its section', async ({ assert }) => {

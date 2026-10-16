@@ -5,7 +5,7 @@
   recommends) and are placed at the bottom with CSS.
   Contracts (scripts/check-mobile-nav.mjs): the [aria-roledescription="carousel"] element is at
   least 350px tall at 390px; every [data-hero-slide] is position:absolute and only one is
-  displayed (x-show); the FIRST <img> of a slide is its background art and is shown at every
+  visible once a change has settled (hero_slider.js hides the others with visibility:hidden); the FIRST <img> of a slide is its background art and is shown at every
   width (phones get the cover, wider screens the banner through <picture>); [data-hero-title]
   holds the title; [data-hero-next] shows the next slide.
 --}}
@@ -14,8 +14,13 @@
   @mouseleave="resume('hover')"
   @focusin="pause('focus')"
   @focusout="$el.contains($event.relatedTarget) || resume('focus')"
-  @touchstart.passive="handleTouchStart($event)"
-  @touchend.passive="handleTouchEnd($event)"
+  :class="{ 'is-dragging': dragging }"
+  @pointerdown="dragStart($event)"
+  @pointermove="dragMove($event)"
+  @pointerup="dragEnd($event)"
+  @pointercancel="dragEnd($event, true)"
+  @click.capture="dragClick($event)"
+  @dragstart.prevent
   @keydown.left.prevent="previous()"
   @keydown.right.prevent="next()">
   @if(featured.length > 1)
@@ -58,16 +63,10 @@
     @let(url = '/series/' + item.type + '/' + item.slug)
     <div class="home-hero__slide" data-hero-slide data-art="{{ item.bannerImage ? 'banner' : 'cover' }}"
       role="group" aria-roledescription="slide" aria-label="{{ index + 1 }} / {{ featured.length }}"
-      x-show="current === {{ index }}"
       @if(index !== 0)
-      x-cloak
+      x-cloak inert
       @end
-      x-transition:enter="home-hero-enter"
-      x-transition:enter-start="home-hero-hidden"
-      x-transition:enter-end="home-hero-shown"
-      x-transition:leave="home-hero-leave"
-      x-transition:leave-start="home-hero-shown"
-      x-transition:leave-end="home-hero-hidden">
+      >
       <picture class="home-hero__art">
         @if(item.bannerImage)
         <source media="(min-width: 640px)" srcset="{{ encodeURI(item.bannerImage) }}">

@@ -1768,6 +1768,9 @@
 
   /* Horizontally scrolling rail of compact cards. */
   .rail {
+    /* Containing block for absolutely positioned descendants (.sr-only, card badges), so the
+       rail clips them; otherwise off-screen cards widened the whole page on phones. */
+    position: relative;
     display: flex;
     gap: 1rem;
     overflow-x: auto;
