@@ -1,0 +1,91 @@
+{{--
+  Player box of the watch page: the 16:9 stage and the numbered source list (right of the stage
+  from lg, under it on smaller screens). Before a source is chosen the stage shows how to start
+  and no third-party player is loaded. Rows are rendered on the server.
+  Needs: sources, chapter.
+--}}
+@let(kindText = { local: 'Sitede barındırılıyor', embed: 'Gömülü oynatıcı', file: 'Doğrudan video' })
+<section class="watch-box" aria-labelledby="watch-title">
+  <h2 id="watch-title" class="sr-only">Bölüm {{ chapter.number }} oynatıcısı</h2>
+  <p class="sr-only" role="status" aria-live="polite" x-text="announcement"></p>
+
+  <div class="watch-grid {{ sources.length ? '' : 'watch-grid--single' }}">
+    <div class="watch-stage" x-ref="stage" data-state="idle" :data-state="state">
+      <div class="watch-screen" x-ref="screen"></div>
+
+      @if(sources.length)
+      <div class="watch-intro" x-show="state === 'idle'">
+        <span class="watch-intro__icon" aria-hidden="true">
+          @!component('components/icon', { name: 'tv', class: 'h-6 w-6' })
+        </span>
+        <p class="watch-intro__title">İzlemeye hazır mısın?</p>
+        <ol class="watch-steps">
+          <li><span class="watch-steps__num" aria-hidden="true">1</span><span><span class="watch-steps__wide">Sağdaki</span><span class="watch-steps__narrow">Alttaki</span> listeden bir <strong>kaynak</strong> seç ya da İzle'ye bas.</span></li>
+          <li><span class="watch-steps__num" aria-hidden="true">2</span><span>Oynatıcı açılmazsa listeden başka bir kaynak dene.</span></li>
+        </ol>
+        <p class="watch-intro__wish">İyi seyirler!</p>
+        <div class="watch-intro__actions">
+          <button type="button" class="btn btn--primary btn--lg" @click="start()" aria-describedby="watch-start-hint">
+            @!component('components/icon', { name: 'play', class: 'btn__icon' })
+            <span>İzle</span>
+          </button>
+          <p id="watch-start-hint" class="watch-intro__hint">
+            <span x-text="startLabel">{{ sources[0].host }}</span>
+          </p>
+        </div>
+        <p class="watch-intro__note">Dış sitelerin oynatıcıları sen bir kaynak seçene kadar yüklenmez.</p>
+        <noscript><p class="watch-intro__note">Oynatıcı için tarayıcında JavaScript açık olmalı.</p></noscript>
+      </div>
+
+      <div class="watch-error" x-ref="error" tabindex="-1" x-show="state === 'error'" x-cloak role="alert">
+        @!component('components/icon', { name: 'exclamation', class: 'h-6 w-6' })
+        <p class="watch-error__title">Bu kaynak oynatılamadı</p>
+        <p class="watch-error__text">Video bulunamamış ya da tarayıcın bu biçimi desteklemiyor olabilir. Listeden başka bir kaynak seçebilirsin.</p>
+        <button type="button" class="btn btn--primary btn--md" x-show="nextSource !== null" @click="playNext()">
+          <span>Sonraki kaynağı dene</span>
+          @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+        </button>
+      </div>
+      @else
+      <div class="watch-empty">
+        @!component('components/ui/empty_state', { icon: 'video', title: 'Bu bölüm için henüz kaynak yok', description: 'Kaynak eklendiğinde burada izleyebilirsin. Seri sayfasından başka bir bölüm seçebilirsin.' })
+      </div>
+      @end
+    </div>
+
+    @if(sources.length)
+    <aside class="watch-sources" aria-labelledby="watch-sources-title">
+      <div class="watch-sources__head">
+        <h3 id="watch-sources-title" class="watch-sources__title">
+          @!component('components/icon', { name: 'server', class: 'h-4 w-4' })
+          Kaynaklar
+        </h3>
+        <span class="badge badge--sm" data-tone="neutral">{{ sources.length }}&nbsp;kaynak</span>
+      </div>
+      <div class="watch-panel">
+        <ol class="watch-list">
+          @each((source, s) in sources)
+          <li>
+            <button type="button" class="watch-source" aria-pressed="false" :aria-pressed="(playing === {{ s }}).toString()"
+              :data-next="isNext({{ s }}) ? 'true' : null" @click="play({{ s }})">
+              <span class="watch-source__num t-num" aria-hidden="true">{{ s + 1 }}</span>
+              <span class="watch-source__body">
+                <span class="watch-source__host">{{ source.host }}</span>
+                <span class="watch-source__meta">{{ source.label ? source.label + ' · ' : '' }}{{ kindText[source.kind] || '' }}</span>
+              </span>
+              <span class="watch-source__state" aria-hidden="true">
+                @!component('components/icon', { name: 'play', class: 'h-4 w-4' })
+              </span>
+            </button>
+          </li>
+          @end
+        </ol>
+      </div>
+      <p class="watch-sources__now" x-show="nowPlaying" x-cloak>
+        @!component('components/icon', { name: 'video', class: 'h-4 w-4' })
+        <span x-text="nowPlaying"></span>
+      </p>
+    </aside>
+    @end
+  </div>
+</section>

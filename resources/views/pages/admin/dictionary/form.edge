@@ -1,6 +1,8 @@
 {{--
   Shared create/edit form of the four dictionaries (genres, authors, artists, content types).
   Props from the controller: dictionary (labels), item (edit), usage (number of series, edit).
+  Content types also choose a format (dictionary.formats: image / text / video) as radio cards;
+  it is locked (disabled, so not posted) while series use the type.
   A duplicate name comes back as the `error` flash with the typed name kept (flashExcept), so
   the field shows it inline; other validation errors use inputErrorsBag.name.
 --}}
@@ -8,6 +10,9 @@
 @let(action = isEdit ? dictionary.base + '/' + item.id + '/duzenle' : dictionary.base + '/ekle')
 @let(duplicate = flashMessages.has('error') && flashMessages.has('name') ? flashMessages.get('error') : '')
 @let(singularLower = dictionary.singular.toLocaleLowerCase('tr'))
+@let(formats = dictionary.formats || null)
+@let(formatLocked = isEdit && usage > 0)
+@let(formatValue = flashMessages.get('format') || (isEdit ? item.format : 'image'))
 @let(catalogUrl = isEdit ? '/seriler?' + dictionary.catalogParam + '=' + encodeURIComponent(item[dictionary.catalogField]) : '')
 @component('components/layout/admin', {
   title: isEdit ? item.name : title,
@@ -30,6 +35,27 @@
           @!component('components/ui/field', { name: 'name', label: dictionary.nameLabel, required: true, maxlength: dictionary.maxLength, placeholder: dictionary.placeholder, autocomplete: 'off', value: isEdit ? item.name : '', autofocus: !isEdit, hint: duplicate ? '' : (isEdit ? '' : dictionary.slugNote), 'aria-invalid': duplicate ? 'true' : null, 'aria-describedby': duplicate ? 'name-duplicate' : null })
           @if(duplicate)
           <p id="name-duplicate" class="field__error -mt-3" role="alert">{{ duplicate }}. Başka bir ad deneyin.</p>
+          @end
+          @if(formats)
+          <fieldset class="ac-fieldset" aria-describedby="format-hint">
+            <legend class="field__label">Biçim</legend>
+            <div class="ac-choices ac-choices--rules">
+              @each((entry, key) in formats)
+              <label class="ac-choice">
+                <input type="radio" name="format" value="{{ key }}" class="ac-choice__input" {{ formatValue === key ? 'checked' : '' }} {{ formatLocked ? 'disabled' : '' }}>
+                <span class="ac-choice__icon">
+                  @!component('components/icon', { name: entry.icon })
+                </span>
+                <span class="ac-choice__text">
+                  <span class="ac-choice__label">{{ entry.label }}</span>
+                  <span class="ac-choice__hint">{{ entry.hint }}</span>
+                </span>
+              </label>
+              @end
+            </div>
+            <p id="format-hint" class="field__hint">{{ formatLocked ? dictionary.formatLocked.replace('{n}', usage) : 'Bölüm düzenleyicisini (sayfa görselleri, metin ya da video kaynakları) ve sitenin “oku” mu “izle” mi diyeceğini belirler.' }}</p>
+            @!component('components/field_error', { field: 'format' })
+          </fieldset>
           @end
           @if(isEdit)
           <div class="field">

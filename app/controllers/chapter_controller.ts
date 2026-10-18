@@ -2,9 +2,11 @@ import type { HttpContext } from '@adonisjs/core/http'
 import seriesService from '#services/series_service'
 import library from '#services/library_service'
 import progress from '#services/progress_service'
+import watch from '#config/watch'
+import access, { AGE_COOKIE } from '#services/access_service'
 
 export default class ChapterController {
-  async show({ view, params, response, auth }: HttpContext) {
+  async show({ view, params, request, response, auth }: HttpContext) {
     const { type, slug, chapter: chapterNum } = params
     const missing = (what: 'series' | 'chapter') => {
       response.status(404)
@@ -12,11 +14,32 @@ export default class ChapterController {
     }
     if (!Number.isSafeInteger(Number(chapterNum)) || Number(chapterNum) < 0)
       return missing('chapter')
-    const series = await seriesService.getSeriesBySlug(type, slug)
+    const drafts = access.canSeeDrafts(auth.user)
+    const series = await seriesService.getSeriesBySlug(type, slug, { drafts })
     if (!series) return missing('series')
 
-    const chapter = await seriesService.getChapter(type, slug, Number(chapterNum))
+    const chapter = await seriesService.getChapter(type, slug, Number(chapterNum), { drafts })
     if (!chapter) return missing('chapter')
+
+    // Nothing is recorded or rewarded until the visitor passes every gate.
+    const gate = access.gate(
+      auth.user,
+      { series, chapter },
+      {
+        confirmedAge: access.confirmedAge(request.plainCookie(AGE_COOKIE, { encoded: false })),
+        warningConfirmed: request.input('onay') === '1',
+      }
+    )
+    if (gate) {
+      if (gate.kind === 'login' || gate.kind === 'vip') response.status(403)
+      return view.render('pages/content_gate', {
+        title: series.title + ' - Bölüm ' + chapter.number,
+        gate,
+        series,
+        chapter: { number: chapter.number, title: chapter.title },
+        next: request.url(true),
+      })
+    }
 
     let reward = null
     if (auth.user) {
@@ -26,12 +49,13 @@ export default class ChapterController {
       if (reward) view.share({ account: await progress.summary(auth.user) })
     }
 
-    const allChapters = await seriesService.getChapters(type, slug)
+    const allChapters = await seriesService.getChapters(type, slug, { drafts })
     const currentIndex = allChapters.findIndex((c) => c.number === Number(chapterNum))
     const prevChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null
     const nextChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null
 
-    return view.render('pages/chapter_reader', {
+    // Video episodes share the reader's data; only the page template differs.
+    return view.render(chapter.video ? 'pages/episode_watch' : 'pages/chapter_reader', {
       title: series.title + ' - Bölüm ' + chapter.number,
       series,
       chapter,
@@ -47,6 +71,7 @@ export default class ChapterController {
               : null,
           }
         : null,
+      ...(chapter.video ? { localHost: watch.localHost } : {}),
     })
   }
 }

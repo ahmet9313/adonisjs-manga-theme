@@ -1,6 +1,8 @@
 import type SeriesModel from '#models/series'
 import type ContentType from '#models/content_type'
 import type Chapter from '#models/chapter'
+import type { VideoSourceKind } from '#config/watch'
+import type { AccessLevel, ContentFormat } from '#config/site'
 
 export interface Person {
   name: string
@@ -14,6 +16,8 @@ export interface SeriesInfo {
   slug: string
   description: string
   type: string
+  /** Content type format: pages, text or video ("izle" instead of "oku"). */
+  format: ContentFormat
   status: string
   translationStatus: string
   author: string
@@ -28,6 +32,9 @@ export interface SeriesInfo {
   bannerImage: string | null
   featured: boolean
   featuredDescription: string | null
+  /** Only staff ever receive drafts (previews); lists leave them out. */
+  draft: boolean
+  access: AccessLevel
   /** Average of 1–10 ratings (0 when nobody rated yet). */
   ratingAverage: number
   ratingCount: number
@@ -41,12 +48,22 @@ export interface ChapterInfo {
   title: string | null
   publishedAt: string
   timeAgo?: string
+  /** The chapter's own access (`public` = same as the series) and draft flag (staff only). */
+  access?: AccessLevel
+  draft?: boolean
 }
 
 export interface ChapterWithPages extends ChapterInfo {
   id: number
   pages: string[]
   textContent?: string
+  warning: string | null
+  /** Video episodes: sources in stored order (see config/watch.ts). */
+  video?: EpisodeVideo
+}
+
+export interface EpisodeVideo {
+  sources: { host: string; kind: VideoSourceKind; url: string; label: string | null }[]
 }
 
 export interface SeriesWithChapters extends SeriesInfo {
@@ -69,6 +86,7 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
     title: s.title,
     slug: s.slug,
     type: contentType?.slug || typeName,
+    format: contentType?.format || 'image',
     description: s.description,
     author: authors.map((a) => a.name).join(', '),
     artist: artists.map((a) => a.name).join(', '),
@@ -84,6 +102,8 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
     bannerImage: s.bannerImage,
     featured: s.featured,
     featuredDescription: s.featuredDescription,
+    draft: Boolean(s.draft),
+    access: s.access || 'public',
     ratingAverage: Number(s.ratingAvg) || 0,
     ratingCount: s.ratingCount || 0,
     reviewCount: s.reviewCount || 0,
@@ -102,6 +122,8 @@ export function serializeChapter(c: Chapter): ChapterInfo {
     title: c.title,
     publishedAt: c.publishedAt,
     timeAgo: calculateTimeAgo(c.publishedAt),
+    access: c.access || 'public',
+    draft: Boolean(c.draft),
   }
 }
 

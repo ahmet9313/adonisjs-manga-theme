@@ -1,14 +1,29 @@
 {{--
   Admin chapter form (create and edit), driven by `chapterForm` (resources/js/components/
   chapter_form.js): series combobox, page manager for image series (drop zone, drag or buttons
-  to reorder, refused files) or a large text area for novels, upload progress in the save bar.
-  Posted fields are unchanged: series_id, number, title, pages (files), page_order (JSON), text_content.
+  to reorder, refused files), a large text area for text types or the source editor for video types
+  (the series' content type format: seriesFormats, id → image/text/video)
+  (config/watch.ts: one row per source with an uploaded video or link/iframe code, host and
+  label), upload progress in the save bar and per video row.
+  Posted fields: series_id, number, title, pages (files), page_order (JSON), text_content and
+  sources (JSON [{ kind: 'local'|'link', url, host, label }]).
 --}}
 @let(isEdit = Boolean(chapter))
 @let(oldSeries = flashMessages.get('series_id'))
 @let(initialSeries = oldSeries ? Number(oldSeries) : (isEdit ? chapter.seriesId : (preSelectedSeriesId || '')))
 @let(seriesOptions = seriesList.map((s) => ({ id: s.id, title: s.title, typeName: s.contentType ? s.contentType.name.charAt(0).toLocaleUpperCase('tr') + s.contentType.name.slice(1) : '-', type: s.contentType ? s.contentType.slug : '', cover: s.coverImage || '/images/no-cover.svg' })))
-@let(formConfig = { seriesId: initialSeries, contentTypes: seriesContentTypeMap, series: seriesOptions, pages: isEdit && chapter.content.type === 'images' ? chapter.content.pages : [] })
+@let(oldSources = flashMessages.get('sources'))
+@let(formConfig = {
+  seriesId: initialSeries,
+  formats: seriesFormats,
+  series: seriesOptions,
+  pages: isEdit && chapter.content.type === 'images' ? chapter.content.pages : [],
+  localHost: localHost || '',
+  maxUploadBytes: maxUploadBytes || 0,
+  videoExtensions: videoExtensions || [],
+  sources: typeof oldSources === 'string' ? oldSources : (isEdit && chapter.content.type === 'video' ? chapter.content.sources : []),
+})
+@let(sourcesError = flashMessages.has('inputErrorsBag.sources') ? flashMessages.get('inputErrorsBag.sources')[0] : '')
 @let(action = isEdit ? '/admin/bolumler/' + chapter.id + '/duzenle' : '/admin/bolumler/ekle')
 @let(listUrl = '/admin/bolumler' + (initialSeries ? '?series_id=' + initialSeries : ''))
 @let(readerUrl = isEdit && chapter.series && chapter.series.contentType ? '/series/' + chapter.series.contentType.slug + '/' + chapter.series.slug + '/' + chapter.number : '')
@@ -16,13 +31,13 @@
 @let(pagesError = flashMessages.has('inputErrorsBag.pages') ? flashMessages.get('inputErrorsBag.pages')[0] : (flashMessages.has('inputErrorsBag.page_order') ? flashMessages.get('inputErrorsBag.page_order')[0] : ''))
 @component('components/layout/admin', {
   title: isEdit ? (chapter.series ? chapter.series.title + ' · ' : '') + 'Bölüm ' + chapter.number : title,
-  description: isEdit ? 'Bölüm bilgilerini, sayfalarını veya metnini düzenleyin.' : 'Seriyi seçin; içerik alanı serinin türüne göre görsel sayfalar ya da metin olarak açılır.',
+  description: isEdit ? 'Bölüm bilgilerini, sayfalarını, metnini veya video kaynaklarını düzenleyin.' : 'Seriyi seçin; içerik alanı serinin türüne göre görsel sayfalar, metin ya da video kaynakları olarak açılır.',
   crumbs: [{ label: 'Bölümler', href: '/admin/bolumler' }, { label: isEdit ? 'Düzenle' : 'Yeni bölüm' }]
 })
   @slot('actions')
     @if(readerUrl)
     @component('components/ui/button', { href: readerUrl, iconRight: 'external', target: '_blank', rel: 'noopener' })
-      Okuyucuda aç
+      {{ chapter.series.contentType.format === 'video' ? 'Oynatıcıda aç' : 'Okuyucuda aç' }}
     @end
     @end
   @end
@@ -69,7 +84,7 @@
                         :aria-selected="(String(seriesId) === String(s.id)).toString()" @mousedown.prevent @click="selectSeries(s)" @mousemove="activeIndex = index">
                       <img :src="s.cover" alt="" class="admin-thumb" width="28" height="37" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
                       <span class="min-w-0 flex-1 truncate" x-text="s.title"></span>
-                      <span class="badge badge--sm" :data-tone="['manga', 'manhwa', 'manhua', 'novel', 'webtoon'].includes(s.type) ? s.type : 'neutral'" x-text="s.typeName"></span>
+                      <span class="badge badge--sm" :data-tone="['manga', 'manhwa', 'manhua', 'novel', 'webtoon', 'anime'].includes(s.type) ? s.type : 'neutral'" x-text="s.typeName"></span>
                     </li>
                   </template>
                   <li role="presentation" class="px-3 py-4 text-center text-sm text-muted" x-show="filteredSeries.length === 0">Bu adla bir seri yok.</li>
@@ -81,7 +96,7 @@
                   Seçili:
                   <strong class="text-ink" x-text="selectedSeries ? selectedSeries.title : ''"></strong>
                   ·
-                  <span x-text="contentType === 'novel' ? 'novel: metin bölümü' : 'görsel sayfalı bölüm'"></span>
+                  <span x-text="isVideo ? 'video bölümü (kaynaklar)' : (format === 'text' ? 'metin bölümü' : 'görsel sayfalı bölüm')"></span>
                 </span>
               </p>
               <p id="f-series-error" class="field__error" role="alert" x-show="seriesError" x-text="seriesError" x-cloak></p>
@@ -97,11 +112,19 @@
           </div>
         @end
 
-        <div x-show="!contentType" x-cloak>
-          @!component('components/ui/empty_state', { icon: 'book-open', title: 'Önce bir seri seçin', description: 'İçerik alanı serinin türüne göre açılır: manga, manhwa ve webtoon için sayfa görselleri, novel için bölüm metni.' })
+        @component('components/ui/panel', { title: 'Yayın ve erişim', id: 'chapter-access', description: 'Taslak bölümler listelerde görünmez ve kaydedenlere bildirim gitmez; taslaktan çıkınca bildirim gönderilir.' })
+          <div class="admin-fields">
+            @!component('components/ui/field', { name: 'draft', label: 'Taslak (yayınlama)', type: 'toggle', value: flashMessages.has('inputErrorsBag') ? flashMessages.has('draft') : (isEdit && chapter.draft), hint: 'Açıkken bölümü yalnız yönetici ve editörler görür.' })
+            @!component('components/ui/field', { name: 'access', label: 'Erişim', type: 'select', value: isEdit ? chapter.access : 'public', options: Object.entries(site.accessLevels).map(([value, level]) => ({ value, label: level.chapterLabel })), hint: 'Seri daha kısıtlıysa serinin ayarı geçerlidir. Üyelere özel: giriş gerekir. VIP: yalnız VIP rolündekiler (ve yönetim).' })
+            @!component('components/ui/field', { name: 'warning', label: 'Bölüm öncesi uyarı (isteğe bağlı)', type: 'textarea', rows: 3, maxlength: 500, value: isEdit ? (chapter.warning || '') : '', placeholder: 'ör. Bu bölüm şiddet ve kan içeren sahneler barındırır.', hint: 'Doluysa okur bölümü açmadan önce bu metni görür ve “Devam et” der.' })
+          </div>
+        @end
+
+        <div x-show="!format" x-cloak>
+          @!component('components/ui/empty_state', { icon: 'book-open', title: 'Önce bir seri seçin', description: 'İçerik alanı serinin içerik türünün biçimine göre açılır: görsel türlerde (manga, manhwa, webtoon) sayfa görselleri, metin türlerinde (novel) bölüm metni, video türlerde (anime) video kaynakları.' })
         </div>
 
-        <section class="panel" aria-labelledby="pages-title" x-show="contentType && contentType !== 'novel'" x-cloak>
+        <section class="panel" aria-labelledby="pages-title" x-show="format === 'image'" x-cloak>
           <div class="panel__head">
             <div class="min-w-0">
               <h2 id="pages-title" class="panel__title">Sayfalar</h2>
@@ -175,7 +198,7 @@
           <p class="mt-4 text-sm text-muted" x-show="allPages.length === 0">Henüz sayfa yok. Görseller dosya adına göre değil, seçtiğiniz sırayla eklenir.</p>
         </section>
 
-        <section class="panel" aria-labelledby="text-title" x-show="contentType === 'novel'" x-cloak>
+        <section class="panel" aria-labelledby="text-title" x-show="format === 'text'" x-cloak>
           <div class="panel__head">
             <div class="min-w-0">
               <h2 id="text-title" class="panel__title">Bölüm metni</h2>
@@ -185,6 +208,8 @@
           </div>
           @!component('components/ui/field', { name: 'text_content', label: 'Metin', type: 'textarea', rows: 22, value: isEdit && chapter.content && chapter.content.type === 'text' ? chapter.content.text : '', controlClass: 'admin-novel', '@input': 'countWords($event.target.value)' })
         </section>
+
+        @include('partials/admin/chapter_sources')
       </div>
 
       <div class="savebar">
@@ -198,15 +223,16 @@
               <button type="button" class="btn btn--ghost btn--sm" x-show="phase === 'upload'" @click="cancelUpload()">İptal</button>
             </div>
           </template>
-          <span x-show="!uploading && contentType && contentType !== 'novel'" x-text="allPages.length ? allPages.length + ' sayfa' + (newCount ? ' · ' + newCount + ' yeni yüklenecek' : ' · yeni yükleme yok') : 'Sayfa eklenmedi'"></span>
-          <span x-show="!uploading && contentType === 'novel'" x-cloak x-text="words.toLocaleString('tr-TR') + ' kelime'"></span>
-          <span x-show="!uploading && !contentType" x-cloak>Seri seçilmedi</span>
+          <span x-show="!uploading && format === 'image'" x-text="allPages.length ? allPages.length + ' sayfa' + (newCount ? ' · ' + newCount + ' yeni yüklenecek' : ' · yeni yükleme yok') : 'Sayfa eklenmedi'"></span>
+          <span x-show="!uploading && isVideo" x-cloak x-text="sourcesSummary"></span>
+          <span x-show="!uploading && format === 'text'" x-cloak x-text="words.toLocaleString('tr-TR') + ' kelime'"></span>
+          <span x-show="!uploading && !format" x-cloak>Seri seçilmedi</span>
         </div>
         <div class="form-actions">
           @component('components/ui/button', { variant: 'ghost', href: listUrl })
             Vazgeç
           @end
-          @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check', ':disabled': 'uploading', ':aria-busy': "uploading ? 'true' : null" })
+          @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check', ':disabled': 'uploading || videoUploading', ':aria-busy': "uploading || videoUploading ? 'true' : null" })
             {{ isEdit ? 'Değişiklikleri kaydet' : 'Bölümü ekle' }}
           @end
         </div>

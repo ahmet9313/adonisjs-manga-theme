@@ -1,0 +1,508 @@
+/*
+ * Episode watch page (pages/episode_watch.edge, partials/watch/*): header with episode
+ * navigation, the player box (16:9 stage, source list) and what comes next.
+ * Colours come from tokens; the stage turns black only while a video plays (letterboxing).
+ */
+
+@layer components {
+  .watch-top {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.25rem 0 1.25rem;
+  }
+
+  @media (width >= 1024px) {
+    .watch-top {
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 2rem;
+      margin-top: 1.75rem;
+    }
+  }
+
+  .watch-top .reader-nav {
+    margin: 0;
+    width: 100%;
+    max-width: none;
+  }
+
+  @media (width >= 1024px) {
+    .watch-top .reader-nav {
+      width: 34rem;
+      flex-shrink: 0;
+    }
+  }
+
+  .watch-head {
+    min-width: 0;
+  }
+
+  .watch-head__series {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--t-accent-text);
+  }
+
+  .watch-head__series > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .watch-head__series:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .watch-head__title {
+    margin-top: 0.375rem;
+    font-size: clamp(1.375rem, 1.1rem + 1.3vw, 2rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.022em;
+    color: var(--t-heading);
+    overflow-wrap: anywhere;
+  }
+
+  .watch-head__name {
+    color: var(--t-text-2);
+  }
+
+  .watch-head__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.625rem;
+    margin-top: 0.625rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  /* ---- Player box ------------------------------------------------------------------------- */
+  /* Edge to edge on phones; a rounded panel from sm. `clip` keeps the stage inside the corners. */
+  .watch-box {
+    margin-inline: -1rem;
+    overflow: clip;
+    border-block: 1px solid var(--t-border);
+    background: var(--t-surface);
+  }
+
+  @media (width >= 640px) {
+    .watch-box {
+      margin-inline: 0;
+      border-inline: 1px solid var(--t-border);
+      border-radius: var(--radius-panel);
+    }
+  }
+
+  .watch-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (width >= 1024px) {
+    .watch-grid:not(.watch-grid--single) {
+      grid-template-columns: minmax(0, 1fr) 19rem;
+    }
+  }
+
+  /* ---- Stage ----------------------------------------------------------------------------- */
+  .watch-stage {
+    position: relative;
+    display: grid;
+    aspect-ratio: 16 / 9;
+    /* Clears the sticky site header when a chosen source scrolls the player into view. */
+    scroll-margin-top: calc(4rem + 0.75rem);
+    background:
+      radial-gradient(120% 90% at 50% 0%, var(--t-accent-soft), transparent 65%), var(--t-surface-2);
+  }
+
+  .watch-stage[data-state='playing'] {
+    background: #000;
+  }
+
+  .watch-screen {
+    position: absolute;
+    inset: 0;
+  }
+
+  .watch-stage[data-state='idle'] .watch-screen,
+  .watch-stage[data-state='error'] .watch-screen {
+    display: none;
+  }
+
+  .watch-media {
+    display: block;
+    height: 100%;
+    width: 100%;
+    border: 0;
+    background: #000;
+  }
+
+  .watch-intro,
+  .watch-error,
+  .watch-empty {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem 1rem;
+    text-align: center;
+  }
+
+  @media (width >= 640px) {
+    .watch-intro,
+    .watch-error {
+      padding: 2rem;
+    }
+  }
+
+  .watch-intro__icon {
+    display: grid;
+    height: 3rem;
+    width: 3rem;
+    place-items: center;
+    margin-bottom: 0.75rem;
+    border-radius: 9999px;
+    background: var(--t-accent-soft);
+    color: var(--t-accent-text);
+  }
+
+  .watch-intro__title {
+    font-size: clamp(1.125rem, 1rem + 0.6vw, 1.375rem);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    color: var(--t-heading);
+  }
+
+  .watch-steps {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    max-width: 30rem;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--t-text-2);
+  }
+
+  .watch-steps > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+  }
+
+  .watch-steps strong {
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .watch-steps__num {
+    display: grid;
+    height: 1.375rem;
+    width: 1.375rem;
+    flex-shrink: 0;
+    place-items: center;
+    border: 1px solid var(--t-accent-line);
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    color: var(--t-accent-text);
+  }
+
+  .watch-steps__wide {
+    display: none;
+  }
+
+  @media (width >= 1024px) {
+    .watch-steps__wide {
+      display: inline;
+    }
+
+    .watch-steps__narrow {
+      display: none;
+    }
+  }
+
+  .watch-intro__wish {
+    margin-top: 0.875rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--t-accent-text);
+  }
+
+  .watch-intro__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 1rem;
+  }
+
+  .watch-intro__actions .btn {
+    min-width: 9rem;
+  }
+
+  .watch-intro__hint {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--t-muted);
+  }
+
+  .watch-intro__note {
+    margin-top: 0.875rem;
+    max-width: 28rem;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .watch-error {
+    gap: 0.5rem;
+    color: var(--t-danger);
+    outline: none;
+  }
+
+  .watch-error__title {
+    font-size: 1.0625rem;
+    font-weight: 800;
+    color: var(--t-heading);
+  }
+
+  .watch-error__text {
+    max-width: 28rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+
+  .watch-empty > .empty {
+    border: 0;
+    background: transparent;
+  }
+
+  /* ---- Sources --------------------------------------------------------------------------- */
+  .watch-sources {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    border-top: 1px solid var(--t-border);
+    padding: 0.75rem;
+  }
+
+  /* Wide screens: the list sits next to the stage and scrolls within its height. */
+  @media (width >= 1024px) {
+    .watch-sources {
+      contain: size;
+      border-top: 0;
+      border-left: 1px solid var(--t-border);
+    }
+  }
+
+  .watch-sources__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.125rem 0.25rem 0.625rem;
+  }
+
+  .watch-sources__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 750;
+    color: var(--t-heading);
+  }
+
+  .watch-panel {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Room for the focus outline (2px + 2px offset) inside the scrolling list. */
+    padding: 4px;
+  }
+
+  .watch-list {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  @media (width >= 640px) and (width < 1024px) {
+    .watch-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .watch-source {
+    display: flex;
+    width: 100%;
+    min-height: 3.25rem;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    padding: 0.5rem 0.625rem;
+    text-align: left;
+    color: var(--t-text);
+    transition:
+      background-color var(--dur-1),
+      border-color var(--dur-1);
+  }
+
+  .watch-source:hover {
+    border-color: var(--t-border);
+    background: var(--t-hover);
+  }
+
+  .watch-source[data-next='true'] {
+    border-color: var(--t-accent-line);
+  }
+
+  .watch-source[aria-pressed='true'],
+  .watch-source[aria-pressed='true']:hover {
+    border-color: var(--t-accent-line);
+    background: var(--t-accent-soft);
+  }
+
+  .watch-source__num {
+    display: grid;
+    height: 1.75rem;
+    width: 1.75rem;
+    flex-shrink: 0;
+    place-items: center;
+    border: 1px solid var(--t-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--t-surface-2);
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--t-text-2);
+  }
+
+  .watch-source[aria-pressed='true'] .watch-source__num {
+    border-color: transparent;
+    background: var(--t-accent-strong);
+    color: var(--t-on-accent);
+  }
+
+  .watch-source__body {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .watch-source__host {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 750;
+    color: var(--t-heading);
+  }
+
+  .watch-source__meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .watch-source__state {
+    flex-shrink: 0;
+    color: var(--t-subtle);
+  }
+
+  .watch-source:hover .watch-source__state,
+  .watch-source[data-next='true'] .watch-source__state {
+    color: var(--t-accent-text);
+  }
+
+  .watch-source[aria-pressed='true'] .watch-source__state {
+    color: var(--t-accent-text);
+  }
+
+  .watch-sources__now {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.625rem;
+    border-top: 1px solid var(--t-border);
+    padding: 0.625rem 0.25rem 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--t-text-2);
+  }
+
+  .watch-sources__now > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .watch-sources__now > svg {
+    flex-shrink: 0;
+    color: var(--t-accent-text);
+  }
+
+  /* ---- After the player ------------------------------------------------------------------ */
+  .watch-after {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  @media (width >= 768px) {
+    .watch-after {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
+  .watch-after__text {
+    min-width: 0;
+    font-size: 0.875rem;
+    color: var(--t-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .watch-after__text strong {
+    color: var(--t-heading);
+  }
+
+  .watch-after__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .watch-comments {
+    margin-top: 3rem;
+    max-width: 52rem;
+  }
+}
+
+@media print {
+  .watch-box,
+  .watch-after,
+  .watch-top .reader-nav,
+  .watch-comments {
+    display: none !important;
+  }
+}

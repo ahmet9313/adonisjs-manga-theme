@@ -50,7 +50,7 @@ const browseKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End']
  * list with the arrow keys (which fires `change` on some systems) waits for Enter, so keyboard
  * users can move through the chapters without leaving the page (WCAG 3.2.2).
  */
-const chapterPicker = {
+export const chapterPicker = {
   keyed: false,
 
   pickKey(event) {

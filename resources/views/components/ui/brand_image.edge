@@ -1,0 +1,40 @@
+{{--
+  Image upload area for an address field on the theme pages (Alpine `brandImage`,
+  brand_image.js): click or drop a file to upload it to /admin/tema/gorsel; the returned address
+  is written into the field `target` (which stays editable for links). Shows the current image,
+  upload progress, errors and a "Kaldır" button.
+  Props: target (input id), kind logo|logo_mobile|favicon|background, label (accessible name),
+         shape wide|square|banner (wide), accept (extensions), max (bytes).
+    @!component('components/ui/brand_image', { target: 'f-logo_url', kind: 'logo', label: 'Logo yükle' })
+--}}
+@let(accept = $props.get('accept', ['png', 'jpg', 'jpeg', 'webp', 'gif']))
+@let(id = 'up-' + $props.get('kind'))
+<div class="brand-drop brand-drop--{{ $props.get('shape', 'wide') }}" x-data="brandImage" data-target="{{ $props.get('target') }}" data-kind="{{ $props.get('kind') }}" data-accept="{{ accept.join(',') }}" data-max="{{ $props.get('max', 5 * 1024 * 1024) }}">
+  <label class="dropzone brand-drop__zone" :class="{ 'is-over': over, 'has-image': url && !broken }"
+         @dragover.prevent="over = true" @dragleave="if (!$el.contains($event.relatedTarget)) over = false" @drop.prevent="drop($event)">
+    <input type="file" id="{{ id }}" class="sr-only" accept="{{ accept.map((ext) => '.' + ext).join(',') }}" @change="pick($event)" :disabled="uploading">
+    <span class="sr-only">{{ $props.get('label', 'Görsel yükle') }}</span>
+    <img alt="" class="brand-drop__img" x-show="url && !broken" :src="url || null" x-on:error="broken = true" x-on:load="broken = false" x-cloak>
+    <span class="brand-drop__empty" x-show="!url || broken">
+      @!component('components/icon', { name: 'upload' })
+      <span class="brand-drop__cta">Görsel yükle</span>
+      <span>veya sürükleyip bırakın · {{ accept.filter((ext) => ext !== 'jpeg').map((ext) => ext.toUpperCase()).join(', ') }}</span>
+    </span>
+  </label>
+  <div class="brand-drop__bar" x-show="uploading" x-cloak role="status">
+    <span class="progress" role="progressbar" aria-label="Yükleniyor" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progress"><span class="progress__bar" :style="'width:' + progress + '%'"></span></span>
+    <span class="t-num" x-text="progress + '%'"></span>
+    <button type="button" class="btn btn--link btn--sm" @click="cancel()">İptal</button>
+  </div>
+  <div class="brand-drop__actions" x-show="url && !uploading" x-cloak>
+    <label for="{{ id }}" class="btn btn--secondary btn--sm">
+      @!component('components/icon', { name: 'upload', class: 'btn__icon' })
+      Değiştir
+    </label>
+    <button type="button" class="btn btn--ghost btn--sm" @click="clear()">
+      @!component('components/icon', { name: 'trash', class: 'btn__icon' })
+      Kaldır
+    </button>
+  </div>
+  <p class="field__error" x-show="error" x-text="error" x-cloak role="alert"></p>
+</div>

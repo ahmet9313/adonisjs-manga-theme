@@ -73,3 +73,15 @@ Her işi küçük, doğrulanabilir değişikliklere ayırın. Veri silen migrati
 - **Profil etkinliği:** Yorum ve inceleme sekmeleri son 12 kaydı gösterir; üye etkinliği için sayfalı uç nokta yok.
 - **Okuma ilerlemesi:** "Devam et" son okunan bölüme gider; sayfa düzeyinde ilerleme yoktur.
 - **Envanter → sayfa eşitlemesi:** Envanterde kuşanılan kozmetik `cosmetic-change` olayı yayar; profil ve yorum kartları bu olayı dinleyip sayfayı yenilemeden güncellenebilir.
+
+## Anime / izleme sonrası açık işler (2026-10-18)
+
+- **Fansub'a göre gruplama:** Bir bölümün kaynaklarını fansub ekiplerine göre ayırma (izleme sayfasında fansub sekmeleri, yönetimde fansub alanı ve önerileri) ilk sürümde yapılmış, kullanıcının isteğiyle 2026-10-18'de kaldırılmıştır; şimdilik her bölümün tek bir kaynak listesi var. Gerekirse kaynaklara `fansub` alanı (veya ayrı bir `fansubs` tablosu) eklenip izleme sayfasına sekme olarak geri getirilebilir.
+- **Kaydedilmemiş yüklemeler:** Yüklenip bölüm kaydedilmeden bırakılan videolar `CONTENT_ROOT/videos` altında kalır; hiçbir bölümün kullanmadığı eski dosyaları silen bir temizlik komutu yazılmalı.
+- **Büyük dosyalar:** Tek parça yükleme 4 GB ve 3 saatlik istek süresiyle sınırlıdır; kesilen yükleme baştan başlar. Parçalı/sürdürülebilir yükleme (ör. tus) ve ters vekil (nginx `client_max_body_size`, zaman aşımları) ayarı belgelenmeli.
+- **Akış biçimi:** HLS (`.m3u8`) ve otomatik kalite seçimi yok; yalnız tarayıcının doğrudan oynattığı MP4/WebM. Sunucuda yeniden kodlama ve küçük resim üretimi de yok.
+- **Altyazı:** Ayrı `.vtt` altyazı dosyası yükleme ve `<track>` desteği eklenebilir (şimdilik altyazının videoya gömülü olması gerekir).
+- **İzleme ilerlemesi:** Videonun kaldığı saniye saklanmıyor; ←/→ bölüm kısayolları oynatıcıdaki sarma tuşlarıyla çakışmasın diye eklenmedi.
+- **Erişim ve taslak (2026-10-18 sonrası):** VIP rolü yalnız yönetici tarafından elle verilir (süre/bitiş tarihi yok). Zamanlanmış yayın (taslağın belirli tarihte otomatik yayınlanması) yok. Kilitli seriler katalogda görünür; isteğe bağlı gizleme ayarı eklenebilir. Yaş onayı yalnız çerezle tutulur (hesaba yazılmaz, cihaz değişince tekrar sorulur). Kaydedilmeden bırakılan tema görselleri `CONTENT_ROOT/branding` altında kalır. Kart kataloğu ve profil sayfalarındaki yorum/inceleme bağlantıları taslak serileri ayıklamaz (bağlantı 404 verir).
+- **Biçim değiştirme:** Seri kullanan bir içerik türünün biçimi (görsel/metin/video) şimdilik kilitli. Gerekirse bölümleri dönüştüren ya da yalnız bölümsüz serilerde izin veren bir akış eklenebilir; rozet rengi ise hâlâ slug'a göre (`site.badgeTones.type`) seçiliyor, yeni türler nötr rozet alır.
+- **Gömülü oynatıcılar:** Dış oynatıcılar `sandbox` olmadan yüklenir (birçok site sandbox'ı reddeder); açılır reklamları engellemek için site bazında izin listesi ve isteğe bağlı sandbox düşünülebilir.

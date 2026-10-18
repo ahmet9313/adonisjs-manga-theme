@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
 import library from '#services/library_service'
+import ContentType from '#models/content_type'
 
 const seriesValidator = vine.compile(
   vine.object({
@@ -31,7 +32,13 @@ const importValidator = vine.compile(
 export default class LibraryController {
   async index({ view, auth }: HttpContext) {
     const items = auth.user ? await library.list(auth.user.id) : null
-    return view.render('pages/bookmarks', { title: 'Kaydedilenler', items })
+    // Guests' bookmarks only know the type slug, so the page gets the video types to say "izle".
+    const videoTypes = await ContentType.query().where('format', 'video').select('slug')
+    return view.render('pages/bookmarks', {
+      title: 'Kaydedilenler',
+      items,
+      videoTypes: videoTypes.map((type) => type.slug),
+    })
   }
 
   async toggle({ request, auth, response }: HttpContext) {

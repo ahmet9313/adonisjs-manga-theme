@@ -419,6 +419,10 @@
     --badge-c: var(--t-badge-webtoon);
   }
 
+  .badge[data-tone='anime'] {
+    --badge-c: var(--t-badge-anime);
+  }
+
   .badge[data-tone='ongoing'] {
     --badge-c: var(--t-badge-ongoing);
   }

@@ -83,6 +83,8 @@
         <tbody>
           @each(chapter in chapters)
           @let(isText = chapter.content && chapter.content.type === 'text')
+          @let(sourceCount = chapter.content && chapter.content.type === 'video' && chapter.content.sources ? chapter.content.sources.length : null)
+          @let(contentText = sourceCount !== null ? sourceCount + ' kaynak' : (isText ? 'Metin' : null))
           @let(pageCount = chapter.content && chapter.content.pages ? chapter.content.pages.length : 0)
           @let(readerUrl = chapter.series && chapter.series.contentType ? '/series/' + chapter.series.contentType.slug + '/' + chapter.series.slug + '/' + chapter.number : '')
           @let(label = (chapter.series ? chapter.series.title + ' · ' : '') + 'Bölüm ' + chapter.number)
@@ -90,10 +92,23 @@
             <td class="cell-main">
               <div class="admin-cell__body">
                 <a href="/admin/bolumler/{{ chapter.id }}/duzenle" class="admin-title">Bölüm {{ chapter.number }}</a>
+                @if(chapter.draft || chapter.access !== 'public' || chapter.warning)
+                <span class="flex flex-wrap gap-1">
+                  @if(chapter.draft)
+                  @!component('components/ui/badge', { kind: 'draft', tone: 'warning', text: 'Taslak', size: 'sm', title: 'Yayında değil; yalnız yönetim görür' })
+                  @end
+                  @if(chapter.access !== 'public')
+                  @!component('components/ui/badge', { kind: 'access', tone: chapter.access === 'vip' ? 'accent' : 'neutral', text: site.accessLevels[chapter.access].label, size: 'sm' })
+                  @end
+                  @if(chapter.warning)
+                  @!component('components/ui/badge', { kind: 'warning', tone: 'neutral', text: 'Uyarılı', size: 'sm', title: chapter.warning })
+                  @end
+                </span>
+                @end
                 @if(chapter.title)
                 <span class="line-clamp-1 text-xs text-muted">{{ chapter.title }}</span>
                 @end
-                <p class="admin-cell__meta md:hidden">{{ !current && chapter.series ? chapter.series.title + ' · ' : '' }}{{ isText ? 'Metin' : pageCount + ' sayfa' }} · {{ dateOf(chapter.publishedAt) || chapter.publishedAt }}</p>
+                <p class="admin-cell__meta md:hidden">{{ !current && chapter.series ? chapter.series.title + ' · ' : '' }}{{ contentText || pageCount + ' sayfa' }} · {{ dateOf(chapter.publishedAt) || chapter.publishedAt }}</p>
               </div>
             </td>
             @if(!current)
@@ -106,7 +121,9 @@
             </td>
             @end
             <td data-label="İçerik" class="max-md:hidden">
-              @if(isText)
+              @if(sourceCount !== null)
+              @!component('components/ui/badge', { kind: 'type', value: 'anime', tone: 'anime', text: sourceCount + ' kaynak' })
+              @elseif(isText)
               @!component('components/ui/badge', { kind: 'info', text: 'Metin' })
               @else
               @!component('components/ui/badge', { kind: 'neutral', text: pageCount + ' sayfa' })
@@ -174,7 +191,7 @@
     </div>
     @else
     <div class="mt-4">
-      @component('components/ui/empty_state', { icon: 'document', title: 'Henüz bölüm eklenmemiş', description: 'Bir seri seçip ilk bölümün sayfalarını ya da metnini ekleyin.' })
+      @component('components/ui/empty_state', { icon: 'document', title: 'Henüz bölüm eklenmemiş', description: 'Bir seri seçip ilk bölümün sayfalarını, metnini ya da video kaynaklarını ekleyin.' })
         @component('components/ui/button', { variant: 'primary', href: addUrl, icon: 'upload' })
           İlk bölümü ekle
         @end

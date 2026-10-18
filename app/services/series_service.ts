@@ -5,13 +5,21 @@ import Chapter from '#models/chapter'
 
 import { serializeSeries, serializeChapter, calculateTimeAgo } from '#services/series_presenter'
 import type { SeriesInfo, ChapterInfo, ChapterWithPages } from '#services/series_presenter'
+import { episodeVideo } from '#services/video_service'
 
-function baseSeriesQuery() {
+/** Published series with their relations; `drafts` (staff previews) also finds drafts. */
+function baseSeriesQuery({ drafts = false } = {}) {
   return SeriesModel.query()
+    .if(!drafts, (query) => query.where('draft', false))
     .preload('contentType')
     .preload('genres')
     .preload('authors')
     .preload('artists')
+}
+
+/** Staff previews see drafts; everyone else gets published series and chapters only. */
+interface Visibility {
+  drafts?: boolean
 }
 
 class SeriesService {
@@ -20,30 +28,43 @@ class SeriesService {
     return ct?.id ?? null
   }
 
-  async getSeriesBySlug(type: string, slug: string): Promise<SeriesInfo | null> {
+  async getSeriesBySlug(
+    type: string,
+    slug: string,
+    { drafts = false }: Visibility = {}
+  ): Promise<SeriesInfo | null> {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return null
 
-    const series = await baseSeriesQuery().where('contentTypeId', ctId).where('slug', slug).first()
+    const series = await baseSeriesQuery({ drafts })
+      .where('contentTypeId', ctId)
+      .where('slug', slug)
+      .first()
 
     if (!series) return null
     return serializeSeries(series)
   }
 
-  async getChapters(type: string, slug: string): Promise<ChapterInfo[]> {
+  async getChapters(
+    type: string,
+    slug: string,
+    { drafts = false }: Visibility = {}
+  ): Promise<ChapterInfo[]> {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return []
 
     const series = await SeriesModel.query()
       .where('contentTypeId', ctId)
       .where('slug', slug)
+      .if(!drafts, (query) => query.where('draft', false))
       .first()
 
     if (!series) return []
 
     const chapters = await Chapter.query()
-      .select('id', 'seriesId', 'number', 'title', 'publishedAt')
+      .select('id', 'seriesId', 'number', 'title', 'publishedAt', 'access', 'draft')
       .where('seriesId', series.id)
+      .if(!drafts, (query) => query.where('draft', false))
       .orderBy('number', 'desc')
 
     return chapters.map(serializeChapter)
@@ -52,7 +73,8 @@ class SeriesService {
   async getChapter(
     type: string,
     slug: string,
-    chapterNum: number
+    chapterNum: number,
+    { drafts = false }: Visibility = {}
   ): Promise<ChapterWithPages | null> {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return null
@@ -60,6 +82,7 @@ class SeriesService {
     const series = await SeriesModel.query()
       .where('contentTypeId', ctId)
       .where('slug', slug)
+      .if(!drafts, (query) => query.where('draft', false))
       .first()
 
     if (!series) return null
@@ -67,6 +90,7 @@ class SeriesService {
     const chapter = await Chapter.query()
       .where('seriesId', series.id)
       .where('number', chapterNum)
+      .if(!drafts, (query) => query.where('draft', false))
       .first()
 
     if (!chapter) return null
@@ -78,6 +102,9 @@ class SeriesService {
       title: chapter.title,
       publishedAt: chapter.publishedAt,
       timeAgo: calculateTimeAgo(chapter.publishedAt),
+      access: chapter.access || 'public',
+      draft: Boolean(chapter.draft),
+      warning: chapter.warning || null,
       pages: [],
     }
 
@@ -85,6 +112,8 @@ class SeriesService {
       result.pages = content.pages
     } else if (content.type === 'text') {
       result.textContent = content.text
+    } else if (content.type === 'video') {
+      result.video = episodeVideo(content.sources)
     }
 
     return result
@@ -103,7 +132,8 @@ class SeriesService {
     const results = await baseSeriesQuery()
       .preload('chapters', (query) =>
         query
-          .select('id', 'seriesId', 'number', 'title', 'publishedAt')
+          .select('id', 'seriesId', 'number', 'title', 'publishedAt', 'access', 'draft')
+          .where('draft', false)
           .groupOrderBy('number', 'desc')
           .groupLimit(3)
       )
@@ -178,8 +208,10 @@ class SeriesService {
 
     const results = await query
       .orderBy('id', 'desc')
-      .withCount('chapters')
-      .withAggregate('chapters', (chapters) => chapters.max('number').as('lastChapter'))
+      .withCount('chapters', (chapters) => chapters.where('draft', false))
+      .withAggregate('chapters', (chapters) =>
+        chapters.where('draft', false).max('number').as('lastChapter')
+      )
       .paginate(page, perPage)
     return {
       items: results.all().map((series) => ({
@@ -209,7 +241,11 @@ class SeriesService {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return []
 
-    const series = await baseSeriesQuery().where('contentTypeId', ctId).where('slug', slug).first()
+    // The source may be a draft a staff member previews; the suggestions never are.
+    const series = await baseSeriesQuery({ drafts: true })
+      .where('contentTypeId', ctId)
+      .where('slug', slug)
+      .first()
 
     if (!series) return []
 

@@ -312,19 +312,30 @@ class CommentService {
   /** Newest visible comments across the site, for the home page. */
   async latest(limit = 6) {
     await cosmetics.ready()
-    return Comment.query()
-      .whereNull('deletedAt')
-      .where('spoiler', false)
-      .where((query) =>
-        query.where('body', '!=', '').orWhereNotNull('stickerId').orWhereNotNull('image')
-      )
-      .preload('user')
-      .preload('series', (series) => series.preload('contentType'))
-      .preload('chapter')
-      .preload('parent', (parent) => parent.preload('user'))
-      .orderBy('createdAt', 'desc')
-      .orderBy('id', 'desc')
-      .limit(limit)
+    return (
+      Comment.query()
+        .whereNull('deletedAt')
+        .where('spoiler', false)
+        .where((query) =>
+          query.where('body', '!=', '').orWhereNotNull('stickerId').orWhereNotNull('image')
+        )
+        // Drafts and comments under restricted chapters stay off the home page.
+        .whereHas('series', (series) => series.where('draft', false).where('access', 'public'))
+        .where((query) =>
+          query
+            .whereNull('chapterId')
+            .orWhereHas('chapter', (chapter) =>
+              chapter.where('draft', false).where('access', 'public')
+            )
+        )
+        .preload('user')
+        .preload('series', (series) => series.preload('contentType'))
+        .preload('chapter')
+        .preload('parent', (parent) => parent.preload('user'))
+        .orderBy('createdAt', 'desc')
+        .orderBy('id', 'desc')
+        .limit(limit)
+    )
   }
 
   async recentByUser(userId: number, limit = 10) {

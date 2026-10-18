@@ -1,6 +1,6 @@
 {{--
   Series header over the banner art: cover, title, other names, metadata, genres, description and
-  the main actions (start/continue reading, save, share).
+  the main actions (start/continue reading or watching, save, share).
   Hooks: continueReading (data-config with the account's last chapter), bookmarkButton (the first
   [data-bookmark] on the page), textClamp and seriesShare (chapter_list.js).
 --}}
@@ -32,7 +32,15 @@
         @end
         @if(series.ageRating)
         <li>
-          @!component('components/ui/badge', { kind: 'age', value: series.ageRating, size: 'lg', title: series.ageRating.replace('+', '') + ' yaş ve üzeri okurlar için' })
+          @!component('components/ui/badge', { kind: 'age', value: series.ageRating, size: 'lg', title: series.ageRating.replace('+', '') + (isVideo ? ' yaş ve üzeri izleyiciler için' : ' yaş ve üzeri okurlar için') })
+        </li>
+        @end
+        @if(series.access !== 'public')
+        <li>
+          <span class="badge badge--lg lock-badge" data-tone="{{ series.access === 'vip' ? 'accent' : 'neutral' }}" title="Bölümler {{ series.access === 'vip' ? 'yalnız VIP üyelere' : 'yalnız üyelere' }} açık">
+            @!component('components/icon', { name: series.access === 'vip' ? 'star' : 'lock', stroke: 2 })
+            {{ site.accessLevels[series.access].label }}
+          </span>
         </li>
         @end
         @if(series.publicationYear)
@@ -85,12 +93,12 @@
               @if(resume !== null)
               style="display: none"
               @end
-              >Okumaya Başla — Bölüm {{ firstChapter.number }}</span>
-            <span x-show="last !== null" x-text="'Okumaya Devam Et — Bölüm ' + last"
+              >{{ isVideo ? 'İzlemeye Başla' : 'Okumaya Başla' }} — Bölüm {{ firstChapter.number }}</span>
+            <span x-show="last !== null" data-label="{{ isVideo ? 'İzlemeye Devam Et — Bölüm ' : 'Okumaya Devam Et — Bölüm ' }}" x-text="$el.dataset.label + last"
               @if(resume === null)
               style="display: none"
               @end
-              >Okumaya Devam Et — Bölüm {{ resume }}</span>
+              >{{ isVideo ? 'İzlemeye Devam Et' : 'Okumaya Devam Et' }} — Bölüm {{ resume }}</span>
           </a>
         </div>
         @else

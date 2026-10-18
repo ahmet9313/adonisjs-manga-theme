@@ -31,6 +31,7 @@
         @let(url = '/series/' + item.type + '/' + item.slug)
         @let(stamp = item.readAt.replace('Z', ''))
         @let(done = item.chapterCount > 0 && item.readCount >= item.chapterCount)
+        @let(watched = item.video)
         <li class="discover-row">
           <a href="{{ url }}" class="discover-row__cover" tabindex="-1" aria-hidden="true">
             <img src="{{ item.coverImage }}" alt="" width="96" height="128" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
@@ -49,12 +50,12 @@
                 max: item.chapterCount || 1,
                 size: 'sm',
                 tone: done ? 'success' : 'accent',
-                label: item.title + ': okunan bölümler',
+                label: item.title + (watched ? ': izlenen bölümler' : ': okunan bölümler'),
                 valueText: item.readCount + ' / ' + item.chapterCount + ' bölüm',
               })
               <p class="discover-row__count" data-done="{{ done ? 'true' : 'false' }}">
                 @if(done)
-                Hepsi okundu
+                {{ watched ? 'Hepsi izlendi' : 'Hepsi okundu' }}
                 @else
                 {{ item.readCount }} / {{ item.chapterCount }} bölüm
                 @end

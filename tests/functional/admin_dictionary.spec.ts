@@ -211,4 +211,109 @@ test.group('Admin dictionaries (genres, authors, artists, content types)', (grou
     await series.delete()
     await type.delete()
   })
+
+  test('content types: format is chosen or suggested, locked while used, drives chapters', async ({
+    assert,
+  }) => {
+    const admin = client()
+    await admin.post('/giris', { login: 'sozlukcu', password })
+
+    // The list and the form offer the three formats; anime is video, novel is text (0020).
+    const list = await textOf(admin.request('/admin/icerik-turleri'))
+    assert.include(list, 'name="format"')
+    assert.include(list, '<option value="video"')
+    const anime = await ContentType.findByOrFail('slug', 'anime')
+    assert.equal(anime.format, 'video')
+    const form = await textOf(admin.request('/admin/icerik-turleri/ekle'))
+    for (const label of ['Görsel', 'Metin', 'Video'])
+      assert.include(form, `<span class="ac-choice__label">${label}</span>`)
+    assert.match(form, /value="image"[^>]*checked/)
+
+    // Chosen explicitly, suggested from the name without a choice, or refused when unknown.
+    await admin.post('/admin/icerik-turleri/ekle', { name: 'Hikâye', format: 'text' })
+    await admin.post('/admin/icerik-turleri/ekle', { name: 'Light Novel' }, '/admin/icerik-turleri')
+    await admin.post('/admin/icerik-turleri/ekle', { name: 'Donghua' }, '/admin/icerik-turleri')
+    await admin.post('/admin/icerik-turleri/ekle', { name: 'Çizgi Roman' }, '/admin/icerik-turleri')
+    await admin.post('/admin/icerik-turleri/ekle', { name: 'Bozuk', format: 'audio' })
+    const story = await ContentType.findByOrFail('slug', 'hikaye')
+    assert.equal(story.format, 'text')
+    const suggested = await ContentType.query()
+      .whereIn('slug', ['light-novel', 'donghua', 'cizgi-roman'])
+      .orderBy('slug')
+    assert.deepEqual(
+      suggested.map((type) => [type.slug, type.format]),
+      [
+        ['cizgi-roman', 'image'],
+        ['donghua', 'video'],
+        ['light-novel', 'text'],
+      ]
+    )
+    assert.isNull(await ContentType.findBy('slug', 'bozuk'))
+
+    // An unused type can switch format; the list shows it.
+    const edited = await admin.post(`/admin/icerik-turleri/${story.id}/duzenle`, {
+      name: 'Hikâye',
+      format: 'image',
+    })
+    assert.equal(edited.headers.get('location'), '/admin/icerik-turleri')
+    await story.refresh()
+    assert.equal(story.format, 'image')
+    await admin.post(`/admin/icerik-turleri/${story.id}/duzenle`, {
+      name: 'Hikâye',
+      format: 'text',
+    })
+    await story.refresh()
+    assert.equal(story.format, 'text')
+
+    // The format, not the slug, picks the chapter body: a text type without "novel" in it.
+    const timestamp = now()
+    const series = await Series.create({
+      title: 'Biçim Serisi',
+      slug: 'bicim-serisi',
+      description: 'Test',
+      contentTypeId: story.id,
+      status: 'Devam Ediyor',
+      translationStatus: 'Aktif',
+      publicationYear: 2026,
+      alternativeTitles: [],
+      coverImage: '/images/no-cover.svg',
+      featured: false,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    })
+    const chapterForm = await textOf(admin.request(`/admin/bolumler/ekle?series_id=${series.id}`))
+    assert.include(chapterForm, `&quot;${series.id}&quot;:&quot;text&quot;`)
+    const saved = await admin.post(
+      '/admin/bolumler/ekle',
+      { series_id: String(series.id), number: '1', text_content: 'Bir varmış bir yokmuş.' },
+      `/admin/bolumler/ekle?series_id=${series.id}`
+    )
+    assert.equal(saved.status, 302)
+    const chapter = await db.from('chapters').where('series_id', series.id).firstOrFail()
+    assert.equal(JSON.parse(chapter.content).type, 'text')
+    const page = await textOf(admin.request('/series/hikaye/bicim-serisi/1'))
+    assert.include(page, 'Bir varmış bir yokmuş.')
+
+    // Used now: the radios are disabled and a posted change is refused; renaming still works.
+    const lockedForm = await textOf(admin.request(`/admin/icerik-turleri/${story.id}/duzenle`))
+    assert.include(lockedForm, 'biçim değiştirilemez')
+    assert.match(lockedForm, /value="video"[^>]*disabled/)
+    const refused = await admin.post(`/admin/icerik-turleri/${story.id}/duzenle`, {
+      name: 'Hikâye',
+      format: 'video',
+    })
+    assert.equal(refused.status, 302)
+    await story.refresh()
+    assert.equal(story.format, 'text')
+    await admin.post(`/admin/icerik-turleri/${story.id}/duzenle`, { name: 'Hikâyeler' })
+    await story.refresh()
+    assert.equal(story.name, 'Hikâyeler')
+    assert.equal(story.format, 'text')
+
+    await db.from('chapters').where('series_id', series.id).delete()
+    await series.delete()
+    await ContentType.query()
+      .whereIn('slug', ['hikaye', 'light-novel', 'donghua', 'cizgi-roman'])
+      .delete()
+  })
 })

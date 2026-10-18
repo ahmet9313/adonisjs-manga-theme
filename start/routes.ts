@@ -9,6 +9,7 @@ import { middleware } from '#start/kernel'
 
 const HomeController = () => import('#controllers/home_controller')
 const SeriesController = () => import('#controllers/series_controller')
+const AgeController = () => import('#controllers/age_controller')
 const ChapterController = () => import('#controllers/chapter_controller')
 const MediaController = () => import('#controllers/media_controller')
 
@@ -18,6 +19,7 @@ router.get('/', [HomeController, 'index']).as('home')
 router.get('/seriler', [SeriesController, 'index']).as('series.index')
 router.get('/ara', [SeriesController, 'search']).as('series.search')
 router.get('/series/:type/:slug', [SeriesController, 'show']).as('series.show')
+router.post('/yas-onayi', [AgeController, 'confirm']).as('age.confirm')
 router.get('/series/:type/:slug/:chapter', [ChapterController, 'show']).as('chapter.show')
 const LibraryController = () => import('#controllers/library_controller')
 router.get('/kaydedilenler', [LibraryController, 'index']).as('bookmarks')
@@ -169,6 +171,7 @@ router
         router.get('/tema/disa-aktar', [AdminThemeController, 'export']).as('admin.theme.export')
         router.post('/tema/ice-aktar', [AdminThemeController, 'import']).as('admin.theme.import')
         router.post('/tema/sifirla', [AdminThemeController, 'reset']).as('admin.theme.reset')
+        router.post('/tema/gorsel', [AdminThemeController, 'uploadImage']).as('admin.theme.image')
         router.get('/tema/:section', [AdminThemeController, 'show']).as('admin.theme.show')
         router.post('/tema/:section', [AdminThemeController, 'update']).as('admin.theme.update')
       })
@@ -222,6 +225,10 @@ router
     router.get('/bolumler', [AdminChapterController, 'index']).as('admin.chapters.index')
     router.get('/bolumler/ekle', [AdminChapterController, 'create']).as('admin.chapters.create')
     router.post('/bolumler/ekle', [AdminChapterController, 'store']).as('admin.chapters.store')
+    // Episode video upload (streamed; see config/bodyparser.ts `processManually`)
+    router
+      .post('/bolumler/video', [AdminChapterController, 'uploadVideo'])
+      .as('admin.chapters.upload_video')
     router.get('/bolumler/:id/duzenle', [AdminChapterController, 'edit']).as('admin.chapters.edit')
     router
       .post('/bolumler/:id/duzenle', [AdminChapterController, 'update'])

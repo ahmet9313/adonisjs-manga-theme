@@ -254,6 +254,36 @@ test.group('Catalog and administration', (group) => {
     assert.notEqual(uploaded.content.pages[0], original)
     assert.equal(uploaded.content.pages[1], original)
     assert.deepEqual(await readFile(app.tmpPath('test-uploads' + original)), originalBytes)
+
+    // Deleting the series also deletes its chapters: a chapter page left open then sends the
+    // editor back to the list with a notice instead of an error page.
+    const chapterPath = `/admin/bolumler/${uploaded.id}/duzenle`
+    const chapterCsrf = await token(chapterPath)
+    const deleted = await request(`/admin/seriler/${created.id}/sil`, {
+      method: 'POST',
+      body: new URLSearchParams({ _csrf: await token('/admin/seriler') }),
+    })
+    assert.equal(deleted.status, 302)
+    assert.isNull(await Chapter.find(uploaded.id))
+    const missing = await request(chapterPath)
+    assert.equal(missing.status, 302)
+    assert.equal(missing.headers.get('location'), '/admin/bolumler')
+    const list = await request('/admin/bolumler')
+    assert.include(await list.text(), 'Bölüm bulunamadı')
+    const resubmitted = await request(chapterPath, {
+      method: 'POST',
+      body: new URLSearchParams({ _csrf: chapterCsrf, series_id: String(created.id) }),
+    })
+    assert.equal(resubmitted.headers.get('location'), '/admin/bolumler')
+    const missingJson = await request(chapterPath, {
+      method: 'POST',
+      headers: { 'accept': 'application/json', 'x-requested-with': 'XMLHttpRequest' },
+      body: new URLSearchParams({ _csrf: chapterCsrf, series_id: String(created.id) }),
+    })
+    assert.equal(missingJson.status, 404)
+    const body = (await missingJson.json()) as { message: string }
+    assert.match(body.message, /^Bölüm bulunamadı/)
+    assert.equal(await statusOf(request(`/admin/seriler/${created.id}/duzenle`)), 302)
   })
 
   test('database enforces foreign keys and rolls back incomplete writes', async ({ assert }) => {

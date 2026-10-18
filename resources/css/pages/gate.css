@@ -1,0 +1,148 @@
+/*
+ * Content gate (pages/content_gate.edge): age confirmation, sign-in / VIP notice and the
+ * chapter warning shown instead of a series or chapter page. Tokens only.
+ */
+
+@layer components {
+  .gate {
+    display: grid;
+    min-height: min(70vh, 40rem);
+    place-items: center;
+    padding: 2rem 0 3rem;
+  }
+
+  .gate__card {
+    display: grid;
+    width: 100%;
+    max-width: 44rem;
+    overflow: hidden;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-panel);
+    background: var(--t-surface);
+    box-shadow: var(--shadow-2);
+  }
+
+  @media (width >= 640px) {
+    .gate__card {
+      grid-template-columns: 13rem minmax(0, 1fr);
+    }
+  }
+
+  .gate__cover {
+    position: relative;
+    overflow: hidden;
+    background: var(--t-surface-2);
+    aspect-ratio: 16 / 7;
+  }
+
+  @media (width >= 640px) {
+    .gate__cover {
+      aspect-ratio: auto;
+    }
+  }
+
+  .gate__cover img {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  /* Age gates show only a hint of the cover. */
+  .gate__cover--blur img {
+    filter: blur(18px) saturate(0.7);
+    transform: scale(1.15);
+  }
+
+  .gate__body {
+    display: grid;
+    align-content: start;
+    gap: 0.875rem;
+    padding: 1.5rem;
+  }
+
+  @media (width >= 768px) {
+    .gate__body {
+      padding: 2rem;
+    }
+  }
+
+  .gate__context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--t-muted);
+  }
+
+  .gate__icon {
+    display: grid;
+    height: 2.75rem;
+    width: 2.75rem;
+    place-items: center;
+    border-radius: var(--radius-lg);
+    background: var(--t-accent-soft);
+    color: var(--t-accent);
+  }
+
+  .gate__icon[data-kind='age'],
+  .gate__icon[data-kind='warning'] {
+    background: var(--t-warning-soft);
+    color: var(--t-warning);
+  }
+
+  .gate__icon > svg {
+    height: 1.5rem;
+    width: 1.5rem;
+  }
+
+  .gate__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--t-heading);
+  }
+
+  .gate__text {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--t-text-2);
+  }
+
+  .gate__notice {
+    border-left: 3px solid var(--t-warning);
+    border-radius: var(--radius-md);
+    background: var(--t-warning-soft);
+    padding: 0.75rem 1rem;
+    white-space: pre-line;
+    color: var(--t-text);
+  }
+
+  .gate__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Draft preview notice (staff) and the lock badge on chapter rows. */
+  .draft-note {
+    margin-top: 1rem;
+  }
+
+  .lock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .lock-badge > svg {
+    height: 0.8125rem;
+    width: 0.8125rem;
+  }
+}

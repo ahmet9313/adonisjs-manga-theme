@@ -3,6 +3,8 @@
   The controller passes `dictionary` (labels, base URL, catalogue filter, delete texts; see
   app/controllers/admin/*_controller.ts), the paginated `items` with `series_count`, `perPage`
   and `search` (?q=). Quick add posts `name` to `<base>/ekle`, like the full form.
+  Content types (dictionary.formats) also show their format and quick add offers the choice;
+  without one the server suggests it from the name (novel → metin, anime → video).
   Genres, authors and artists are detached from their series on delete (cascade); a content type
   that series use cannot be deleted (restrict), so its button is disabled with the reason.
 --}}
@@ -10,14 +12,18 @@
 @let(first = items.total ? (items.currentPage - 1) * items.perPage + 1 : 0)
 @let(last = Math.min(items.currentPage * items.perPage, items.total))
 @let(singularLower = dictionary.singular.toLocaleLowerCase('tr'))
+@let(formats = dictionary.formats || null)
 @component('components/layout/admin', { title, description: dictionary.description })
   @slot('main')
     <div class="max-w-4xl">
       <section class="panel panel--tight" aria-labelledby="quick-add-title">
         <h2 id="quick-add-title" class="sr-only">{{ dictionary.addLabel }}</h2>
-        <form action="{{ dictionary.base }}/ekle" method="POST" class="admin-quickadd" data-submit-once>
+        <form action="{{ dictionary.base }}/ekle" method="POST" class="admin-quickadd {{ formats ? 'admin-quickadd--format' : '' }}" data-submit-once>
           {{ csrfField() }}
           @!component('components/ui/field', { name: 'name', id: 'quick-name', label: dictionary.addLabel, required: true, maxlength: dictionary.maxLength, placeholder: dictionary.placeholder, autocomplete: 'off' })
+          @if(formats)
+          @!component('components/ui/field', { name: 'format', id: 'quick-format', label: 'Biçim', type: 'select', value: 'image', options: Object.entries(formats).map(([key, entry]) => ({ value: key, label: entry.label })) })
+          @end
           <div class="admin-quickadd__submit">
             @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'plus', block: true })
               Ekle
@@ -62,6 +68,9 @@
             <tr>
               <th scope="col">Ad</th>
               <th scope="col">Adres</th>
+              @if(formats)
+              <th scope="col">Biçim</th>
+              @end
               <th scope="col" class="num">Seri</th>
               <th scope="col"><span class="sr-only">İşlemler</span></th>
             </tr>
@@ -74,12 +83,22 @@
               <td class="cell-main">
                 <div class="admin-cell__body">
                   <a href="{{ dictionary.base }}/{{ item.id }}/duzenle" class="admin-title">{{ item.name }}</a>
-                  <p class="admin-cell__meta md:hidden"><span class="admin-mono">{{ item.slug }}</span> · {{ number(count) }} seri</p>
+                  <p class="admin-cell__meta md:hidden"><span class="admin-mono">{{ item.slug }}</span>{{ formats && formats[item.format] ? ' · ' + formats[item.format].label : '' }} · {{ number(count) }} seri</p>
                 </div>
               </td>
               <td data-label="Adres" class="max-md:hidden">
                 <span class="admin-mono">{{ item.slug }}</span>
               </td>
+              @if(formats)
+              <td data-label="Biçim" class="max-md:hidden">
+                @if(formats[item.format])
+                <span class="inline-flex items-center gap-1.5 text-sm">
+                  @!component('components/icon', { name: formats[item.format].icon, class: 'size-4 text-muted' })
+                  {{ formats[item.format].label }}
+                </span>
+                @end
+              </td>
+              @end
               <td data-label="Seri" class="num max-md:hidden">
                 @if(count)
                 <a href="{{ catalogUrl }}" class="link" target="_blank" rel="noopener" title="Bu {{ singularLower }} ile katalogda ara (yeni sekme)">{{ number(count) }}</a>

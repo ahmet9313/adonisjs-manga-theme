@@ -1,11 +1,15 @@
 {{--
-  Admin → Tema → Genel: site_name (2–40), site_description (≤200), logo_url (/yol or http(s)://).
+  Admin → Tema → Genel: site_name (2–40), site_description (≤200), logo_url, logo_mobile_url and
+  favicon_url (/yol or http(s)://). Each image field has an upload area (components/ui/brand_image)
+  that uploads to /admin/tema/gorsel and fills the field; replaced uploads are deleted on save.
   The preview shows the wordmark in the header, the browser tab and a search result; it reads
   the fields as you type (values are never written into scripts).
 --}}
 @let(name = flashMessages.get('site_name') ?? values.site_name)
 @let(description = flashMessages.get('site_description') ?? values.site_description)
 @let(logo = flashMessages.get('logo_url') ?? values.logo_url)
+@let(logoMobile = flashMessages.get('logo_mobile_url') ?? values.logo_mobile_url)
+@let(favicon = flashMessages.get('favicon_url') ?? values.favicon_url)
 @component('components/layout/admin', {
   title,
   description: 'Site adı, açıklama ve logo; menüde, alt bilgide, sekme başlığında ve arama sonuçlarında kullanılır.',
@@ -21,8 +25,8 @@
     @include('partials/admin/theme_nav')
 
     <div class="te-page"
-         x-data="{ name: '', desc: '', logo: '', broken: false }"
-         x-init="name = $el.querySelector('#f-site_name').value; desc = $el.querySelector('#f-site_description').value; logo = $el.querySelector('#f-logo_url').value.trim()">
+         x-data="{ name: '', desc: '', logo: '', icon: '', broken: false }"
+         x-init="name = $el.querySelector('#f-site_name').value; desc = $el.querySelector('#f-site_description').value; logo = $el.querySelector('#f-logo_url').value.trim(); icon = $el.querySelector('#f-favicon_url').value.trim()">
       <section class="panel" aria-labelledby="identity-preview-title">
         <div class="panel__head">
           <div class="min-w-0">
@@ -37,7 +41,7 @@
           <div class="te-browser">
             <div class="te-tabstrip">
               <span class="te-tab">
-                <img src="/favicon.svg" alt="">
+                <img src="{{ favicon || '/favicon.svg' }}" alt="" :src="icon || '/favicon.svg'">
                 <span><span x-text="name.trim() || 'Site adı'">{{ name }}</span></span>
               </span>
             </div>
@@ -71,7 +75,7 @@
           </div>
           <div class="te-serp">
             <div class="te-serp__site">
-              <img src="/favicon.svg" alt="">
+              <img src="{{ favicon || '/favicon.svg' }}" alt="" :src="icon || '/favicon.svg'">
               <div class="min-w-0">
                 <strong class="block truncate" x-text="name.trim() || 'Site adı'">{{ name }}</strong>
                 <span class="block truncate">https://{{ request.host() }}</span>
@@ -106,8 +110,19 @@
             @!component('components/ui/field', { name: 'site_description', label: 'Açıklama', type: 'textarea', rows: 3, value: description, maxlength: 200, hint: 'Arama sonuçlarında ve alt bilgide görünür. Boş bırakırsanız varsayılan açıklama kullanılır.', 'x-on:input': 'desc = $event.target.value' })
             <span class="te-counter" aria-hidden="true"><span x-text="desc.length">{{ (description || '').length }}</span> / 200</span>
           </div>
-          @!component('components/ui/field', { name: 'logo_url', label: 'Logo adresi (isteğe bağlı)', value: logo, maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '/images/logo.png veya https://…', hint: 'Yatay ya da kare bir görsel (SVG, PNG, WebP). Boş bırakırsanız site adının baş harfi gösterilir.', 'x-on:input': 'logo = $event.target.value.trim(); broken = false' })
+          <div class="te-image-field">
+            @!component('components/ui/field', { name: 'logo_url', label: 'Logo (isteğe bağlı)', value: logo, maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '/images/logo.png veya https://…', hint: 'Görsel yükleyin ya da adres yapıştırın. Yatay ya da kare bir görsel (PNG, WebP, SVG adresi). Boşsa site adının baş harfi gösterilir.', 'x-on:input': 'logo = $event.target.value.trim(); broken = false' })
+            @!component('components/ui/brand_image', { target: 'f-logo_url', kind: 'logo', label: 'Logo yükle' })
+          </div>
           <p class="field__hint -mt-3" x-show="logo && broken" x-cloak role="status">Bu adresteki görsel yüklenemedi; adresi kontrol edin.</p>
+          <div class="te-image-field">
+            @!component('components/ui/field', { name: 'logo_mobile_url', label: 'Mobil logo (isteğe bağlı)', value: logoMobile, maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '/images/logo-mobil.png veya https://…', hint: 'Telefonda ve dar ekranlarda (1024 px altı) logo yerine gösterilir; genelde kare bir simge. Boşsa normal logo kullanılır.' })
+            @!component('components/ui/brand_image', { target: 'f-logo_mobile_url', kind: 'logo_mobile', label: 'Mobil logo yükle', shape: 'square' })
+          </div>
+          <div class="te-image-field">
+            @!component('components/ui/field', { name: 'favicon_url', label: 'Sekme simgesi / favicon (isteğe bağlı)', value: favicon, maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '/favicon.png veya https://…', hint: 'Tarayıcı sekmesinde ve yer imlerinde görünür. Kare PNG (en az 64×64) veya ICO önerilir; en fazla 1 MB. Boşsa varsayılan simge kullanılır.', 'x-on:input': 'icon = $event.target.value.trim()' })
+            @!component('components/ui/brand_image', { target: 'f-favicon_url', kind: 'favicon', label: 'Sekme simgesi yükle', shape: 'square', accept: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'ico'], max: 1024 * 1024 })
+          </div>
           <div class="te-form-foot">
             <p>Kaydettiğinizde tüm sayfalarda hemen güncellenir.</p>
             @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })

@@ -6,6 +6,7 @@ import reviews, { ratingLabels } from '#services/review_service'
 import Author from '#models/author'
 import Artist from '#models/artist'
 import ContentType from '#models/content_type'
+import access, { AGE_COOKIE } from '#services/access_service'
 
 export default class SeriesController {
   async index({ view, request }: HttpContext) {
@@ -81,16 +82,35 @@ export default class SeriesController {
     })
   }
 
-  async show({ view, params, response, auth }: HttpContext) {
+  async show({ view, params, request, response, auth }: HttpContext) {
     const { type, slug } = params
-    const series = await seriesService.getSeriesBySlug(type, slug)
+    const drafts = access.canSeeDrafts(auth.user)
+    const series = await seriesService.getSeriesBySlug(type, slug, { drafts })
 
     if (!series) {
       response.status(404)
       return view.render('pages/errors/not_found', { missing: 'series' })
     }
 
-    const chapters = await seriesService.getChapters(type, slug)
+    // The series page itself only asks for the age rating; members / VIP content is listed with
+    // locks and gated when a chapter opens.
+    const gate = access.gate(
+      auth.user,
+      { series: { ...series, access: 'public' } },
+      { confirmedAge: access.confirmedAge(request.plainCookie(AGE_COOKIE, { encoded: false })) }
+    )
+    if (gate) {
+      if (gate.kind === 'login') response.status(403)
+      return view.render('pages/content_gate', {
+        title: series.title,
+        gate,
+        series,
+        chapter: null,
+        next: request.url(true),
+      })
+    }
+
+    const chapters = await seriesService.getChapters(type, slug, { drafts })
     const similar = await seriesService.getSimilarSeries(type, slug)
     const reading = auth.user ? await library.state(auth.user.id, series.id) : null
 

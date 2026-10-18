@@ -9,6 +9,8 @@ import Author from '#models/author'
 import Artist from '#models/artist'
 import { seriesValidator } from '#validators/admin'
 import { invalidField, imageOptions, saveImage } from '#services/upload_service'
+import Chapter from '#models/chapter'
+import { localVideoPaths, removeUnusedVideos } from '#services/video_service'
 
 export default class SeriesAdminController {
   /** Series list with read-only filters: ?search (title, address, alternative titles), ?status, ?type (slug). */
@@ -147,6 +149,8 @@ export default class SeriesAdminController {
         keywords: split(data.keywords),
         featured: data.featured === 'on',
         featuredDescription: data.featured_description || null,
+        draft: data.draft === 'on',
+        access: data.access ?? 'public',
         coverImage,
         bannerImage,
         createdAt: series.createdAt || timestamp,
@@ -209,7 +213,11 @@ export default class SeriesAdminController {
 
   async destroy({ params, session, response }: HttpContext) {
     const series = await SeriesModel.findOrFail(params.id)
+    // Chapter rows cascade with the series; their uploaded videos are removed afterwards.
+    const chapters = await Chapter.query().where('seriesId', series.id).select('content')
+    const videos = chapters.flatMap((chapter) => localVideoPaths(chapter.content))
     await series.delete()
+    await removeUnusedVideos(videos)
     session.flash('success', 'Seri silindi')
     return response.redirect('/admin/seriler')
   }

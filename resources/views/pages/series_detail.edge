@@ -5,6 +5,8 @@
 --}}
 @let(seriesUrl = '/series/' + series.type + '/' + series.slug)
 @let(typeLabel = series.type.charAt(0).toUpperCase() + series.type.slice(1))
+{{-- Video series (content type format, Admin → İçerik Türleri): the partials say "izle" instead of "oku". --}}
+@let(isVideo = series.format === 'video')
 @let(hasKeywords = ui('series_keywords') && series.keywords && series.keywords.length > 0)
 @let(hasAside = ui('series_sidebar') || hasKeywords)
 @component('components/layout/main', { title, description })
@@ -16,6 +18,7 @@
 @end
 
 @slot('main')
+  @include('partials/draft_notice')
   <noscript>
     <style>
       .chapter-list > li[x-cloak] { display: block !important; }

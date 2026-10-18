@@ -25,6 +25,7 @@ class LibraryService {
       .join('content_types', 'content_types.id', 'series.content_type_id')
       .where('content_types.slug', type)
       .where('series.slug', slug)
+      .where('series.draft', false)
       .select('series.id')
       .first()
     return row?.id ?? null
@@ -72,6 +73,8 @@ class LibraryService {
       .join('series', 'series.id', 'chapter_reads.series_id')
       .join('content_types', 'content_types.id', 'series.content_type_id')
       .where('chapter_reads.user_id', userId)
+      .where('series.draft', false)
+      .where('chapters.draft', false)
       .orderBy('chapter_reads.read_at', 'desc')
       .orderBy('chapter_reads.id', 'desc')
       .limit(2000)
@@ -82,7 +85,8 @@ class LibraryService {
         'series.title',
         'series.slug',
         'series.cover_image',
-        'content_types.slug as type'
+        'content_types.slug as type',
+        'content_types.format'
       )
     const seen = new Map<number, Record<string, any>>()
     const counts = new Map<number, number>()
@@ -92,6 +96,7 @@ class LibraryService {
     }
     return [...seen.values()].slice(0, limit).map((row) => ({
       type: row.type as string,
+      video: row.format === 'video',
       slug: row.slug as string,
       title: row.title as string,
       coverImage: String(row.cover_image || '').startsWith('/')
@@ -125,10 +130,14 @@ class LibraryService {
   async list(userId: number) {
     const bookmarks = await Bookmark.query()
       .where('userId', userId)
+      // A series turned back into a draft disappears from the list until it is published again.
+      .whereHas('series', (series) => series.where('draft', false))
       .preload('series', (series) =>
         series
           .preload('contentType')
-          .withAggregate('chapters', (chapters) => chapters.max('number').as('latestChapter'))
+          .withAggregate('chapters', (chapters) =>
+            chapters.where('draft', false).max('number').as('latestChapter')
+          )
       )
       .orderBy('createdAt', 'desc')
       .orderBy('id', 'desc')
@@ -169,6 +178,7 @@ class LibraryService {
     const series = await SeriesModel.query()
       .whereIn('contentTypeId', [...typeIds.values()])
       .whereIn('slug', [...new Set(wanted.map((item) => item.slug))])
+      .where('draft', false)
       .select('id', 'slug', 'contentTypeId')
     const seriesId = (type: string, slug: string) =>
       series.find((item) => item.slug === slug && item.contentTypeId === typeIds.get(type))?.id
@@ -191,6 +201,7 @@ class LibraryService {
         const chapters = await Chapter.query({ client: trx })
           .where('seriesId', id)
           .whereIn('number', item.chapters)
+          .where('draft', false)
           .select('id', 'number')
         const existing = await ChapterRead.query({ client: trx })
           .where({ userId, seriesId: id })

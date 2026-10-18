@@ -8,6 +8,8 @@ import { pageNumber } from '#services/input_service'
 import { removeContentFile, saveImage } from '#services/upload_service'
 import { recordAttempt, tooManyAttempts } from '#services/throttle'
 import cosmetics from '#services/cosmetic_service'
+import access from '#services/access_service'
+import type User from '#models/user'
 
 export const commentImageRules = { size: '8mb', extnames: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }
 const maxBody = 1000
@@ -30,11 +32,29 @@ const listValidator = vine.compile(
   })
 )
 
+/**
+ * True when the visitor may read and write the thread: the series (and chapter) are published
+ * or the visitor is staff, and the visitor may open the content (members / VIP). Age warnings
+ * are a page concern and do not block the thread.
+ */
+async function threadOpen(user: User | null, seriesId: number, chapterId: number | null) {
+  const series = await SeriesModel.find(seriesId)
+  if (!series) return false
+  const chapter = chapterId
+    ? await Chapter.query().where('id', chapterId).where('seriesId', seriesId).first()
+    : null
+  if (chapterId && !chapter) return false
+  const target = { series, chapter }
+  return access.visible(user, target) && access.allows(user, access.effectiveAccess(target))
+}
+
 export default class CommentController {
-  async index({ request, auth }: HttpContext) {
+  async index({ request, auth, response }: HttpContext) {
     const { series, chapter } = await request.validateUsing(listValidator, {
       data: request.qs(),
     })
+    if (!(await threadOpen(auth.user ?? null, series, chapter ?? null)))
+      return response.forbidden({ error: 'Bu içeriğin yorumlarını göremezsin.' })
     const sort: CommentSort = request.input('sort') === 'top' ? 'top' : 'new'
     return comments.topLevel(
       { seriesId: series, chapterId: chapter ?? null },
@@ -47,6 +67,8 @@ export default class CommentController {
   async replies({ params, request, auth, response }: HttpContext) {
     const parent = await Comment.find(params.id)
     if (!parent) return response.notFound({ error: 'Yorum bulunamadı' })
+    if (!(await threadOpen(auth.user ?? null, parent.seriesId, parent.chapterId)))
+      return response.forbidden({ error: 'Bu içeriğin yorumlarını göremezsin.' })
     return comments.replies(parent.id, pageNumber(request.input('page')), auth.user ?? null)
   }
 
@@ -73,6 +95,8 @@ export default class CommentController {
       .first()
     if (!series) return response.notFound({ error: 'Seri bulunamadı' })
     const chapterId = data.chapter_id ?? null
+    if (!(await threadOpen(user, series.id, chapterId)))
+      return response.forbidden({ error: 'Bu içeriğe yorum yazamazsın.' })
     let link = `/series/${series.contentType.slug}/${series.slug}`
     if (chapterId) {
       const chapter = await Chapter.query()

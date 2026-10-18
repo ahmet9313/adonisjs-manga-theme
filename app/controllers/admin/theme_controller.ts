@@ -18,7 +18,9 @@ import theme, {
   lookKey,
   CUSTOM_CSS_KEY,
 } from '#services/theme_service'
-import { invalidField } from '#services/upload_service'
+import { invalidField, removeContentFile, saveImage } from '#services/upload_service'
+import site, { agePolicyKeys } from '#config/site'
+import { agePolicyKey } from '#services/settings_service'
 
 /** Public paths or http(s) addresses only; blocks `javascript:` and protocol-relative links. */
 const link = vine
@@ -33,7 +35,16 @@ const genelValidator = vine.compile(
     site_name: vine.string().trim().minLength(2).maxLength(40),
     site_description: vine.string().trim().maxLength(200).optional(),
     logo_url: link,
+    logo_mobile_url: link,
+    favicon_url: link,
   })
+)
+const erisimValidator = vine.compile(
+  vine.object(
+    Object.fromEntries(
+      site.ageRatings.map((rating) => [agePolicyKey(rating), vine.enum(agePolicyKeys)])
+    )
+  )
 )
 const duyuruValidator = vine.compile(
   vine.object({
@@ -43,12 +54,34 @@ const duyuruValidator = vine.compile(
   })
 )
 
+/**
+ * Images uploaded from the theme pages (logo, phone logo, tab icon, page background). They go to
+ * `<content root>/branding/` and the page puts the returned address into the matching field;
+ * nothing changes on the site until that page is saved.
+ */
+const brandImages = {
+  logo: { size: '5mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
+  logo_mobile: { size: '5mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
+  favicon: { size: '1mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'ico'] },
+  background: { size: '10mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
+} as const
+type BrandImage = keyof typeof brandImages
+const brandKeys = () => ['logo_url', 'logo_mobile_url', 'favicon_url', lookKey('bg_image')]
+
+/** Deletes uploaded branding files a save replaced, unless another field still uses them. */
+async function removeReplacedBranding(before: string[]) {
+  const inUse = new Set(brandKeys().map((key) => settings.get(key)))
+  for (const path of new Set(before))
+    if (path.startsWith('/content/branding/') && !inUse.has(path)) await removeContentFile(path)
+}
+
 const titles = {
   genel: 'Tema: Genel',
   renkler: 'Tema: Renkler',
   gorunum: 'Tema: Düzen ve Görünüm',
   goster: 'Tema: Göster / Gizle',
   duyuru: 'Tema: Duyuru Çubuğu',
+  erisim: 'Tema: Yaş ve Erişim',
   gelismis: 'Tema: Gelişmiş',
 } as const
 type Section = keyof typeof titles
@@ -85,6 +118,8 @@ export default class ThemeController {
           'site_name',
           'site_description',
           'logo_url',
+          'logo_mobile_url',
+          'favicon_url',
           'announcement_enabled',
           'announcement_text',
           'announcement_url',
@@ -110,6 +145,14 @@ export default class ThemeController {
         lookValues: currentLooks(),
         stacks: fontStacks,
       }
+    } else if (section === 'erisim') {
+      // Strictest rating first: that is the one people usually change.
+      data.ratings = [...site.ageRatings].reverse().map((rating) => ({
+        rating,
+        key: agePolicyKey(rating),
+        value: settings.agePolicy(rating),
+      }))
+      data.policies = agePolicyKeys.map((key) => ({ key, label: site.agePolicyLabels[key] }))
     } else if (section === 'goster') {
       data.groups = Object.entries(flagGroups).map(([key, label]) => ({
         key,
@@ -136,6 +179,8 @@ export default class ThemeController {
         site_name: data.site_name,
         site_description: data.site_description ?? '',
         logo_url: data.logo_url ?? '',
+        logo_mobile_url: data.logo_mobile_url ?? '',
+        favicon_url: data.favicon_url ?? '',
       }
     } else if (section === 'duyuru') {
       const data = await request.validateUsing(duyuruValidator)
@@ -155,15 +200,37 @@ export default class ThemeController {
         body,
         looks.map((l) => l.key).filter((key) => !colorPageLooks.includes(key))
       )
+    } else if (section === 'erisim') {
+      entries = (await request.validateUsing(erisimValidator)) as Record<string, string>
     } else if (section === 'goster') {
       entries = theme.readFlags(body)
     } else {
       entries = theme.readCss(body.custom_css)
     }
 
+    const before = brandKeys().map((key) => settings.get(key))
     await settings.save(entries)
+    await removeReplacedBranding(before)
     session.flash('success', 'Tema ayarları kaydedildi')
     return response.redirect(`/admin/tema/${section}`)
+  }
+
+  /** POST /admin/tema/gorsel (`image`, `kind`): stores one branding image, answers `{ url }`. */
+  async uploadImage({ request, response }: HttpContext) {
+    const kind = String(request.input('kind', '')) as BrandImage
+    if (!(kind in brandImages))
+      return response.unprocessableEntity({ error: 'Geçersiz görsel türü.' })
+    const rules = brandImages[kind]
+    const file = request.file('image', { size: rules.size, extnames: [...rules.extnames] })
+    if (!file) return response.unprocessableEntity({ error: 'Bir görsel seçin.' })
+    if (!file.isValid)
+      return response.unprocessableEntity({
+        error: `Görsel ${rules.extnames
+          .filter((ext) => ext !== 'jpeg')
+          .map((ext) => ext.toUpperCase())
+          .join(', ')} olmalı ve ${rules.size.toUpperCase()} sınırını aşmamalı.`,
+      })
+    return response.send({ url: await saveImage(file, ['branding']) })
   }
 
   /** Every theme value as a portable document (`colors` is the dark scheme). */
@@ -212,6 +279,7 @@ export default class ThemeController {
     const flagInput = Object.fromEntries(
       flags.map((flag) => [`f_${flag.key}`, (data.flags ?? {})[flag.key] === false ? 'off' : 'on'])
     )
+    const before = brandKeys().map((key) => settings.get(key))
     await settings.save({
       ...theme.readColors(colors),
       ...theme.readColors(colors, { light: true }),
@@ -219,6 +287,7 @@ export default class ThemeController {
       ...theme.readFlags(flagInput),
       ...theme.readCss(data.css),
     })
+    await removeReplacedBranding(before)
     session.flash('success', 'Tema içe aktarıldı')
     return response.redirect('/admin/tema/gelismis')
   }
@@ -232,7 +301,9 @@ export default class ThemeController {
     }
     for (const look of looks) entries[lookKey(look.key)] = ''
     for (const flag of flags) entries[flagKey(flag.key)] = ''
+    const before = brandKeys().map((key) => settings.get(key))
     await settings.save(entries)
+    await removeReplacedBranding(before)
     session.flash('success', 'Tema varsayılan değerlere döndürüldü')
     return response.redirect('/admin/tema/gelismis')
   }

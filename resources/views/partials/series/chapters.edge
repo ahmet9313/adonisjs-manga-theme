@@ -1,7 +1,7 @@
 {{--
   Chapter list. Rows are rendered on the server (newest first, the first 10 visible) so the list
   works before JavaScript; chapterList (chapter_list.js) searches, flips the order, expands the
-  list and marks read chapters (account: data-progress, guest: localStorage).
+  list and marks read (video series: watched) chapters (account: data-progress, guest: localStorage).
 --}}
 @let(latestChapter = chapters.length ? chapters[0] : null)
 @let(oldestChapter = chapters.length ? chapters[chapters.length - 1] : null)
@@ -56,6 +56,8 @@
     <ol id="bolum-listesi" class="chapter-list" :class="ascending && 'is-asc'" aria-labelledby="bolumler-title">
       @each((chapter, index) in chapters)
       @let(rowState = lastRead === chapter.number ? 'last' : (readNumbers.includes(chapter.number) ? 'read' : ''))
+      {{-- Members / VIP lock: the stricter of the series' and the chapter's access. --}}
+      @let(lock = chapter.access === 'vip' || series.access === 'vip' ? 'vip' : (chapter.access === 'members' || series.access === 'members' ? 'members' : ''))
       <li x-show="shown({{ index }})"
         @if(index >= 10)
         x-cloak
@@ -72,11 +74,20 @@
             <span class="chapter-row__name">{{ chapter.title }}</span>
             @end
           </span>
+          @if(chapter.draft)
+          <span class="badge badge--sm" data-tone="warning">Taslak</span>
+          @end
+          @if(lock)
+          <span class="badge badge--sm lock-badge" data-tone="{{ lock === 'vip' ? 'accent' : 'neutral' }}" title="{{ site.accessLevels[lock].label }}">
+            @!component('components/icon', { name: lock === 'vip' ? 'star' : 'lock', stroke: 2 })
+            {{ lock === 'vip' ? 'VIP' : 'Üye' }}
+          </span>
+          @end
           @if(new Date(chapter.publishedAt).getTime() > freshSince)
           <span class="badge badge--sm" data-tone="success">Yeni</span>
           @end
-          <span class="badge badge--sm chapter-row__current" data-tone="accent">Son okunan</span>
-          <span class="sr-only chapter-row__read-label">, okundu</span>
+          <span class="badge badge--sm chapter-row__current" data-tone="accent">{{ isVideo ? 'Son izlenen' : 'Son okunan' }}</span>
+          <span class="sr-only chapter-row__read-label">{{ isVideo ? ', izlendi' : ', okundu' }}</span>
           <span class="chapter-row__time">{{ chapter.timeAgo }}</span>
         </a>
       </li>

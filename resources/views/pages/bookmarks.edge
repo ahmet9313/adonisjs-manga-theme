@@ -8,9 +8,9 @@
 
 @slot('main')
   @if(items)
-  <div x-data="bookmarkPage" data-items="{{ JSON.stringify(items) }}">
+  <div x-data="bookmarkPage" data-items="{{ JSON.stringify(items) }}" data-video-types="{{ JSON.stringify(videoTypes || []) }}">
   @else
-  <div x-data="bookmarkPage">
+  <div x-data="bookmarkPage" data-video-types="{{ JSON.stringify(videoTypes || []) }}">
   @end
     @component('components/ui/page_header', { title: 'Kaydedilenler', description: items ? 'Kaydettiğin seriler hesabında saklanır; her cihazda aynı listeyi görürsün.' : 'Kaydettiğin seriler ve kaldığın bölümler.' })
       <p class="mt-2 text-sm font-semibold text-(--t-text-2) t-num" x-cloak x-show="bookmarks.length > 0" x-text="summary"></p>

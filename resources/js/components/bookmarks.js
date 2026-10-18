@@ -2,7 +2,7 @@ import { isAccount, postJson, readLocal } from './library.js'
 import { toast } from './shared.js'
 
 /** Content types with their own badge colour (components.css `.badge[data-tone]`). */
-const typeTones = ['manga', 'manhwa', 'manhua', 'novel', 'webtoon']
+const typeTones = ['manga', 'manhwa', 'manhua', 'novel', 'webtoon', 'anime']
 
 export function bookmarkCover(item) {
   const cover = item.coverImage
@@ -55,7 +55,14 @@ export function bookmarkPage() {
     busy: false,
     account: false,
     cover: bookmarkCover,
+    /** Video series (config/watch.ts) say "izlendi" instead of "okundu". */
+    videoTypes: [],
     init() {
+      try {
+        this.videoTypes = JSON.parse(this.$el.dataset.videoTypes || '[]')
+      } catch {
+        this.videoTypes = []
+      }
       this.account = isAccount() && this.$el.dataset.items !== undefined
       if (this.account) {
         this.bookmarks = JSON.parse(this.$el.dataset.items)
@@ -87,9 +94,10 @@ export function bookmarkPage() {
     },
     /** Meta line: reading position, with the newest chapter when the server knows it. */
     progressText(item) {
-      if (item.lastRead === null) return 'Henüz okunmadı'
+      const video = this.videoTypes.includes(item.type)
+      if (item.lastRead === null) return video ? 'Henüz izlenmedi' : 'Henüz okunmadı'
       if (item.latestChapter !== null) return `Bölüm ${item.lastRead} / ${item.latestChapter}`
-      return `Son okunan: Bölüm ${item.lastRead}`
+      return `${video ? 'Son izlenen' : 'Son okunan'}: Bölüm ${item.lastRead}`
     },
     continueText(item) {
       return `Devam et — Bölüm ${item.lastRead}`

@@ -31,8 +31,12 @@
     </button>
 
     <a href="/" class="logo">
-      @if(site.logo)
-      <img src="{{ site.logo }}" alt="" class="logo__img">
+      {{-- Below lg the phone logo (Tema → Genel) replaces the logo; either falls back to the other. --}}
+      @if(site.logo && site.logoMobile)
+      <img src="{{ site.logo }}" alt="" class="logo__img max-lg:hidden">
+      <img src="{{ site.logoMobile }}" alt="" class="logo__img lg:hidden">
+      @elseif(site.logo || site.logoMobile)
+      <img src="{{ site.logo || site.logoMobile }}" alt="" class="logo__img">
       @else
       <span class="logo__mark" aria-hidden="true">{{ site.name.charAt(0).toUpperCase() }}</span>
       @end

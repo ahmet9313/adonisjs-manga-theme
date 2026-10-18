@@ -5,6 +5,7 @@ import SeriesReview from '#models/series_review'
 import reviews, { isReviewSort } from '#services/review_service'
 import { pageNumber } from '#services/input_service'
 import { recordAttempt, tooManyAttempts } from '#services/throttle'
+import access from '#services/access_service'
 
 const saveValidator = vine.compile(
   vine.object({
@@ -53,7 +54,8 @@ export default class ReviewController {
       return response.tooManyRequests({ error: 'Çok hızlı işlem yapıyorsun. Biraz bekle.' })
     const data = await request.validateUsing(saveValidator)
     const series = await SeriesModel.find(data.series_id)
-    if (!series) return response.notFound({ error: 'Seri bulunamadı' })
+    if (!series || !access.visible(user, { series }))
+      return response.notFound({ error: 'Seri bulunamadı' })
     recordAttempt(key, 60 * 1000)
     const created = await reviews.save(user, series.id, {
       rating: data.rating,

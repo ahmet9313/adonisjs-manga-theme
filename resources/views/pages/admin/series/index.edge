@@ -72,6 +72,12 @@
                   <div class="admin-cell__meta">
                     @!component('components/ui/badge', { kind: 'type', value: series.contentType ? series.contentType.slug : '', text: typeName(series.contentType), size: 'sm' })
                     @!component('components/ui/badge', { kind: 'status', value: series.status, size: 'sm', class: 'md:hidden' })
+                    @if(series.draft)
+                    @!component('components/ui/badge', { kind: 'draft', tone: 'warning', text: 'Taslak', size: 'sm', title: 'Yayında değil; yalnız yönetim görür' })
+                    @end
+                    @if(series.access !== 'public')
+                    @!component('components/ui/badge', { kind: 'access', tone: series.access === 'vip' ? 'accent' : 'neutral', text: site.accessLevels[series.access].label, size: 'sm' })
+                    @end
                     @if(series.featured)
                     @!component('components/ui/badge', { kind: 'accent', text: 'Öne çıkan', size: 'sm', title: 'Ana sayfa vitrininde' })
                     @end

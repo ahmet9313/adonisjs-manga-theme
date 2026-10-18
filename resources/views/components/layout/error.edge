@@ -12,7 +12,11 @@
   <meta name="robots" content="noindex">
   <title>{{ title ? title + ' — ' + site.name : site.name }}</title>
   {{{ themeMeta(scheme) }}}
+  @if(site.favicon)
+  <link rel="icon" href="{{ site.favicon }}">
+  @else
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  @end
   @vite(['resources/css/app.css'])
   @if(themeCss())
   <style>{{{ themeCss() }}}</style>

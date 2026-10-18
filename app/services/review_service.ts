@@ -255,6 +255,7 @@ class ReviewService {
       .whereNotNull('body')
       .whereNot('body', '')
       .where('spoiler', false)
+      .whereHas('series', (series) => series.where('draft', false))
       .preload('user')
       .preload('series', (series) => series.preload('contentType'))
       .orderBy('helpfulCount', 'desc')

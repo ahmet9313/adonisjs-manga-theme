@@ -1,0 +1,11 @@
+{{--
+  Staff preview of a draft series or chapter (readers get a 404 instead). Shared by the series,
+  reader and watch pages. Props via the including page: series, chapter (optional).
+--}}
+@if(series.draft || (chapter && chapter.draft))
+<div class="draft-note">
+  @component('components/ui/alert', { tone: 'warning', title: series.draft ? 'Taslak seri' : 'Taslak bölüm' })
+    <p>Bu {{ series.draft ? 'seri' : 'bölüm' }} yayında değil; yalnız yönetici ve editörler görür. Yayınlamak için yönetim panelinde “Taslak” seçeneğini kapatın.</p>
+  @end
+</div>
+@end

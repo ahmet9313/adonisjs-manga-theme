@@ -145,6 +145,7 @@ export const colorTokens: ColorToken[] = [
   token('badge_manhua', 'Manhua', 'badges', '--t-badge-manhua', '#dc2626', '#dc2626'),
   token('badge_novel', 'Novel', 'badges', '--t-badge-novel', '#7c3aed', '#7c3aed'),
   token('badge_webtoon', 'Webtoon', 'badges', '--t-badge-webtoon', '#c2410c', '#c2410c'),
+  token('badge_anime', 'Anime', 'badges', '--t-badge-anime', '#db2777', '#db2777'),
   token('badge_ongoing', 'Devam ediyor', 'badges', '--t-badge-ongoing', '#15803d', '#15803d'),
   token('badge_completed', 'Tamamlandı', 'badges', '--t-badge-completed', '#2563eb', '#2563eb'),
   token('badge_dropped', 'Bırakıldı', 'badges', '--t-badge-dropped', '#52525b', '#52525b'),
@@ -277,7 +278,7 @@ export const looks: (RangeOption | SelectOption | TextOption)[] = [
     label: 'Arka plan görseli',
     type: 'url',
     default: '',
-    hint: '/content/… veya https://… adresi. Boş bırakırsanız kullanılmaz.',
+    hint: 'Görsel yükleyin ya da /content/… veya https://… adresi yapıştırın. Boş bırakırsanız kullanılmaz.',
   },
   {
     key: 'bg_size',

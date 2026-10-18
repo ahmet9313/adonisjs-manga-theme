@@ -3,7 +3,7 @@ import type { NextFn } from '@adonisjs/core/types/http'
 import { serveContent } from '#controllers/media_controller'
 
 /**
- * Serves `/content/*` images before the router middleware runs, so image requests do not
+ * Serves `/content/*` images and videos before the router middleware runs, so media requests do not
  * create sessions, set cookies, verify CSRF or load the signed-in user.
  */
 export default class ContentMiddleware {

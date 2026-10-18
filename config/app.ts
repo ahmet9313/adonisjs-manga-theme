@@ -20,6 +20,12 @@ export const http = defineConfig({
   allowMethodSpoofing: false,
 
   /**
+   * Node ends any request whose body is still arriving after 5 minutes, which would cut off
+   * large episode uploads (config/watch.ts). Headers must still arrive within the default 60 s.
+   */
+  requestTimeout: 3 * 60 * 60 * 1000,
+
+  /**
    * Enabling async local storage will let you access HTTP context
    * from anywhere inside your application.
    */

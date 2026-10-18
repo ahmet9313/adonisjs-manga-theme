@@ -9,6 +9,7 @@ import Author from '#models/author'
 import Artist from '#models/artist'
 import SeriesModel from '#models/series'
 import contentConfig from '#config/content'
+import { suggestedFormat } from '#config/site'
 
 // ---------- DATA from generate-data.mjs ----------
 
@@ -1209,7 +1210,10 @@ export default class SeriesSeeder extends BaseSeeder {
     // 1. Seed content types
     const contentTypeMap = new Map<string, ContentType>()
     for (const name of ['manga', 'manhwa', 'manhua', 'novel', 'webtoon']) {
-      const ct = await ContentType.firstOrCreate({ name }, { name, slug: name })
+      const ct = await ContentType.firstOrCreate(
+        { name },
+        { name, slug: name, format: suggestedFormat(name) }
+      )
       contentTypeMap.set(name, ct)
     }
 

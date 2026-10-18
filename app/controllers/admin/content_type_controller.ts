@@ -3,9 +3,14 @@ import { now, slugify, pageNumber, pageSize, searchText } from '#services/input_
 import type { HttpContext } from '@adonisjs/core/http'
 import ContentType from '#models/content_type'
 import vine from '@vinejs/vine'
+import site, { contentFormatKeys, suggestedFormat } from '#config/site'
 
 const contentTypeValidator = vine.compile(
-  vine.object({ name: vine.string().trim().minLength(1).maxLength(50) })
+  vine.object({
+    name: vine.string().trim().minLength(1).maxLength(50),
+    // Missing (quick add without the choice, disabled radio group) → suggested or kept.
+    format: vine.enum(contentFormatKeys).optional(),
+  })
 )
 
 /**
@@ -17,7 +22,7 @@ const dictionary = {
   singular: 'İçerik türü',
   base: '/admin/icerik-turleri',
   description:
-    'Manga, manhwa, novel gibi biçimler. Seri ve bölüm adreslerinde kullanılır; novel türündeki bölümler metin olarak yazılır.',
+    'Manga, manhwa, webtoon, novel, anime gibi türler. Her tür üç biçimden birindedir: görsel (sayfa görselleri), metin ya da video (video kaynakları). Biçim, bölüm düzenleyicisini ve sitenin "oku" mu "izle" mi diyeceğini belirler.',
   nameLabel: 'İçerik türü adı',
   placeholder: 'ör. manga',
   maxLength: 50,
@@ -33,6 +38,10 @@ const dictionary = {
   deleteUnused: 'içerik türü silinecek. Bu türü kullanan seri yok.',
   restrictDelete: true,
   restrictNote: 'Bu türü {n} seri kullanıyor; önce serileri başka bir türe taşıyın.',
+  /** Content types only: the three formats (config/site.ts) as radio cards and a list column. */
+  formats: site.contentFormats,
+  formatLocked:
+    'Bu türü {n} seri kullanıyor; bölümleri bu biçime göre kaydedildiği için biçim değiştirilemez.',
 }
 
 export default class ContentTypeController {
@@ -80,6 +89,7 @@ export default class ContentTypeController {
     await ContentType.create({
       name: data.name,
       slug: slugify(data.name),
+      format: data.format ?? suggestedFormat(slugify(data.name)),
       createdAt: timestamp,
       updatedAt: timestamp,
     })
@@ -101,8 +111,15 @@ export default class ContentTypeController {
   }
 
   async update({ request, params, session, response }: HttpContext) {
-    const contentType = await ContentType.findOrFail(params.id)
+    const contentType = await ContentType.query()
+      .where('id', params.id)
+      .withCount('series')
+      .firstOrFail()
     const data = await request.validateUsing(contentTypeValidator)
+    // Existing chapters were stored as pages, text or video; they would not fit another format.
+    const used = Number(contentType.$extras.series_count || 0)
+    if (data.format && data.format !== contentType.format && used)
+      invalidField('format', dictionary.formatLocked.replace('{n}', String(used)))
     if (!slugify(data.name)) invalidField('name', 'Ad en az bir harf veya rakam içermeli.')
     const existing = await ContentType.query()
       .where((q) => q.where('name', data.name).orWhere('slug', slugify(data.name)))
@@ -114,6 +131,7 @@ export default class ContentTypeController {
       return response.redirect(`/admin/icerik-turleri/${contentType.id}/duzenle`)
     }
     contentType.name = data.name
+    if (data.format) contentType.format = data.format
     contentType.updatedAt = now()
     await contentType.save()
     session.flash('success', 'İçerik türü güncellendi')

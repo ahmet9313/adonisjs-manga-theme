@@ -1,0 +1,140 @@
+{{--
+  Source editor of the admin chapter form for video series (pages/admin/chapters/form.edge,
+  chapterForm in chapter_form.js). One row per source: kind (video uploaded to this site or a
+  link / pasted iframe code), the upload or
+  the link, an optional host name for links and an optional label. Rows keep their order on the
+  watch page. Only the hidden `sources` field (JSON) is posted; the row controls have no name.
+  Needs: sourcesError.
+--}}
+<section class="panel" aria-labelledby="sources-title" x-show="isVideo" x-cloak>
+  <div class="panel__head">
+    <div class="min-w-0">
+      <h2 id="sources-title" class="panel__title">Kaynaklar</h2>
+      <p class="panel__desc">İzleyiciler kaynakları bu sırayla görür. Siteye video yükleyin ya da başka bir sitenin bağlantısını veya iframe kodunu yapıştırın.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2" x-show="sources.length > 0">
+      <span class="badge" data-tone="neutral" x-text="sourceBadge"></span>
+    </div>
+  </div>
+
+  <input type="hidden" name="sources" :value="sourcesJSON()">
+
+  @if(sourcesError)
+  <div class="alert mb-4" data-tone="danger" role="alert">
+    @!component('components/icon', { name: 'exclamation' })
+    <p class="min-w-0 flex-1">{{ sourcesError }}</p>
+  </div>
+  @end
+
+  <ol class="admin-sources" aria-label="Kaynak sırası" x-show="sources.length > 0">
+    <template x-for="(row, index) in sources" :key="row.id">
+      <li class="admin-source" :data-source-id="row.id" :data-invalid="row.error ? 'true' : null">
+        <div class="admin-source__head">
+          <span class="admin-source__num t-num" aria-hidden="true" x-text="index + 1"></span>
+          <p :id="'source-title-' + row.id" class="admin-source__title" x-text="rowTitle(row, index)"></p>
+          <div class="admin-source__tools">
+            <button type="button" class="btn btn--ghost btn--sm btn--icon" data-tool="up" @click="moveSource(index, -1)" :disabled="index === 0"
+                    :aria-label="rowAction(index, 'up')" title="Yukarı taşı">
+              @!component('components/icon', { name: 'arrow-up', class: 'btn__icon' })
+            </button>
+            <button type="button" class="btn btn--ghost btn--sm btn--icon" data-tool="down" @click="moveSource(index, 1)" :disabled="index === sources.length - 1"
+                    :aria-label="rowAction(index, 'down')" title="Aşağı taşı">
+              @!component('components/icon', { name: 'arrow-down', class: 'btn__icon' })
+            </button>
+            <button type="button" class="btn btn--ghost btn--sm btn--icon admin-danger" data-tool="remove" @click="removeSource(index)"
+                    :aria-label="rowAction(index, 'remove')" title="Kaldır">
+              @!component('components/icon', { name: 'trash', class: 'btn__icon' })
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-source__fields" role="group" :aria-labelledby="'source-title-' + row.id">
+
+          <div class="field">
+            <span :id="'source-kind-' + row.id" class="field__label">Kaynak türü</span>
+            <div class="segmented admin-source__kind" role="group" :aria-labelledby="'source-kind-' + row.id">
+              <button type="button" @click="setKind(row, 'local')" :aria-pressed="(row.kind === 'local').toString()" :disabled="row.upload.state === 'uploading'">
+                @!component('components/icon', { name: 'upload' })
+                <span x-text="localKindLabel"></span>
+              </button>
+              <button type="button" @click="setKind(row, 'link')" :aria-pressed="(row.kind === 'link').toString()" :disabled="row.upload.state === 'uploading'">
+                @!component('components/icon', { name: 'link' })
+                <span>Bağlantı / iframe kodu</span>
+              </button>
+            </div>
+          </div>
+
+          {{-- Uploaded video --}}
+          <div class="field field--wide" x-show="row.kind === 'local'">
+            <span class="field__label">Video dosyası</span>
+            <div class="admin-source__file" x-show="row.video && row.upload.state !== 'uploading'">
+              @!component('components/icon', { name: 'video', class: 'h-5 w-5 shrink-0 text-accent' })
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold text-ink" x-text="row.upload.name || 'Kayıtlı video'"></p>
+                <p class="text-xs text-muted" x-text="fileMeta(row)"></p>
+              </div>
+            </div>
+
+            <div x-show="row.upload.state === 'uploading'" class="admin-source__upload">
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold text-ink" x-text="row.upload.name"></p>
+                <div class="progress progress--sm mt-1.5" role="progressbar" :aria-label="uploadLabel(row)"
+                     aria-valuemin="0" aria-valuemax="100" :aria-valuenow="row.upload.progress" data-tone="accent">
+                  <div class="progress__bar" :style="{ width: row.upload.progress + '%' }"></div>
+                </div>
+                <p class="t-num mt-1 text-xs text-muted" x-text="uploadText(row)"></p>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm" @click="cancelVideo(row)">İptal</button>
+            </div>
+
+            <label :for="'source-file-' + row.id" class="dropzone admin-source__drop" x-show="row.upload.state !== 'uploading'"
+                   :class="{ 'is-over': row.over }"
+                   @dragover.prevent="row.over = true" @dragleave="if (!$el.contains($event.relatedTarget)) row.over = false"
+                   @drop.prevent="row.over = false; pickVideo(row, $event.dataTransfer.files)">
+              <input type="file" :id="'source-file-' + row.id" class="sr-only" :accept="videoAccept"
+                     :aria-describedby="'source-file-hint-' + row.id" @change="pickVideo(row, $event.target.files); $event.target.value = ''">
+              @!component('components/icon', { name: 'upload', class: 'h-6 w-6 text-accent' })
+              <span class="text-sm font-bold text-ink" x-text="row.video ? 'Başka bir video seçin' : 'Video seçin veya buraya sürükleyin'"></span>
+              <span :id="'source-file-hint-' + row.id" x-text="videoHint"></span>
+            </label>
+          </div>
+
+          {{-- Link or iframe code --}}
+          <div class="field field--wide" x-show="row.kind === 'link'">
+            <label :for="'source-url-' + row.id" class="field__label">
+              Bağlantı veya iframe kodu
+              <span class="field__req" aria-hidden="true">*</span>
+            </label>
+            <textarea :id="'source-url-' + row.id" class="control admin-source__url" rows="2" x-model="row.link" spellcheck="false" autocomplete="off"
+                      placeholder="https://… ya da <iframe src=&quot;…&quot;></iframe>" :aria-describedby="'source-url-hint-' + row.id" @input="row.error = ''"></textarea>
+            <p :id="'source-url-hint-' + row.id" class="field__hint">YouTube, Google Drive, Dailymotion, ok.ru ve Vimeo izleme adresleri oynatıcı adresine çevrilir; .mp4/.webm adresleri doğrudan oynatılır. Yalnız https.</p>
+          </div>
+
+          <div class="field" x-show="row.kind === 'link'">
+            <label :for="'source-host-' + row.id" class="field__label">Kaynak adı</label>
+            <input type="text" :id="'source-host-' + row.id" class="control" x-model="row.host" maxlength="60" autocomplete="off" spellcheck="false"
+                   placeholder="otomatik" :aria-describedby="'source-host-hint-' + row.id">
+            <p :id="'source-host-hint-' + row.id" class="field__hint">Boş bırakılırsa adresten bulunur (ör. YouTube).</p>
+          </div>
+
+          <div class="field">
+            <label :for="'source-label-' + row.id" class="field__label">Etiket</label>
+            <input type="text" :id="'source-label-' + row.id" class="control" x-model="row.label" maxlength="30" autocomplete="off"
+                   placeholder="ör. 1080p" :aria-describedby="'source-label-hint-' + row.id">
+            <p :id="'source-label-hint-' + row.id" class="field__hint">İsteğe bağlı; listede kaynak adının altında görünür.</p>
+          </div>
+        </div>
+
+        <p class="field__error admin-source__error" role="alert" x-show="row.error" x-text="row.error"></p>
+      </li>
+    </template>
+  </ol>
+
+  <p class="text-sm text-muted" x-show="sources.length === 0">Henüz kaynak yok. Bir bölüme birden çok kaynak ekleyebilirsiniz; izleyici listeden seçer.</p>
+
+  <div class="mt-4">
+    @component('components/ui/button', { icon: 'plus', '@click': 'addSource()', 'x-ref': 'addSourceButton' })
+      Kaynak ekle
+    @end
+  </div>
+</section>

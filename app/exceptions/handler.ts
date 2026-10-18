@@ -12,6 +12,19 @@ const FALLBACK_HTML =
   '<body style="background:#000022;color:#fff;font-family:system-ui;text-align:center;padding:4rem">' +
   '<h1>Bir şeyler ters gitti</h1><p><a href="/" style="color:#3fba67">Ana sayfaya dön</a></p></body></html>'
 
+/** Admin sections whose `/admin/<section>/:id/...` pages load one record, with its name for the notice. */
+const ADMIN_RECORDS: Record<string, string> = {
+  'seriler': 'Seri',
+  'bolumler': 'Bölüm',
+  'turler': 'Tür',
+  'yazarlar': 'Yazar',
+  'cizerler': 'Çizer',
+  'icerik-turleri': 'İçerik türü',
+  'kozmetikler': 'Kozmetik',
+  'kartlar': 'Kart',
+  'kullanicilar': 'Kullanıcı',
+}
+
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
    * In debug mode, the exception handler will display verbose errors
@@ -75,7 +88,29 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * response to the client
    */
   async handle(error: unknown, ctx: HttpContext) {
+    if (this.handleMissingAdminRecord(error, ctx)) return
     return super.handle(error, ctx)
+  }
+
+  /**
+   * A record opened in the admin panel can disappear while its page is open (e.g. its series was
+   * deleted in another tab, which also deletes its chapters). Instead of a 404 page, the editor is
+   * sent back to that section's list with a notice; JSON requests (the chapter upload) get a 404
+   * with the same message.
+   */
+  private handleMissingAdminRecord(error: unknown, ctx: HttpContext) {
+    if ((error as { code?: string } | null)?.code !== 'E_ROW_NOT_FOUND') return false
+    const section = /^\/admin\/([^/]+)\/[^/]+/.exec(ctx.request.url())?.[1]
+    if (!section || !Object.hasOwn(ADMIN_RECORDS, section)) return false
+
+    const message = `${ADMIN_RECORDS[section]} bulunamadı; silinmiş olabilir.`
+    if (ctx.session && ctx.request.accepts(['html', 'json']) === 'html') {
+      ctx.session.flash('error', message)
+      ctx.response.redirect(`/admin/${section}`)
+    } else {
+      ctx.response.status(404).send({ message })
+    }
+    return true
   }
 
   /**

@@ -5,6 +5,7 @@ import Genre from '#models/genre'
 import Author from '#models/author'
 import Artist from '#models/artist'
 import Chapter from '#models/chapter'
+import type { AccessLevel } from '#config/site'
 
 export default class Series extends BaseModel {
   @column({ isPrimary: true })
@@ -54,6 +55,14 @@ export default class Series extends BaseModel {
 
   @column()
   declare featured: boolean
+
+  /** Drafts are only visible to staff (series lists, counts and pages leave them out). */
+  @column({ consume: (value) => Boolean(value) })
+  declare draft: boolean
+
+  /** Who may open the chapters: everyone, members or VIP members (config/site.ts). */
+  @column()
+  declare access: AccessLevel
 
   @column()
   declare featuredDescription: string | null

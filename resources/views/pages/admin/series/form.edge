@@ -96,6 +96,13 @@
             </div>
           @end
 
+          @component('components/ui/panel', { title: 'Yayın ve erişim', id: 'access', description: 'Taslaklar yalnız yönetimde görünür. Erişim, bölümleri kimin açabileceğini belirler; yaş uyarısı Yaş sınırı ve Tema → Yaş ve Erişim ayarından gelir.' })
+            <div class="admin-fields">
+              @!component('components/ui/field', { name: 'draft', label: 'Taslak (yayınlama)', type: 'toggle', value: failed ? flashMessages.has('draft') : (isEdit && series.draft), hint: 'Açıkken seri katalogda, aramada ve ana sayfada görünmez; adresi yalnız yönetici ve editörler açabilir.' })
+              @!component('components/ui/field', { name: 'access', label: 'Erişim', type: 'select', value: isEdit ? series.access : 'public', options: Object.entries(site.accessLevels).map(([value, level]) => ({ value, label: level.label })), hint: 'Seri sayfası herkese görünür; kilitli bölümler kilit simgesiyle listelenir ve açılırken giriş ya da VIP rolü istenir.' })
+            </div>
+          @end
+
           @component('components/ui/panel', { title: 'Vitrin', id: 'showcase', description: 'Öne çıkan seriler ana sayfadaki büyük vitrinde döner.' })
             <div class="admin-fields">
               @!component('components/ui/field', { name: 'featured', label: 'Ana sayfa vitrininde göster', type: 'toggle', value: failed ? flashMessages.has('featured') : (isEdit && series.featured), '@change': 'featured = $event.target.checked' })

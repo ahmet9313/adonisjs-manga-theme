@@ -1,5 +1,5 @@
 /*
- * Page styles: Admin → Tema (genel, renkler, gorunum, goster, duyuru, gelismis).
+ * Page styles: Admin → Tema (genel, renkler, gorunum, goster, duyuru, erisim, gelismis).
  * Tokens only (var(--t-*)); shared patterns come from components.css. The previews are built
  * from the live variables, so they follow the scheme being edited (theme_editor.js).
  */
@@ -1461,4 +1461,91 @@ details[open] > summary .te-chevron {
 
 .te-page .check:has(> .switch) {
   align-items: center;
+}
+
+/* Address field + upload area pairs on Tema → Genel. */
+.te-image-field {
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* Branding image upload next to an address field (components/ui/brand_image.edge). */
+.brand-drop {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.brand-drop__zone {
+  position: relative;
+  min-height: 6.5rem;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.brand-drop--square .brand-drop__zone {
+  max-width: 22rem;
+  min-height: 7rem;
+}
+
+.brand-drop--banner .brand-drop__zone {
+  min-height: 9rem;
+}
+
+.brand-drop__zone.has-image {
+  border-style: solid;
+  padding: 0.75rem;
+}
+
+.brand-drop__img {
+  max-height: 5rem;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.brand-drop--square .brand-drop__img {
+  height: 4rem;
+  width: 4rem;
+}
+
+.brand-drop--banner .brand-drop__img {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  max-height: none;
+  width: 100%;
+  object-fit: cover;
+}
+
+.brand-drop__empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+}
+
+.brand-drop__empty > svg {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+.brand-drop__cta {
+  font-weight: 700;
+  color: var(--t-heading);
+}
+
+.brand-drop__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--t-muted);
+}
+
+.brand-drop__bar .progress {
+  flex: 1;
+}
+
+.brand-drop__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }

@@ -48,6 +48,8 @@ class CommunityStatsService {
     const rows = await db
       .from('genres')
       .join('series_genres', 'series_genres.genre_id', 'genres.id')
+      .join('series', 'series.id', 'series_genres.series_id')
+      .where('series.draft', false)
       .groupBy('genres.id', 'genres.name')
       .select('genres.name')
       .countDistinct('series_genres.series_id as total')

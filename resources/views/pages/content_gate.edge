@@ -1,0 +1,101 @@
+{{--
+  Shown instead of a series or chapter page until the visitor passes its gate (access_service):
+  gate.kind 'age' (confirm age → POST /yas-onayi, remembered in a cookie), 'login' (age policy
+  "members", or members / VIP content; gate.reason says which), 'vip' (signed-in member opening
+  VIP content) or 'warning' (the chapter's own notice; "Devam et" reopens it with ?onay=1).
+  Props: gate, series (SeriesInfo), chapter ({ number, title } or null), next (current URL).
+  Nothing of the content itself is rendered here; the cover is blurred for age gates.
+--}}
+@let(seriesUrl = '/series/' + series.type + '/' + series.slug)
+@let(where = chapter ? 'Bu bölüm' : 'Bu seri')
+@let(back = chapter ? seriesUrl : '/')
+@let(backLabel = chapter ? 'Seri sayfasına dön' : 'Ana sayfaya dön')
+@let(continueUrl = next + (next.includes('?') ? '&' : '?') + 'onay=1')
+@let(age = gate.kind === 'age' ? gate.age : (series.ageRating ? parseInt(series.ageRating, 10) : 0))
+@let(icons = { age: 'shield', login: 'lock', vip: 'star', warning: 'exclamation' })
+@component('components/layout/main', { title, description: series.title })
+  @slot('main')
+  <div class="gate">
+    <section class="gate__card" aria-labelledby="gate-title">
+      <div class="gate__cover {{ gate.kind === 'age' || (gate.kind === 'login' && gate.reason === 'age') ? 'gate__cover--blur' : '' }}" aria-hidden="true">
+        <img src="{{ series.coverImage }}" alt="" width="240" height="320" decoding="async" data-fallback="/images/no-cover.svg">
+      </div>
+      <div class="gate__body">
+        <p class="gate__context t-overline">
+          {{ series.title }}{{ chapter ? ' · Bölüm ' + chapter.number : '' }}
+          @if(series.ageRating)
+          @!component('components/ui/badge', { kind: 'age', value: series.ageRating, size: 'sm' })
+          @end
+        </p>
+        <span class="gate__icon" data-kind="{{ gate.kind }}">
+          @!component('components/icon', { name: icons[gate.kind] })
+        </span>
+
+        @if(gate.kind === 'age')
+        <h1 id="gate-title" class="gate__title">{{ age }} yaş ve üzeri içerik</h1>
+        <p class="gate__text">{{ where }} {{ age }} yaşından küçükler için uygun olmayan sahneler içerebilir. Devam etmek için {{ age }} yaşında ya da daha büyük olduğunu onayla. Seçimin bu tarayıcıda hatırlanır.</p>
+        <div class="gate__actions">
+          <form action="/yas-onayi" method="POST" data-submit-once>
+            {{ csrfField() }}
+            <input type="hidden" name="age" value="{{ age }}">
+            <input type="hidden" name="next" value="{{ next }}">
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+              {{ age }} yaşından büyüğüm, devam et
+            @end
+          </form>
+          @component('components/ui/button', { variant: 'ghost', href: back })
+            {{ backLabel }}
+          @end
+        </div>
+
+        @elseif(gate.kind === 'login')
+        <h1 id="gate-title" class="gate__title">
+          {{ gate.reason === 'age' ? age + '+ içerik için giriş yap' : (gate.reason === 'vip' ? "VIP'lere özel" : 'Üyelere özel') }}
+        </h1>
+        <p class="gate__text">
+          @if(gate.reason === 'age')
+          {{ where }} {{ age }} yaş ve üzeri içerik barındırıyor; görüntülemek için üye girişi gerekiyor. Üyelik ücretsiz.
+          @elseif(gate.reason === 'vip')
+          {{ where }} yalnız VIP üyelere açık. Önce giriş yap; VIP rolü yöneticiler tarafından verilir.
+          @else
+          {{ where }} yalnız üyelere açık. Ücretsiz bir hesapla giriş yaparak devam edebilirsin.
+          @end
+        </p>
+        <div class="gate__actions">
+          @component('components/ui/button', { variant: 'primary', icon: 'login', href: '/giris?next=' + encodeURIComponent(next) })
+            Giriş yap
+          @end
+          @component('components/ui/button', { href: '/kayit?next=' + encodeURIComponent(next) })
+            Kayıt ol
+          @end
+          @component('components/ui/button', { variant: 'ghost', href: back })
+            {{ backLabel }}
+          @end
+        </div>
+
+        @elseif(gate.kind === 'vip')
+        <h1 id="gate-title" class="gate__title">VIP'lere özel</h1>
+        <p class="gate__text">{{ where }} yalnız VIP üyelere açık. VIP rolü yöneticiler tarafından verilir; sitede satın alma yoktur.</p>
+        <div class="gate__actions">
+          @component('components/ui/button', { variant: 'primary', icon: 'arrow-left', href: back })
+            {{ backLabel }}
+          @end
+        </div>
+
+        @else
+        <h1 id="gate-title" class="gate__title">Bölüm uyarısı</h1>
+        <p class="gate__text gate__notice">{{ gate.text }}</p>
+        <div class="gate__actions">
+          @component('components/ui/button', { variant: 'primary', icon: 'arrow-right', href: continueUrl })
+            Anladım, devam et
+          @end
+          @component('components/ui/button', { variant: 'ghost', href: back })
+            {{ backLabel }}
+          @end
+        </div>
+        @end
+      </div>
+    </section>
+  </div>
+  @end
+@end

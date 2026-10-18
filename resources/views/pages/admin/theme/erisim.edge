@@ -1,0 +1,86 @@
+{{--
+  Admin → Tema → Yaş ve Erişim: what happens before a series with an age rating opens
+  (age_policy_18, age_policy_16 … → none | warn | members; config/site.ts → agePolicies).
+  Props: ratings [{ rating, key, value }] (strictest first), policies [{ key, label }].
+  Members-only / VIP content and drafts are set per series and chapter; the side panel says so.
+--}}
+@let(hints = {
+  none: 'Seri doğrudan açılır.',
+  warn: 'Ziyaretçi yaşını bir kez onaylar; seçim tarayıcıda hatırlanır.',
+  members: 'Önce giriş yapılması istenir, sonra yaş onayı.',
+})
+@let(icons = { none: 'check-circle', warn: 'shield', members: 'lock' })
+@component('components/layout/admin', {
+  title,
+  description: 'Yaş sınırlı serilerin açılmadan önce uyarı gösterip göstermeyeceğini ve üyelik isteyip istemeyeceğini seçin.',
+  crumbs: [{ label: 'Tema', href: '/admin/tema/genel' }, { label: 'Yaş ve Erişim' }]
+})
+  @slot('main')
+    @include('partials/admin/theme_nav')
+
+    <div class="te-page">
+      <section class="panel" aria-labelledby="age-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="age-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'shield' })
+              Yaş sınırı uyarıları
+            </h2>
+            <p class="panel__desc">Serinin yaş sınırı seri formunda seçilir. 18+ onayı 16+ ve altını da kapsar. Yönetici ve editörler uyarı görmez.</p>
+          </div>
+        </div>
+        <form action="/admin/tema/erisim" method="POST" class="grid gap-6" data-submit-once>
+          {{ csrfField() }}
+          @each(item in ratings)
+          @let(current = flashMessages.get(item.key) || item.value)
+          <fieldset class="ac-fieldset">
+            <legend class="field__label">
+              @!component('components/ui/badge', { kind: 'age', value: item.rating, size: 'sm' })
+              <span class="ml-1">{{ item.rating }} seriler</span>
+            </legend>
+            <div class="ac-choices ac-choices--rules">
+              @each(policy in policies)
+              <label class="ac-choice">
+                <input type="radio" name="{{ item.key }}" value="{{ policy.key }}" class="ac-choice__input" {{ current === policy.key ? 'checked' : '' }}>
+                <span class="ac-choice__icon">
+                  @!component('components/icon', { name: icons[policy.key] })
+                </span>
+                <span class="ac-choice__text">
+                  <span class="ac-choice__label">{{ policy.label }}</span>
+                  <span class="ac-choice__hint">{{ hints[policy.key] }}</span>
+                </span>
+              </label>
+              @end
+            </div>
+            @!component('components/field_error', { field: item.key })
+          </fieldset>
+          @end
+          <div class="te-form-foot">
+            <p>Kaydettiğinizde bütün seri ve bölüm sayfalarında hemen geçerli olur.</p>
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+              Kaydet
+            @end
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="access-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="access-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'lock' })
+              Üyelere özel, VIP ve taslak
+            </h2>
+            <p class="panel__desc">Bunlar her seri ve bölüm için ayrı seçilir.</p>
+          </div>
+        </div>
+        <ul class="grid gap-3 text-sm text-(--t-text-2)">
+          <li><strong class="text-ink">Erişim:</strong> Seri ve bölüm formundaki “Yayın ve erişim” bölümünden Herkes, Üyelere özel veya VIP'lere özel seçilir. Bölümde serinin ayarından daha sıkı olan geçerlidir; kilitli bölümler listede kilit simgesiyle görünür.</li>
+          <li><strong class="text-ink">VIP rolü:</strong> <a href="/admin/kullanicilar" class="link">Kullanıcılar</a> sayfasından verilir. VIP'ler üyelere özel içeriği de açar; rolün adı ve rengi <a href="/admin/roller" class="link">Roller</a>'den değişir.</li>
+          <li><strong class="text-ink">Taslak:</strong> Taslak seri ve bölümler katalogda, aramada, ana sayfada ve bölüm listelerinde görünmez; adresi yalnız yönetici ve editörler açabilir. Bölüm taslaktan çıkınca kaydedenlere bildirim gider.</li>
+          <li><strong class="text-ink">Bölüm uyarısı:</strong> Bölüm formundaki “Bölüm öncesi uyarı” doluysa okur bölümü açmadan önce bu metni görür.</li>
+        </ul>
+      </section>
+    </div>
+  @end
+@end

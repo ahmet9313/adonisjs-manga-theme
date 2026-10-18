@@ -7,7 +7,7 @@
 @let(isSelf = member.id === me.id)
 @let(level = levelOf(member).level)
 @let(roleValue = flashMessages.has('role') ? flashMessages.get('role') : member.role)
-@let(roleHints = { admin: 'Tam yetki: kozmetik, kart, tema, kullanıcı ve rol yönetimi dahil.', editor: 'Yönetim paneline girer; seri, bölüm ve sözlükleri yönetir, yorumları silebilir.', member: 'Yalnızca siteyi kullanır: okur, yorum yapar ve kaydeder.' })
+@let(roleHints = { admin: 'Tam yetki: kozmetik, kart, tema, kullanıcı ve rol yönetimi dahil.', editor: 'Yönetim paneline girer; seri, bölüm ve sözlükleri yönetir, yorumları silebilir.', vip: 'Üye gibi siteyi kullanır, ayrıca VIP\'lere özel seri ve bölümleri açar. Yönetim paneline giremez.', member: 'Yalnızca siteyi kullanır: okur, yorum yapar ve kaydeder; üyelere özel içeriği açar.' })
 @let(roleError = flashMessages.has('inputErrorsBag.role') ? flashMessages.get('inputErrorsBag.role')[0] : '')
 @component('components/layout/admin', {
   title: member.fullName,

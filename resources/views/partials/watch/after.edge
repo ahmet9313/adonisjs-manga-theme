@@ -1,0 +1,31 @@
+{{--
+  Under the player: what comes next (next episode, back to the series, rate the series).
+  Needs: nextChapter, chapterUrl, seriesUrl.
+--}}
+<div class="watch-after">
+  <p class="watch-after__text">
+    @if(nextChapter)
+    Sırada <strong>Bölüm {{ nextChapter.number }}</strong>{{ nextChapter.title ? ': ' + nextChapter.title : '' }} var.
+    @else
+    Şimdilik son bölüm bu. Yeni bölüm eklendiğinde seri sayfasında görünür.
+    @end
+  </p>
+  <div class="watch-after__actions">
+    @if(nextChapter)
+    <a href="{{ chapterUrl(nextChapter.number) }}" rel="next" class="btn btn--primary btn--md">
+      <span>Sonraki bölüm</span>
+      @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+    </a>
+    @end
+    <a href="{{ seriesUrl }}" class="btn {{ nextChapter ? 'btn--secondary' : 'btn--primary' }} btn--md">
+      @!component('components/icon', { name: 'library', class: 'btn__icon' })
+      <span>Seriye dön</span>
+    </a>
+    @if(ui('series_reviews'))
+    <a href="{{ seriesUrl }}#incelemeler" class="btn btn--ghost btn--md">
+      @!component('components/icon', { name: 'star', class: 'btn__icon' })
+      <span>Seriyi puanla</span>
+    </a>
+    @end
+  </div>
+</div>

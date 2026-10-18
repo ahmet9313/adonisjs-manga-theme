@@ -20,6 +20,7 @@
 @end
 
 @slot('main')
+  @include('partials/draft_notice')
   <div x-data="readingTracker" data-chapter="{{ JSON.stringify({ type: series.type, slug: series.slug, number: chapter.number }) }}" hidden></div>
   @if(reward)
   <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Yeni bölüm okundu: +' + reward.exp + ' EXP', tone: 'success' }) }}"></div>

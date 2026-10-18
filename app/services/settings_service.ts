@@ -1,5 +1,5 @@
 import db from '@adonisjs/lucid/services/db'
-import site from '#config/site'
+import site, { agePolicyKeys, type AgePolicy } from '#config/site'
 import { roleNames, roles, type Role } from '#config/roles'
 import { now } from '#services/input_service'
 import theme from '#services/theme_service'
@@ -9,9 +9,19 @@ const defaults: Record<string, string> = {
   site_name: site.name,
   site_description: site.description,
   logo_url: site.logo || '',
+  logo_mobile_url: '',
+  favicon_url: '',
+  ...Object.fromEntries(
+    Object.entries(site.agePolicies).map(([rating, policy]) => [agePolicyKey(rating), policy])
+  ),
   announcement_enabled: '',
   announcement_text: '',
   announcement_url: '',
+}
+
+/** Settings key of an age rating's policy: `age_policy_18` for "18+". */
+export function agePolicyKey(rating: string) {
+  return `age_policy_${rating.replace(/\D/g, '')}`
 }
 
 /** Key/value settings kept in the `settings` table and cached for the life of the process. */
@@ -69,6 +79,13 @@ class SettingsService {
     return roleNames.map((key) => ({ key, ...this.role(key) }))
   }
 
+  /** What happens before a series with this age rating opens (config/site.ts → agePolicies). */
+  agePolicy(rating: string | null | undefined): AgePolicy {
+    if (!rating) return 'none'
+    const value = this.get(agePolicyKey(rating)) as AgePolicy
+    return agePolicyKeys.includes(value) ? value : 'none'
+  }
+
   announcement() {
     const text = this.get('announcement_text')
     if (!this.get('announcement_enabled') || !text) return null
@@ -80,6 +97,8 @@ class SettingsService {
     site.name = this.get('site_name') || defaults.site_name
     site.description = this.get('site_description') || defaults.site_description
     site.logo = this.get('logo_url') || null
+    site.logoMobile = this.get('logo_mobile_url') || null
+    site.favicon = this.get('favicon_url') || null
 
     theme.apply((key) => this.values.get(key) ?? '')
   }

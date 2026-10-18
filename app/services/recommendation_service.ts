@@ -19,11 +19,12 @@ function cards(rows: SeriesModel[]) {
 function base() {
   return SeriesModel.query()
     .select('series.*', readers, savers)
+    .where('series.draft', false)
     .preload('contentType')
     .preload('genres')
     .preload('authors')
     .preload('artists')
-    .withCount('chapters')
+    .withCount('chapters', (chapters) => chapters.where('draft', false))
 }
 
 /** "Sana özel öneriler": new releases in favourite genres and popular series not read yet. */

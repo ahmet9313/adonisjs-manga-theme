@@ -1,0 +1,60 @@
+{{--
+  Episode watch page of a video series (config/watch.ts), rendered by ChapterController#show on
+  the reader's URL. Same data as pages/chapter_reader.edge plus `localHost`; `chapter.video`
+  = { sources: [{ host, kind, url, label }] }.
+  Hooks: readingTracker + data-chapter (guest history), data-reward-toast (EXP and card drops),
+  episodePlayer (source list and player; resources/js/components/episode_player.js) and
+  commentSection (loads when visible).
+--}}
+@let(seriesUrl = '/series/' + series.type + '/' + series.slug)
+@let(chapterUrl = (number) => seriesUrl + '/' + number)
+@let(sources = chapter.video && chapter.video.sources ? chapter.video.sources : [])
+@let(episodeName = series.title + ', Bölüm ' + chapter.number)
+@let(navId = 'top')
+@component('components/layout/main', { title, description: series.title + ', Bölüm ' + chapter.number + (chapter.title ? ': ' + chapter.title : '') + '. ' + site.name + ' üzerinde izle.' })
+
+@slot('main')
+  @include('partials/draft_notice')
+  <div x-data="readingTracker" data-chapter="{{ JSON.stringify({ type: series.type, slug: series.slug, number: chapter.number }) }}" hidden></div>
+  @if(reward)
+  <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Yeni bölüm izlendi: +' + reward.exp + ' EXP', tone: 'success' }) }}"></div>
+  @if(reward.card)
+  <div hidden data-reward-toast="{{ JSON.stringify({ text: 'Kart düştü! ' + reward.card.name + ' (' + reward.card.rarity + ')', tone: 'reward', image: reward.card.image }) }}"></div>
+  @end
+  @end
+
+  <div class="watch" x-data="episodePlayer"
+    data-player="{{ JSON.stringify({ base: seriesUrl + '/', title: episodeName, sources }) }}">
+    <div class="watch-top">
+      <header class="watch-head">
+        <a href="{{ seriesUrl }}" class="watch-head__series">
+          @!component('components/icon', { name: 'arrow-left', class: 'h-4 w-4' })
+          <span>{{ series.title }}</span>
+        </a>
+        <h1 class="watch-head__title"><span class="sr-only">{{ series.title }}, </span>Bölüm {{ chapter.number }}<span class="watch-head__name">{{ chapter.title ? ': ' + chapter.title : '' }}</span></h1>
+        <p class="watch-head__meta">
+          @!component('components/ui/badge', { kind: 'type', value: series.type, size: 'sm' })
+          @if(sources.length)
+          <span>{{ sources.length }} kaynak</span>
+          @end
+          @if(chapter.timeAgo)
+          <span aria-hidden="true">·</span>
+          <span>{{ chapter.timeAgo }}</span>
+          @end
+        </p>
+      </header>
+      @include('partials/reader/nav')
+    </div>
+
+    @include('partials/watch/player')
+    @include('partials/watch/after')
+  </div>
+
+  @if(ui('reader_comments'))
+  <div class="watch-comments">
+    @include('partials/comments/section')
+  </div>
+  @end
+@end
+
+@end

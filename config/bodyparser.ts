@@ -41,7 +41,11 @@ const bodyParserConfig = defineConfig({
      */
     autoProcess: true,
     convertEmptyStringsToNull: true,
-    processManually: [],
+    /**
+     * Episode videos (up to `watch.maxUploadBytes`) are streamed straight to the content
+     * directory by the controller instead of the tmp folder, outside the limit below.
+     */
+    processManually: ['/admin/bolumler/video'],
 
     /**
      * Maximum limit of data to parse including all files

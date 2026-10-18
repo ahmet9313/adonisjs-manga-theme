@@ -1,4 +1,4 @@
-import site from '#config/site'
+import site, { accessLevelKeys } from '#config/site'
 import vine from '@vinejs/vine'
 
 const relationIds = () =>
@@ -16,6 +16,8 @@ export const seriesValidator = vine.compile(
     alternative_titles: vine.string().maxLength(5000).optional(),
     featured: vine.enum(['on']).optional(),
     featured_description: vine.string().maxLength(5000).optional(),
+    draft: vine.enum(['on']).optional(),
+    access: vine.enum(accessLevelKeys).optional(),
     keywords: vine.string().maxLength(5000).optional(),
     genres: relationIds(),
     authors: relationIds(),
@@ -28,7 +30,12 @@ export const chapterValidator = vine.compile(
     series_id: vine.number().positive().withoutDecimals(),
     number: vine.number().withoutDecimals().range([0, 1000000]),
     title: vine.string().trim().maxLength(255).optional(),
+    draft: vine.enum(['on']).optional(),
+    access: vine.enum(accessLevelKeys).optional(),
+    warning: vine.string().trim().maxLength(500).optional(),
     text_content: vine.string().maxLength(1000000).optional(),
     page_order: vine.string().maxLength(100000).optional(),
+    /** Video episodes: JSON list of sources, checked by `parseSources` (video_service). */
+    sources: vine.string().maxLength(200000).optional(),
   })
 )

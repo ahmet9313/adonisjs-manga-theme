@@ -6,6 +6,14 @@ import SeriesModel from '#models/series'
 import { chapterValidator } from '#validators/admin'
 import { chapterContent, invalidField } from '#services/upload_service'
 import db from '@adonisjs/lucid/services/db'
+import watch from '#config/watch'
+import {
+  localVideoPaths,
+  parseSources,
+  removeUnusedVideos,
+  VideoUploadError,
+  receiveVideo,
+} from '#services/video_service'
 
 export default class ChapterAdminController {
   async index({ view, request }: HttpContext) {
@@ -52,23 +60,33 @@ export default class ChapterAdminController {
 
     const seriesList = await SeriesModel.query().preload('contentType').orderBy('title', 'asc')
 
-    const seriesContentTypeMap: Record<number, string> = {}
-    for (const s of seriesList) {
-      seriesContentTypeMap[s.id] = s.contentType?.slug || 'manga'
-    }
-
-    let currentContentType = ''
-    if (preSelectedSeriesId) {
-      currentContentType = seriesContentTypeMap[Number(preSelectedSeriesId)] || ''
-    }
+    const seriesFormats = this.formatsOf(seriesList)
+    const currentFormat = preSelectedSeriesId
+      ? seriesFormats[Number(preSelectedSeriesId)] || ''
+      : ''
 
     return view.render('pages/admin/chapters/form', {
       title: 'Yeni Bölüm Ekle',
       seriesList,
-      seriesContentTypeMap,
-      currentContentType,
+      seriesFormats,
+      currentFormat,
       preSelectedSeriesId: preSelectedSeriesId ? Number(preSelectedSeriesId) : null,
+      ...this.videoOptions(),
     })
+  }
+
+  /** Content format (image/text/video) of every series, keyed by id, for the chapter form. */
+  private formatsOf(seriesList: SeriesModel[]) {
+    return Object.fromEntries(seriesList.map((s) => [s.id, s.contentType?.format || 'image']))
+  }
+
+  /** Form data for video episodes: upload limits and the local player name. */
+  private videoOptions() {
+    return {
+      localHost: watch.localHost,
+      maxUploadBytes: watch.maxUploadBytes,
+      videoExtensions: watch.videoExtensions,
+    }
   }
 
   private async save(request: HttpContext['request'], chapter = new Chapter()) {
@@ -84,33 +102,57 @@ export default class ChapterAdminController {
       .preload('contentType')
       .first()
     if (!series) invalidField('series_id', 'Seri bulunamadı.')
-    const content = await chapterContent(
-      request,
-      series.contentType.slug === 'novel',
-      data.text_content,
-      data.page_order,
-      [series.contentType.slug, series.slug, 'chapters', String(data.number)],
-      chapter.content
-    )
+    const previous = chapter.$isPersisted ? chapter.content : undefined
+    const chapterBody: Chapter['content'] =
+      series.contentType.format === 'video'
+        ? {
+            type: 'video',
+            sources: await parseSources(data.sources, {
+              seriesId: series.id,
+              previous: previous?.type === 'video' ? previous.sources : [],
+            }),
+          }
+        : await chapterContent(
+            request,
+            series.contentType.format === 'text',
+            data.text_content,
+            data.page_order,
+            [series.contentType.slug, series.slug, 'chapters', String(data.number)],
+            chapter.content
+          )
     const timestamp = now()
     const oldSeriesId = chapter.seriesId
+    const draft = data.draft === 'on'
+    // A chapter leaving draft is published now: it gets today's date and its announcement.
+    const published = !draft && (!chapter.$isPersisted || chapter.draft)
     await db.transaction(async (trx) => {
       chapter.useTransaction(trx)
       chapter.merge({
         seriesId: series.id,
         number: data.number,
         title: data.title || null,
-        content,
-        publishedAt: chapter.publishedAt || timestamp.slice(0, 10),
+        content: chapterBody,
+        draft,
+        access: data.access ?? 'public',
+        warning: data.warning || null,
+        publishedAt:
+          published && chapter.$isPersisted
+            ? timestamp.slice(0, 10)
+            : chapter.publishedAt || timestamp.slice(0, 10),
         createdAt: chapter.createdAt || timestamp,
         updatedAt: timestamp,
       })
       await chapter.save()
-      await SeriesModel.query({ client: trx })
-        .whereIn('id', [...new Set([series.id, oldSeriesId].filter(Boolean))])
-        .update({ updatedAt: timestamp })
+      // Drafts do not move the series up in "Son Güncellenenler".
+      if (!draft)
+        await SeriesModel.query({ client: trx })
+          .whereIn('id', [...new Set([series.id, oldSeriesId].filter(Boolean))])
+          .update({ updatedAt: timestamp })
     })
-    return chapter
+    // Uploaded videos dropped from the episode are deleted once the new sources are stored.
+    const kept = new Set(localVideoPaths(chapterBody))
+    await removeUnusedVideos(localVideoPaths(previous).filter((path) => !kept.has(path)))
+    return { chapter, published }
   }
 
   /** Tells every reader who saved the series that a new chapter is out. */
@@ -119,6 +161,7 @@ export default class ChapterAdminController {
       .where('id', chapter.seriesId)
       .preload('contentType')
       .firstOrFail()
+    if (series.draft) return
     const readers = await db.from('bookmarks').where('series_id', series.id).select('user_id')
     await notifications.notifyMany(
       readers.map((row) => Number(row.user_id)),
@@ -132,9 +175,9 @@ export default class ChapterAdminController {
   }
 
   async store({ request, session, response }: HttpContext) {
-    const chapter = await this.save(request)
-    await this.announce(chapter)
-    session.flash('success', 'Bölüm eklendi')
+    const { chapter, published } = await this.save(request)
+    if (published) await this.announce(chapter)
+    session.flash('success', chapter.draft ? 'Bölüm taslak olarak kaydedildi' : 'Bölüm eklendi')
     return response.redirect('/admin/bolumler')
   }
 
@@ -146,32 +189,54 @@ export default class ChapterAdminController {
 
     const seriesList = await SeriesModel.query().preload('contentType').orderBy('title', 'asc')
 
-    const seriesContentTypeMap: Record<number, string> = {}
-    for (const s of seriesList) {
-      seriesContentTypeMap[s.id] = s.contentType?.slug || 'manga'
-    }
-
-    const currentContentType = chapter.series?.contentType?.slug || 'manga'
-
     return view.render('pages/admin/chapters/form', {
       title: 'Bölüm Düzenle',
       chapter,
       seriesList,
-      seriesContentTypeMap,
-      currentContentType,
+      seriesFormats: this.formatsOf(seriesList),
+      currentFormat: chapter.series?.contentType?.format || 'image',
+      ...this.videoOptions(),
     })
   }
 
   async update({ request, params, session, response }: HttpContext) {
-    await this.save(request, await Chapter.findOrFail(params.id))
-    session.flash('success', 'Bölüm güncellendi')
+    const { chapter, published } = await this.save(request, await Chapter.findOrFail(params.id))
+    // A draft series stays quiet; its readers hear about the chapter when the series goes live.
+    if (published) await this.announce(chapter)
+    session.flash('success', published ? 'Bölüm yayınlandı' : 'Bölüm güncellendi')
     return response.redirect('/admin/bolumler')
   }
 
   async destroy({ params, session, response }: HttpContext) {
     const chapter = await Chapter.findOrFail(params.id)
+    const videos = localVideoPaths(chapter.content)
     await chapter.delete()
+    await removeUnusedVideos(videos)
     session.flash('success', 'Bölüm silindi')
     return response.redirect('/admin/bolumler')
+  }
+
+  /**
+   * Streams one video (`video` field) of a video series into
+   * `<content root>/videos/<series id>/<uuid>.<ext>`. The body is not parsed by the body parser
+   * for this route (`processManually`), so the CSRF token arrives in the `X-CSRF-TOKEN` header.
+   */
+  async uploadVideo({ request, response }: HttpContext) {
+    const seriesId = Number(request.qs().series_id)
+    const series =
+      Number.isSafeInteger(seriesId) && seriesId > 0
+        ? await SeriesModel.query().where('id', seriesId).preload('contentType').first()
+        : null
+    if (!series) return response.status(404).send({ message: 'Seri bulunamadı.' })
+    if (series.contentType?.format !== 'video')
+      return response.status(422).send({ message: 'Bu seriye video yüklenemez.' })
+    try {
+      const saved = await receiveVideo(request, series.id)
+      return response.send(saved)
+    } catch (error) {
+      if (error instanceof VideoUploadError)
+        return response.status(error.status).send({ message: error.message })
+      throw error
+    }
   }
 }

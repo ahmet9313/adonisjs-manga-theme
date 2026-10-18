@@ -28,6 +28,12 @@
       @if(series.ageRating)
       @!component('components/ui/badge', { kind: 'age', value: series.ageRating, solid: true, size: 'sm', title: 'Yaş sınırı ' + series.ageRating })
       @end
+      @if(series.access && series.access !== 'public')
+      <span class="badge badge--solid badge--sm lock-badge" data-tone="{{ series.access === 'vip' ? 'accent' : 'neutral' }}" title="{{ site.accessLevels[series.access].label }}">
+        @!component('components/icon', { name: series.access === 'vip' ? 'star' : 'lock', stroke: 2 })
+        {{ series.access === 'vip' ? 'VIP' : 'Üye' }}
+      </span>
+      @end
     </span>
     @end
   </a>

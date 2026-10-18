@@ -57,7 +57,9 @@ export default class DiscoverController {
     const rows = await db
       .from('series')
       .join('content_types', 'content_types.id', 'series.content_type_id')
-      .leftJoin('chapters', 'chapters.series_id', 'series.id')
+      .leftJoin('chapters', (join) =>
+        join.on('chapters.series_id', 'series.id').andOnVal('chapters.draft', false)
+      )
       .whereIn('series.slug', [...new Set(items.map((item) => item.slug))])
       .groupBy('series.id', 'series.slug', 'content_types.slug')
       .select('series.slug', 'content_types.slug as type')
