@@ -22,6 +22,4 @@
 @import './pages/account.css';
 @import './pages/community.css';
 @import './pages/rewards.css';
-@import './pages/admin.css';
-@import './pages/admin_theme.css';
-@import './pages/admin_community.css';
+/* Admin panel styles are a separate file (resources/css/admin.css, layout/admin only). */

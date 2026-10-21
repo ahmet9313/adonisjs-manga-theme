@@ -9,6 +9,8 @@ import { excerptOf } from '#services/comment_service'
 import { buildPaginationPages } from '#services/input_service'
 import type User from '#models/user'
 import type { Scheme } from '#config/theme'
+import { coverView, type CoverSource } from '#services/cover_policy_service'
+import { variantSrcset, variantUrl } from '#services/media_service'
 
 edge.global('site', site)
 edge.global('adminNav', adminNav)
@@ -52,6 +54,19 @@ edge.global('lookOf', (user: User | null) => cosmetics.look(user))
 edge.global('stickerOf', (id: number | null) => cosmetics.sticker(id))
 /** One-line description of a comment (what a reply answers). */
 edge.global('excerptOf', excerptOf)
+/**
+ * Cover fields of a series model as the current visitor may see them (presenter output already
+ * has them): `coverOf(review.series).coverImage`, `.coverVeil`.
+ */
+/**
+ * Smaller WebP copies of stored images (media_service, `/content/<path>?w=`):
+ * `thumbOf(series.coverImage, 320)` for `src`, `srcsetOf(src, [160, 320, 640])` for `srcset`
+ * (empty for images that are not stored rasters, e.g. SVG placeholders: leave srcset out then).
+ */
+edge.global('thumbOf', variantUrl)
+edge.global('srcsetOf', variantSrcset)
+
+edge.global('coverOf', (series: CoverSource) => coverView(series))
 /** "5 dk önce", "3 sa önce", "2 gün önce" for a database timestamp. */
 edge.global('agoOf', (value: string) => {
   const seconds = Math.max(0, (Date.now() - parseTimestamp(value)) / 1000)

@@ -1265,55 +1265,6 @@ export default class SeriesSeeder extends BaseSeeder {
       const contentType = contentTypeMap.get(s.type)!
       const colors = COVER_COLORS[seriesIndex % COVER_COLORS.length]
 
-      // Create series record
-      const seriesRecord = await SeriesModel.firstOrCreate(
-        { slug: s.slug },
-        {
-          title: s.title,
-          slug: s.slug,
-          description: s.desc,
-          alternativeTitles: s.alt,
-          contentTypeId: contentType.id,
-          status: s.status,
-          translationStatus: s.tStatus,
-          publicationYear: s.year,
-          ageRating: s.age || null,
-          coverImage: `/content/${s.type}/${s.slug}/cover.svg`,
-          bannerImage: s.featured ? `/content/${s.type}/${s.slug}/banner.svg` : null,
-          keywords: [
-            `${s.slug.replace(/-/g, ' ')} turkce oku`,
-            `${s.slug.replace(/-/g, ' ')} ${s.type}`,
-            `${s.title.toLowerCase()} oku`,
-          ],
-          featured: s.featured,
-          featuredDescription: s.featuredDesc || null,
-        }
-      )
-
-      // Force set timestamps to match original data (capped to today)
-      const today = new Date().toISOString().split('T')[0]
-      const rawCreatedAt = `${s.year + 10}-01-01`
-      seriesRecord.createdAt = (rawCreatedAt > today ? today : rawCreatedAt) as any
-      const rawUpdatedAt = generateDate(2025, s.chapters - 1, s.chapters)
-      seriesRecord.updatedAt = (rawUpdatedAt > today ? today : rawUpdatedAt) as any
-      await seriesRecord.save()
-
-      // Attach genres
-      const genreIds = s.genres.map((g) => genreMap.get(g)!.id)
-      if (genreIds.length > 0) {
-        await db
-          .table('series_genres')
-          .multiInsert(genreIds.map((gid) => ({ series_id: seriesRecord.id, genre_id: gid })))
-      }
-
-      // Attach author
-      const author = authorMap.get(s.author)!
-      await db.table('series_authors').insert({ series_id: seriesRecord.id, author_id: author.id })
-
-      // Attach artist
-      const artist = artistMap.get(s.artist)!
-      await db.table('series_artists').insert({ series_id: seriesRecord.id, artist_id: artist.id })
-
       // Create directory structure for SVGs
       const dir = join(basePath, s.type, s.slug)
       mkdirSync(dir, { recursive: true })
@@ -1358,7 +1309,6 @@ export default class SeriesSeeder extends BaseSeeder {
         }
 
         chapterRows.push({
-          series_id: seriesRecord.id,
           number: i,
           title: chTitle,
           content: JSON.stringify(content),
@@ -1366,21 +1316,74 @@ export default class SeriesSeeder extends BaseSeeder {
           created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
           updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
         })
+      }
 
-        // Keep-alive every 10 chapters during SVG generation
-        if (i % 10 === 0) {
-          await db.rawQuery('SELECT 1')
+      // One transaction per series: an interrupted seed never leaves a series without its
+      // relations or chapters (AGENTS.md rule 10).
+      await db.transaction(async (trx) => {
+        // Create series record
+        const seriesRecord = await SeriesModel.firstOrCreate(
+          { slug: s.slug },
+          {
+            title: s.title,
+            slug: s.slug,
+            description: s.desc,
+            alternativeTitles: s.alt,
+            contentTypeId: contentType.id,
+            status: s.status,
+            translationStatus: s.tStatus,
+            publicationYear: s.year,
+            ageRating: s.age || null,
+            coverImage: `/content/${s.type}/${s.slug}/cover.svg`,
+            bannerImage: s.featured ? `/content/${s.type}/${s.slug}/banner.svg` : null,
+            keywords: [
+              `${s.slug.replace(/-/g, ' ')} turkce oku`,
+              `${s.slug.replace(/-/g, ' ')} ${s.type}`,
+              `${s.title.toLowerCase()} oku`,
+            ],
+            featured: s.featured,
+            featuredDescription: s.featuredDesc || null,
+          },
+          { client: trx }
+        )
+
+        // Force set timestamps to match original data (capped to today)
+        const today = new Date().toISOString().split('T')[0]
+        const rawCreatedAt = `${s.year + 10}-01-01`
+        seriesRecord.createdAt = (rawCreatedAt > today ? today : rawCreatedAt) as any
+        const rawUpdatedAt = generateDate(2025, s.chapters - 1, s.chapters)
+        seriesRecord.updatedAt = (rawUpdatedAt > today ? today : rawUpdatedAt) as any
+        seriesRecord.useTransaction(trx)
+        await seriesRecord.save()
+
+        // Attach genres
+        const genreIds = s.genres.map((g) => genreMap.get(g)!.id)
+        if (genreIds.length > 0) {
+          await trx
+            .table('series_genres')
+            .multiInsert(genreIds.map((gid) => ({ series_id: seriesRecord.id, genre_id: gid })))
         }
-      }
 
-      // Keep-alive before chapter inserts
-      await db.rawQuery('SELECT 1')
+        // Attach author
+        const author = authorMap.get(s.author)!
+        await trx
+          .table('series_authors')
+          .insert({ series_id: seriesRecord.id, author_id: author.id })
 
-      // Insert chapters in batches of 50
-      for (let b = 0; b < chapterRows.length; b += 50) {
-        const batch = chapterRows.slice(b, b + 50)
-        await db.table('chapters').multiInsert(batch)
-      }
+        // Attach artist
+        const artist = artistMap.get(s.artist)!
+        await trx
+          .table('series_artists')
+          .insert({ series_id: seriesRecord.id, artist_id: artist.id })
+
+        // Insert chapters in batches of 50
+        for (let b = 0; b < chapterRows.length; b += 50) {
+          const batch = chapterRows.slice(b, b + 50)
+          await trx
+            .table('chapters')
+            .multiInsert(batch.map((row) => ({ ...row, series_id: seriesRecord.id })))
+        }
+      })
 
       seriesIndex++
       console.log(`✓ ${s.title} seeded (${s.chapters} bölüm)`)

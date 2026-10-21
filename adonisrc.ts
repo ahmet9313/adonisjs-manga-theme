@@ -88,6 +88,11 @@ export default defineConfig({
       pattern: 'public/images/**',
       reloadServer: false,
     },
+    // The default tab icon (layouts fall back to it when Tema → Genel has none).
+    {
+      pattern: 'public/favicon.svg',
+      reloadServer: false,
+    },
     {
       pattern: 'public/assets/**',
       reloadServer: false,

@@ -23,6 +23,7 @@ router.post('/yas-onayi', [AgeController, 'confirm']).as('age.confirm')
 router.get('/series/:type/:slug/:chapter', [ChapterController, 'show']).as('chapter.show')
 const LibraryController = () => import('#controllers/library_controller')
 router.get('/kaydedilenler', [LibraryController, 'index']).as('bookmarks')
+router.get('/kutuphane/kapaklar', [LibraryController, 'saved']).as('library.saved')
 router
   .group(() => {
     router.post('/kaydet', [LibraryController, 'toggle']).as('library.toggle')
@@ -39,7 +40,6 @@ router.get('/yorumlar/:id/yanitlar', [CommentController, 'replies']).as('comment
 router
   .group(() => {
     router.post('/', [CommentController, 'store']).as('comments.store')
-    router.post('/:id/begen', [CommentController, 'like']).as('comments.like')
     router.post('/:id/oy', [CommentController, 'vote']).as('comments.vote')
     router.post('/:id/sil', [CommentController, 'destroy']).as('comments.destroy')
   })
@@ -131,6 +131,7 @@ const AdminDashboardController = () => import('#controllers/admin/dashboard_cont
 const AdminUserController = () => import('#controllers/admin/user_controller')
 const AdminSeriesController = () => import('#controllers/admin/series_controller')
 const AdminChapterController = () => import('#controllers/admin/chapter_controller')
+const AdminCoverController = () => import('#controllers/admin/cover_controller')
 const AdminGenreController = () => import('#controllers/admin/genre_controller')
 const AdminAuthorController = () => import('#controllers/admin/author_controller')
 const AdminArtistController = () => import('#controllers/admin/artist_controller')
@@ -220,6 +221,11 @@ router
     router.get('/seriler/:id/duzenle', [AdminSeriesController, 'edit']).as('admin.series.edit')
     router.post('/seriler/:id/duzenle', [AdminSeriesController, 'update']).as('admin.series.update')
     router.post('/seriler/:id/sil', [AdminSeriesController, 'destroy']).as('admin.series.destroy')
+    // "Otomatik doldur" in the series form (config/covers.ts)
+    router.get('/seriler/kapak-ara', [AdminCoverController, 'search']).as('admin.covers.search')
+    router.get('/seriler/kapak-gorsel', [AdminCoverController, 'image']).as('admin.covers.image')
+    router.get('/seriler/kapak-bilgi', [AdminCoverController, 'details']).as('admin.covers.details')
+    router.post('/seriler/kapak-kayit', [AdminCoverController, 'record']).as('admin.covers.record')
 
     // Chapters CRUD
     router.get('/bolumler', [AdminChapterController, 'index']).as('admin.chapters.index')

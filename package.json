@@ -11,7 +11,6 @@
     "build": "node ace build",
     "dev": "node ace serve --hmr",
     "test": "node ace test",
-    "test:mobile-nav": "node scripts/check-mobile-nav.mjs",
     "test:ui": "node scripts/check-mobile-nav.mjs",
     "test:a11y": "node scripts/check-a11y.mjs",
     "lint": "eslint .",
@@ -21,12 +20,13 @@
     "typecheck": "tsc --noEmit",
     "migrate": "node ace migration:run",
     "migrate:rollback": "node ace migration:rollback",
-    "migrate:fresh": "node ace migration:fresh",
+    "migrate:fresh": "node scripts/confirm-destructive.mjs migration:fresh && node ace migration:fresh",
     "seed": "node ace db:seed",
     "seed:demo": "node ace db:seed --files=database/seeders/social_seeder.ts",
     "seed:clear": "node scripts/clear-demo.mjs",
     "covers:fetch": "node scripts/fetch-covers.mjs",
-    "db:reset": "node ace migration:fresh && node ace db:seed",
+    "db:reset": "node scripts/confirm-destructive.mjs db:reset && node ace migration:fresh && node ace db:seed",
+    "db:backup": "node scripts/backup-db.mjs",
     "admin:promote": "node scripts/promote-admin.mjs",
     "measure": "node scripts/measure-baseline.mjs"
   },
@@ -68,6 +68,7 @@
     "@japa/runner": "^5.3.0",
     "@poppinss/ts-exec": "^1.4.4",
     "@tailwindcss/vite": "^4.3.1",
+    "@types/compression": "^1.8.1",
     "@types/luxon": "^3.7.1",
     "@types/node": "^25.9.3",
     "axe-core": "^4.14.0",
@@ -92,10 +93,12 @@
     "@vinejs/vine": "^4.4.0",
     "alpinejs": "^3.15.12",
     "better-sqlite3": "^13.0.3",
+    "compression": "^1.8.1",
     "edge.js": "^6.5.1",
     "luxon": "^3.7.2",
     "mysql2": "^3.22.5",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "sharp": "^0.34.4"
   },
   "hotHook": {
     "boundaries": [

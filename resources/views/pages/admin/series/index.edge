@@ -66,7 +66,7 @@
           <tr>
             <td class="cell-main">
               <div class="admin-cell">
-                <img src="{{ series.coverImage || '/images/no-cover.svg' }}" alt="" class="admin-thumb" width="40" height="53" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+                <img src="{{ thumbOf(series.coverImage, 160) || '/images/no-cover.svg' }}" alt="" class="admin-thumb" width="40" height="53" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
                 <div class="admin-cell__body">
                   <a href="/admin/seriler/{{ series.id }}/duzenle" class="admin-title line-clamp-2">{{ series.title }}</a>
                   <div class="admin-cell__meta">

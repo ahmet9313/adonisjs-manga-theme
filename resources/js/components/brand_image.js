@@ -5,7 +5,8 @@
  * address into the field named by `data-target`, firing `input` so live previews follow. Typing an
  * address keeps working; "Kaldır" empties the field. Nothing is stored until the form is saved.
  *
- * Data attributes: target (input id), kind (logo | logo_mobile | favicon | background),
+ * Data attributes: target (input id), kind (logo | logo_mobile | favicon | background |
+ * cover_placeholder),
  * accept (comma separated extensions), max (bytes). Messages are Turkish and fixed here.
  */
 import { fileSize } from './tag_input.js'

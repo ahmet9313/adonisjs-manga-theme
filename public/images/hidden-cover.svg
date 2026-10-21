@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a2140"/>
+      <stop offset="1" stop-color="#121018"/>
+    </linearGradient>
+    <pattern id="p" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="14" height="28" fill="#ffffff" opacity="0.025"/>
+    </pattern>
+  </defs>
+  <rect width="600" height="800" fill="url(#g)"/>
+  <rect width="600" height="800" fill="url(#p)"/>
+  <circle cx="300" cy="340" r="120" fill="#000000" opacity="0.35"/>
+  <g fill="none" stroke="#ddd6fe" stroke-linecap="round" stroke-linejoin="round" transform="translate(300 340) scale(7) translate(-12 -12)">
+    <path d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" stroke-width="1.6"/>
+  </g>
+  <text x="300" y="530" text-anchor="middle" font-family="system-ui, sans-serif" font-size="44" font-weight="800" fill="#ede9fe">Hassas içerik</text>
+  <text x="300" y="580" text-anchor="middle" font-family="system-ui, sans-serif" font-size="26" fill="#a39cb8">Kapak gizlendi</text>
+</svg>

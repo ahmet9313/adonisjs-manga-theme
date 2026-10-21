@@ -34,7 +34,12 @@
         @let(watched = item.video)
         <li class="discover-row">
           <a href="{{ url }}" class="discover-row__cover" tabindex="-1" aria-hidden="true">
-            <img src="{{ item.coverImage }}" alt="" width="96" height="128" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+            <img src="{{ thumbOf(item.coverImage, 320) }}" srcset="{{ srcsetOf(item.coverImage, [160, 320]) || null }}" sizes="96px" alt="" width="96" height="128" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
+              @if(item.coverVeil)
+              data-veil="{{ item.coverVeil }}"
+              @end
+              >
+            @!component('components/series/veil', { series: item })
           </a>
           <div class="discover-row__body">
             <h3 class="discover-row__title"><a href="{{ url }}">{{ item.title }}</a></h3>

@@ -37,7 +37,7 @@
 
     @if(current)
     <section class="card mt-4 flex flex-wrap items-center gap-4 p-4" aria-label="Seçili seri">
-      <img src="{{ current.coverImage || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--lg" width="60" height="80" decoding="async" data-fallback="/images/no-cover.svg">
+      <img src="{{ thumbOf(current.coverImage, 160) || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--lg" width="60" height="80" decoding="async" data-fallback="/images/no-cover.svg">
       <div class="min-w-0 flex-1 basis-48">
         <p class="t-h3 line-clamp-2">{{ current.title }}</p>
         <div class="admin-cell__meta mt-1.5">

@@ -19,8 +19,8 @@ import theme, {
   CUSTOM_CSS_KEY,
 } from '#services/theme_service'
 import { invalidField, removeContentFile, saveImage } from '#services/upload_service'
-import site, { agePolicyKeys } from '#config/site'
-import { agePolicyKey } from '#services/settings_service'
+import site, { agePolicyKeys, coverModeKeys, coverRevealKeys } from '#config/site'
+import { agePolicyKey, coverPolicyKey } from '#services/settings_service'
 
 /** Public paths or http(s) addresses only; blocks `javascript:` and protocol-relative links. */
 const link = vine
@@ -46,6 +46,15 @@ const erisimValidator = vine.compile(
     )
   )
 )
+const coverValidator = vine.compile(
+  vine.object({
+    ...Object.fromEntries(
+      site.ageRatings.map((rating) => [coverPolicyKey(rating), vine.enum(coverModeKeys)])
+    ),
+    cover_reveal: vine.enum(coverRevealKeys),
+    cover_placeholder_url: link,
+  })
+)
 const duyuruValidator = vine.compile(
   vine.object({
     announcement_enabled: vine.enum(['on']).optional(),
@@ -64,9 +73,16 @@ const brandImages = {
   logo_mobile: { size: '5mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
   favicon: { size: '1mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'ico'] },
   background: { size: '10mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
+  cover_placeholder: { size: '5mb', extnames: ['png', 'jpg', 'jpeg', 'webp'] },
 } as const
 type BrandImage = keyof typeof brandImages
-const brandKeys = () => ['logo_url', 'logo_mobile_url', 'favicon_url', lookKey('bg_image')]
+const brandKeys = () => [
+  'logo_url',
+  'logo_mobile_url',
+  'favicon_url',
+  'cover_placeholder_url',
+  lookKey('bg_image'),
+]
 
 /** Deletes uploaded branding files a save replaced, unless another field still uses them. */
 async function removeReplacedBranding(before: string[]) {
@@ -153,6 +169,15 @@ export default class ThemeController {
         value: settings.agePolicy(rating),
       }))
       data.policies = agePolicyKeys.map((key) => ({ key, label: site.agePolicyLabels[key] }))
+      data.coverRatings = [...site.ageRatings].reverse().map((rating) => ({
+        rating,
+        key: coverPolicyKey(rating),
+        value: settings.coverPolicy(rating),
+      }))
+      data.coverModes = coverModeKeys.map((key) => ({ key, ...site.coverModes[key] }))
+      data.coverReveal = settings.get('cover_reveal')
+      data.coverReveals = coverRevealKeys.map((key) => ({ key, ...site.coverReveals[key] }))
+      data.coverPlaceholder = settings.get('cover_placeholder_url')
     } else if (section === 'goster') {
       data.groups = Object.entries(flagGroups).map(([key, label]) => ({
         key,
@@ -200,6 +225,17 @@ export default class ThemeController {
         body,
         looks.map((l) => l.key).filter((key) => !colorPageLooks.includes(key))
       )
+    } else if (section === 'erisim' && body.part === 'covers') {
+      const {
+        cover_reveal: reveal,
+        cover_placeholder_url: placeholder,
+        ...rules
+      } = await request.validateUsing(coverValidator)
+      entries = {
+        ...(rules as Record<string, string>),
+        cover_reveal: reveal,
+        cover_placeholder_url: placeholder ?? '',
+      }
     } else if (section === 'erisim') {
       entries = (await request.validateUsing(erisimValidator)) as Record<string, string>
     } else if (section === 'goster') {

@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
 import library from '#services/library_service'
+import { takeAttempt } from '#services/throttle'
 import ContentType from '#models/content_type'
 
 const seriesValidator = vine.compile(
@@ -56,8 +57,25 @@ export default class LibraryController {
     return { saved: false }
   }
 
-  async import({ request, auth }: HttpContext) {
+  /** GET /kutuphane/kapaklar?items=type/slug,… (at most 200): see library.savedSeries. */
+  async saved({ request, response }: HttpContext) {
+    const items = String(request.input('items', ''))
+      .split(',')
+      .slice(0, 200)
+      .map((entry) => entry.split('/'))
+      .filter(([type, slug]) => type && slug && /^[\w-]+$/.test(type) && /^[\w-]+$/.test(slug))
+      .map(([type, slug]) => ({ type, slug }))
+    response.header('Cache-Control', 'no-store')
+    return library.savedSeries(items)
+  }
+
+  /** Guest data is handed over once after signing in; a few tries per 10 minutes are plenty. */
+  async import({ request, auth, response }: HttpContext) {
+    if (!takeAttempt(`library-import:${auth.user!.id}`, 5, 10 * 60 * 1000))
+      return response.tooManyRequests({
+        error: 'Çok sık aktarım denendi; biraz sonra tekrar dene.',
+      })
     const data = await request.validateUsing(importValidator)
-    return library.importLocal(auth.user!.id, data)
+    return library.importLocal(auth.user!, data)
   }
 }

@@ -66,7 +66,10 @@
       <template x-for="item in bookmarks" :key="item.key">
         <li class="series-card bookmark-card">
           <a :href="seriesUrl(item)" class="series-card__cover" tabindex="-1" aria-hidden="true">
-            <img :src="cover(item)" alt="" width="300" height="400" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+            <img :src="cover(item)" :data-veil="item.coverVeil === 'blur' ? 'blur' : null" alt="" width="300" height="400" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+            <span class="cover-veil" aria-hidden="true" x-show="item.coverVeil === 'blur'">
+              @!component('components/icon', { name: 'eye-off', stroke: 1.8, class: 'cover-veil__icon' })
+            </span>
             <span class="series-card__badges">
               <span class="bookmark-card__flags">
                 <span class="badge badge--sm badge--solid badge--caps" :data-tone="typeTone(item)" x-text="typeLabel(item)"></span>

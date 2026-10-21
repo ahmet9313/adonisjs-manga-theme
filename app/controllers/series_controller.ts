@@ -1,3 +1,4 @@
+import { variantUrl } from '#services/media_service'
 import { buildPaginationPages, pageNumber, filterValues, searchText } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
 import seriesService from '#services/series_service'
@@ -139,6 +140,8 @@ export default class SeriesController {
         slug: s.slug,
         type: s.type,
         coverImage: s.coverImage,
+        thumb: variantUrl(s.coverImage, 160),
+        coverVeil: s.coverVeil,
         genres: s.genres.slice(0, 3),
       }))
     )

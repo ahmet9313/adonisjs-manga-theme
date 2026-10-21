@@ -8,7 +8,14 @@ import Genre from '#models/genre'
 import Author from '#models/author'
 import Artist from '#models/artist'
 import { seriesValidator } from '#validators/admin'
-import { invalidField, imageOptions, saveImage } from '#services/upload_service'
+import {
+  invalidField,
+  imageOptions,
+  pageImages,
+  removeContentFiles,
+  removeUnreferencedImages,
+  saveImage,
+} from '#services/upload_service'
 import Chapter from '#models/chapter'
 import { localVideoPaths, removeUnusedVideos } from '#services/video_service'
 
@@ -121,10 +128,12 @@ export default class SeriesAdminController {
       if (file && !file.isValid)
         invalidField(file.fieldName, 'Görsel JPG, PNG veya WebP olmalı ve 10 MB sınırını aşmamalı.')
     const segments = [contentType.slug, slug]
+    const previous = [series.coverImage, series.bannerImage]
     const coverImage = cover
       ? await saveImage(cover, segments)
       : series.coverImage || '/images/no-cover.svg'
     const bannerImage = banner ? await saveImage(banner, segments) : series.bannerImage || null
+    const added = [cover ? coverImage : null, banner ? bannerImage : null]
     const timestamp = now()
     const split = (value?: string) => [
       ...new Set(
@@ -134,33 +143,44 @@ export default class SeriesAdminController {
           .filter(Boolean)
       ),
     ]
-    await db.transaction(async (trx) => {
-      series.useTransaction(trx)
-      series.merge({
-        title: data.title,
-        slug,
-        description: data.description,
-        contentTypeId: data.content_type_id,
-        status: data.status,
-        translationStatus: data.translation_status,
-        publicationYear: data.publication_year,
-        ageRating: data.age_rating || null,
-        alternativeTitles: split(data.alternative_titles),
-        keywords: split(data.keywords),
-        featured: data.featured === 'on',
-        featuredDescription: data.featured_description || null,
-        draft: data.draft === 'on',
-        access: data.access ?? 'public',
-        coverImage,
-        bannerImage,
-        createdAt: series.createdAt || timestamp,
-        updatedAt: timestamp,
+    try {
+      await db.transaction(async (trx) => {
+        series.useTransaction(trx)
+        series.merge({
+          title: data.title,
+          slug,
+          description: data.description,
+          contentTypeId: data.content_type_id,
+          status: data.status,
+          translationStatus: data.translation_status,
+          publicationYear: data.publication_year,
+          ageRating: data.age_rating || null,
+          alternativeTitles: split(data.alternative_titles),
+          keywords: split(data.keywords),
+          featured: data.featured === 'on',
+          featuredDescription: data.featured_description || null,
+          draft: data.draft === 'on',
+          access: data.access ?? 'public',
+          coverMode: data.cover_mode ?? 'auto',
+          coverImage,
+          bannerImage,
+          createdAt: series.createdAt || timestamp,
+          updatedAt: timestamp,
+        })
+        await series.save()
+        await series.related('genres').sync([...new Set(data.genres || [])])
+        await series.related('authors').sync([...new Set(data.authors || [])])
+        await series.related('artists').sync([...new Set(data.artists || [])])
       })
-      await series.save()
-      await series.related('genres').sync([...new Set(data.genres || [])])
-      await series.related('authors').sync([...new Set(data.authors || [])])
-      await series.related('artists').sync([...new Set(data.artists || [])])
-    })
+    } catch (error) {
+      // Images uploaded with a save that failed are not kept.
+      await removeContentFiles(added)
+      throw error
+    }
+    // A replaced cover/banner goes, unless a card or another series still shows it.
+    await removeUnreferencedImages(
+      previous.filter((path) => path !== coverImage && path !== bannerImage)
+    )
   }
 
   async store({ request, session, response }: HttpContext) {
@@ -213,11 +233,20 @@ export default class SeriesAdminController {
 
   async destroy({ params, session, response }: HttpContext) {
     const series = await SeriesModel.findOrFail(params.id)
-    // Chapter rows cascade with the series; their uploaded videos are removed afterwards.
+    // Chapters and comments cascade with the series; their files go afterwards: videos, page
+    // images, comment images, and the cover/banner unless a card still shows them.
     const chapters = await Chapter.query().where('seriesId', series.id).select('content')
     const videos = chapters.flatMap((chapter) => localVideoPaths(chapter.content))
+    const pages = chapters.flatMap((chapter) => pageImages(chapter.content))
+    const images = await db
+      .from('comments')
+      .where('series_id', series.id)
+      .whereNotNull('image')
+      .select('image')
     await series.delete()
     await removeUnusedVideos(videos)
+    await removeContentFiles([...pages, ...images.map((row) => row.image as string)])
+    await removeUnreferencedImages([series.coverImage, series.bannerImage])
     session.flash('success', 'Seri silindi')
     return response.redirect('/admin/seriler')
   }

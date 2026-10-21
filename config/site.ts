@@ -27,6 +27,50 @@ const site = {
     warn: 'Yaş uyarısı',
     members: 'Yaş uyarısı + üyelik',
   } as Record<AgePolicy, string>,
+  /**
+   * How covers of age-rated series appear in lists, cards, search and the series page (manga
+   * sites hide adult covers the same way). Per rating under Admin → Tema → Yaş ve Erişim; a series
+   * can override it in its form (`series.cover_mode`). `placeholder` never sends the real image:
+   * the default image (uploadable on that page) takes its place, banners are left out.
+   */
+  coverPolicies: { '18+': 'blur', '16+': 'show', '13+': 'show', '7+': 'show' } as Record<
+    string,
+    CoverMode
+  >,
+  coverModes: {
+    show: { label: 'Göster', icon: 'eye', hint: 'Kapak olduğu gibi görünür.' },
+    blur: {
+      label: 'Bulanıklaştır',
+      icon: 'eye-off',
+      hint: 'Kapak bulanık ve yaş etiketiyle görünür.',
+    },
+    placeholder: {
+      label: 'Varsayılan görsel',
+      icon: 'photo',
+      hint: 'Kapak yerine varsayılan görsel gösterilir; asıl görsel gönderilmez.',
+    },
+  } as Record<CoverMode, { label: string; icon: string; hint: string }>,
+  /**
+   * Who sees the real cover of a hidden one (`cover_reveal`): nobody, visitors who confirmed
+   * their age at the age gate, signed-in members, or members who also confirmed their age.
+   */
+  coverReveals: {
+    none: { label: 'Kimse', hint: 'Gizli kapaklar herkese gizli kalır.' },
+    age: {
+      label: 'Yaşını onaylayanlar',
+      hint: 'Yaş uyarısında yaşını onaylayan herkes (üye olmasa da) asıl kapağı görür.',
+    },
+    members: {
+      label: 'Üyeler',
+      hint: 'Giriş yapmış üyeler asıl kapağı görür; ziyaretçilere gizli kalır.',
+    },
+    members_age: {
+      label: 'Yaşını onaylayan üyeler',
+      hint: 'Hem giriş yapmış hem yaşını onaylamış olmak gerekir.',
+    },
+  } as Record<CoverReveal, { label: string; hint: string }>,
+  /** Built-in image for `placeholder` when none is uploaded. */
+  hiddenCover: '/images/hidden-cover.svg',
   /** Who may open a series or chapter. Staff (admin, editor) may always. */
   accessLevels: {
     public: { label: 'Herkes', chapterLabel: 'Seriyle aynı', icon: 'globe' },
@@ -78,6 +122,13 @@ const site = {
 }
 
 export type ContentFormat = keyof typeof site.contentFormats
+export type CoverMode = 'show' | 'blur' | 'placeholder'
+export const coverModeKeys: CoverMode[] = ['show', 'blur', 'placeholder']
+export type CoverReveal = 'none' | 'age' | 'members' | 'members_age'
+export const coverRevealKeys: CoverReveal[] = ['none', 'age', 'members', 'members_age']
+/** A series follows its age rating (`auto`) or sets its own cover mode. */
+export type SeriesCoverMode = 'auto' | CoverMode
+export const seriesCoverModeKeys: SeriesCoverMode[] = ['auto', ...coverModeKeys]
 export type AgePolicy = 'none' | 'warn' | 'members'
 export const agePolicyKeys: AgePolicy[] = ['none', 'warn', 'members']
 export type AccessLevel = keyof typeof site.accessLevels

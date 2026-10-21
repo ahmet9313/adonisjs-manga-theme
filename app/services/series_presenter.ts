@@ -3,6 +3,7 @@ import type ContentType from '#models/content_type'
 import type Chapter from '#models/chapter'
 import type { VideoSourceKind } from '#config/watch'
 import type { AccessLevel, ContentFormat } from '#config/site'
+import { coverView } from '#services/cover_policy_service'
 
 export interface Person {
   name: string
@@ -30,6 +31,8 @@ export interface SeriesInfo {
   keywords: string[]
   coverImage: string
   bannerImage: string | null
+  /** Hidden cover for this visitor (cover_policy_service): blurred or the default image. */
+  coverVeil: 'blur' | 'placeholder' | null
   featured: boolean
   featuredDescription: string | null
   /** Only staff ever receive drafts (previews); lists leave them out. */
@@ -98,8 +101,7 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
     translationStatus: s.translationStatus,
     publicationYear: s.publicationYear,
     ageRating: s.ageRating,
-    coverImage: s.coverImage?.startsWith('/') ? s.coverImage : '/images/no-cover.svg',
-    bannerImage: s.bannerImage,
+    ...coverView(s),
     featured: s.featured,
     featuredDescription: s.featuredDescription,
     draft: Boolean(s.draft),

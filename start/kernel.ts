@@ -24,8 +24,11 @@ server.errorHandler(() => import('#exceptions/handler'))
  */
 server.use([
   () => import('#middleware/container_bindings_middleware'),
-  () => import('@adonisjs/static/static_middleware'),
+  () => import('#middleware/compress_middleware'),
+  // Before the static files: /content may live inside public/ and must still get its own
+  // headers, access rules and resized variants (media_service).
   () => import('#middleware/content_middleware'),
+  () => import('@adonisjs/static/static_middleware'),
   () => import('@adonisjs/vite/vite_middleware'),
 ])
 

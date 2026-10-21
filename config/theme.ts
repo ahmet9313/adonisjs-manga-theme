@@ -155,8 +155,6 @@ export const colorTokens: ColorToken[] = [
   token('badge_age7', '7+', 'badges', '--t-badge-age7', '#2563eb', '#2563eb'),
 ]
 
-export const colorKeys = colorTokens.map((item) => item.key)
-
 /** Colours whose change is marked on <html> (`data-accent`, `data-accent2`). */
 export const derivedAccents: Record<string, string> = {
   accent: 'data-accent',

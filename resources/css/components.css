@@ -46,8 +46,7 @@
     color: var(--t-muted);
   }
 
-  .t-overline,
-  .section-title {
+  .t-overline {
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -78,21 +77,6 @@
   }
 
   /* Long-form text (descriptions, novel chapters, reviews). */
-  .prose-ink {
-    color: var(--t-text);
-    line-height: 1.75;
-  }
-
-  .prose-ink p + p {
-    margin-top: 0.85em;
-  }
-
-  .prose-ink a {
-    color: var(--t-accent-text);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
   /* ---- Buttons --------------------------------------------------------------------------- */
   .btn {
     --btn-h: 2.5rem;
@@ -309,19 +293,6 @@
     border-radius: var(--radius-card);
     background: var(--t-surface);
   }
-
-  .card--hover {
-    transition:
-      border-color var(--dur-1),
-      box-shadow var(--dur-1),
-      transform var(--dur-1);
-  }
-
-  .card--hover:hover {
-    border-color: var(--t-border-strong);
-    box-shadow: var(--t-shadow-2);
-  }
-
   .inset {
     border-radius: var(--radius-control);
     background: var(--t-surface-2);
@@ -472,9 +443,8 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Filter and metadata chips; `.pill` and `.pill-active` are toggled by older scripts. */
+  /* Filter and metadata chips. */
   .chip,
-  .pill,
   .link-chip {
     display: inline-flex;
     flex-shrink: 0;
@@ -503,7 +473,6 @@
   }
 
   .chip:hover,
-  .pill:hover,
   .link-chip:hover {
     border-color: var(--t-border-strong);
     background: var(--t-hover);
@@ -513,9 +482,7 @@
   .chip[aria-pressed='true'],
   .chip[aria-selected='true'],
   .chip[aria-current='page'],
-  .chip--active,
-  .pill-active,
-  .pill-active:hover {
+  .chip--active {
     border-color: var(--t-accent-line);
     background: var(--t-accent-soft);
     color: var(--t-accent-text);
@@ -1684,24 +1651,6 @@
     justify-content: space-between;
     gap: 0.25rem;
   }
-
-  .series-card__ribbon {
-    pointer-events: none;
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 0.25rem;
-    background: linear-gradient(to top, rgb(0 0 0 / 0.78), transparent);
-    padding: 1.75rem 0.5rem 0.5rem;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    color: #fff;
-  }
-
   .series-card__body {
     display: flex;
     min-width: 0;
@@ -1941,6 +1890,69 @@
 
   .tag > button:hover {
     background: color-mix(in oklab, var(--t-accent) 25%, transparent);
+  }
+
+  /* ---- Hidden covers (cover_policy_service, components/series/veil) --------------------- */
+  /* Blurred and slightly zoomed so the edges stay covered; the icon sits on a dark scrim, so
+     it is a fixed white like other text over images. */
+  img[data-veil='blur'] {
+    filter: blur(18px) saturate(0.7) brightness(0.85);
+    transform: scale(1.15);
+    transition:
+      filter var(--dur-2),
+      transform var(--dur-2);
+  }
+
+  .home-hero__cover,
+  .discover-row__cover {
+    position: relative;
+  }
+
+  .cover-veil {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.5rem;
+    background: rgb(0 0 0 / 0.18);
+    text-align: center;
+    color: #fff;
+    pointer-events: none;
+  }
+
+  /* The eye-off mark: large and on a round scrim so it reads on any cover. */
+  .cover-veil__icon {
+    box-sizing: content-box;
+    height: 3rem;
+    width: 3rem;
+    border-radius: 9999px;
+    background: rgb(0 0 0 / 0.45);
+    padding: 0.75rem;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.5));
+  }
+
+  .series-hero__cover .cover-veil__icon {
+    height: 4rem;
+    width: 4rem;
+    padding: 1rem;
+  }
+
+  .series-card--row .cover-veil__icon,
+  .discover-row__cover .cover-veil__icon {
+    height: 1.5rem;
+    width: 1.5rem;
+    padding: 0.375rem;
+  }
+
+  .cover-veil--action {
+    pointer-events: auto;
+  }
+
+  .cover-veil--action > .btn {
+    margin-top: 0.25rem;
   }
 }
 

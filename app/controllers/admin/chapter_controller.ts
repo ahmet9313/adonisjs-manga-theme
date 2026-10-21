@@ -1,10 +1,17 @@
 import { now, pageNumber, pageSize } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
+import logger from '@adonisjs/core/services/logger'
 import notifications from '#services/notification_service'
 import Chapter from '#models/chapter'
 import SeriesModel from '#models/series'
 import { chapterValidator } from '#validators/admin'
-import { chapterContent, invalidField } from '#services/upload_service'
+import {
+  chapterContent,
+  invalidField,
+  pageImages,
+  removeContentFiles,
+} from '#services/upload_service'
+import { localDay } from '#services/level'
 import db from '@adonisjs/lucid/services/db'
 import watch from '#config/watch'
 import {
@@ -125,38 +132,59 @@ export default class ChapterAdminController {
     const draft = data.draft === 'on'
     // A chapter leaving draft is published now: it gets today's date and its announcement.
     const published = !draft && (!chapter.$isPersisted || chapter.draft)
-    await db.transaction(async (trx) => {
-      chapter.useTransaction(trx)
-      chapter.merge({
-        seriesId: series.id,
-        number: data.number,
-        title: data.title || null,
-        content: chapterBody,
-        draft,
-        access: data.access ?? 'public',
-        warning: data.warning || null,
-        publishedAt:
-          published && chapter.$isPersisted
-            ? timestamp.slice(0, 10)
-            : chapter.publishedAt || timestamp.slice(0, 10),
-        createdAt: chapter.createdAt || timestamp,
-        updatedAt: timestamp,
+    const before = new Set(pageImages(previous))
+    const added = pageImages(chapterBody).filter((page) => !before.has(page))
+    const today = localDay()
+    try {
+      await db.transaction(async (trx) => {
+        chapter.useTransaction(trx)
+        chapter.merge({
+          seriesId: series.id,
+          number: data.number,
+          title: data.title || null,
+          content: chapterBody,
+          draft,
+          access: data.access ?? 'public',
+          warning: data.warning || null,
+          // The site's calendar day (config/site.ts timezone), not the UTC one.
+          publishedAt: published && chapter.$isPersisted ? today : chapter.publishedAt || today,
+          createdAt: chapter.createdAt || timestamp,
+          updatedAt: timestamp,
+        })
+        await chapter.save()
+        // Drafts do not move the series up in "Son Güncellenenler".
+        if (!draft)
+          await SeriesModel.query({ client: trx })
+            .whereIn('id', [...new Set([series.id, oldSeriesId].filter(Boolean))])
+            .update({ updatedAt: timestamp })
       })
-      await chapter.save()
-      // Drafts do not move the series up in "Son Güncellenenler".
-      if (!draft)
-        await SeriesModel.query({ client: trx })
-          .whereIn('id', [...new Set([series.id, oldSeriesId].filter(Boolean))])
-          .update({ updatedAt: timestamp })
-    })
-    // Uploaded videos dropped from the episode are deleted once the new sources are stored.
+    } catch (error) {
+      // Pages written for this save are not kept when the save itself fails.
+      await removeContentFiles(added)
+      throw error
+    }
+    // Pages and uploaded videos dropped from the chapter are deleted once the new body is stored.
+    const keptPages = new Set(pageImages(chapterBody))
+    await removeContentFiles(pageImages(previous).filter((page) => !keptPages.has(page)))
     const kept = new Set(localVideoPaths(chapterBody))
     await removeUnusedVideos(localVideoPaths(previous).filter((path) => !kept.has(path)))
     return { chapter, published }
   }
 
-  /** Tells every reader who saved the series that a new chapter is out. */
+  /**
+   * Tells every reader who saved the series that a new chapter is out. The chapter is already
+   * saved, so a failure here is logged instead of answering the editor with an error page (a
+   * retry would only hit "bu numara zaten var").
+   */
   private async announce(chapter: Chapter) {
+    try {
+      await this.notifyReaders(chapter)
+    } catch (error) {
+      logger.error({ err: error, chapterId: chapter.id }, 'Yeni bölüm bildirimi gönderilemedi')
+    }
+  }
+
+  private async notifyReaders(chapter: Chapter) {
     const series = await SeriesModel.query()
       .where('id', chapter.seriesId)
       .preload('contentType')
@@ -210,8 +238,14 @@ export default class ChapterAdminController {
   async destroy({ params, session, response }: HttpContext) {
     const chapter = await Chapter.findOrFail(params.id)
     const videos = localVideoPaths(chapter.content)
+    const images = await db
+      .from('comments')
+      .where('chapter_id', chapter.id)
+      .whereNotNull('image')
+      .select('image')
     await chapter.delete()
     await removeUnusedVideos(videos)
+    await removeContentFiles([...pageImages(chapter.content), ...images.map((row) => row.image)])
     session.flash('success', 'Bölüm silindi')
     return response.redirect('/admin/bolumler')
   }

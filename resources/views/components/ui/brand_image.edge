@@ -3,8 +3,8 @@
   brand_image.js): click or drop a file to upload it to /admin/tema/gorsel; the returned address
   is written into the field `target` (which stays editable for links). Shows the current image,
   upload progress, errors and a "Kaldır" button.
-  Props: target (input id), kind logo|logo_mobile|favicon|background, label (accessible name),
-         shape wide|square|banner (wide), accept (extensions), max (bytes).
+  Props: target (input id), kind logo|logo_mobile|favicon|background|cover_placeholder, label,
+         shape wide|square|banner|cover (wide), accept (extensions), max (bytes).
     @!component('components/ui/brand_image', { target: 'f-logo_url', kind: 'logo', label: 'Logo yükle' })
 --}}
 @let(accept = $props.get('accept', ['png', 'jpg', 'jpeg', 'webp', 'gif']))

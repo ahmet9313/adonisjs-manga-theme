@@ -6,7 +6,7 @@ import SeriesModel from '#models/series'
 import comments, { type CommentSort } from '#services/comment_service'
 import { pageNumber } from '#services/input_service'
 import { removeContentFile, saveImage } from '#services/upload_service'
-import { recordAttempt, tooManyAttempts } from '#services/throttle'
+import { refundAttempt, takeAttempt } from '#services/throttle'
 import cosmetics from '#services/cosmetic_service'
 import access from '#services/access_service'
 import type User from '#models/user'
@@ -74,36 +74,41 @@ export default class CommentController {
 
   async store({ request, auth, response }: HttpContext) {
     const user = auth.user!
-    const key = `comment:${user.id}`
-    if (tooManyAttempts(key, 6))
-      return response.tooManyRequests({
-        error: 'Çok hızlı yorum yapıyorsun. Biraz bekleyip tekrar dene.',
-      })
-
     const data = await request.validateUsing(commentValidator)
     const body = data.body ?? ''
     const file = request.file('image', commentImageRules)
     if (!body && !file && !data.sticker_id)
       return response.unprocessableEntity({ error: 'Bir şey yaz, görsel ya da çıkartma ekle.' })
+    // Counted at once (not after the image is saved), so parallel posts cannot slip through;
+    // a post refused further down gives its attempt back.
+    const key = `comment:${user.id}`
+    if (!takeAttempt(key, 6, 60 * 1000))
+      return response.tooManyRequests({
+        error: 'Çok hızlı yorum yapıyorsun. Biraz bekleyip tekrar dene.',
+      })
+    const refuse = <T>(answer: T) => {
+      refundAttempt(key)
+      return answer
+    }
     const sticker = data.sticker_id ? await cosmetics.usableSticker(user, data.sticker_id) : null
     if (data.sticker_id && !sticker)
-      return response.unprocessableEntity({ error: 'Bu çıkartma henüz açılmadı.' })
+      return refuse(response.unprocessableEntity({ error: 'Bu çıkartma henüz açılmadı.' }))
 
     const series = await SeriesModel.query()
       .where('id', data.series_id)
       .preload('contentType')
       .first()
-    if (!series) return response.notFound({ error: 'Seri bulunamadı' })
+    if (!series) return refuse(response.notFound({ error: 'Seri bulunamadı' }))
     const chapterId = data.chapter_id ?? null
     if (!(await threadOpen(user, series.id, chapterId)))
-      return response.forbidden({ error: 'Bu içeriğe yorum yazamazsın.' })
+      return refuse(response.forbidden({ error: 'Bu içeriğe yorum yazamazsın.' }))
     let link = `/series/${series.contentType.slug}/${series.slug}`
     if (chapterId) {
       const chapter = await Chapter.query()
         .where('id', chapterId)
         .where('seriesId', series.id)
         .first()
-      if (!chapter) return response.notFound({ error: 'Bölüm bulunamadı' })
+      if (!chapter) return refuse(response.notFound({ error: 'Bölüm bulunamadı' }))
       link += `/${chapter.number}`
     }
     let parent: Comment | null = null
@@ -115,18 +120,19 @@ export default class CommentController {
         parent.seriesId !== series.id ||
         parent.chapterId !== chapterId
       )
-        return response.unprocessableEntity({ error: 'Yanıtlanan yorum bulunamadı.' })
+        return refuse(response.unprocessableEntity({ error: 'Yanıtlanan yorum bulunamadı.' }))
     }
 
     let image: string | null = null
     if (file) {
       if (!file.isValid)
-        return response.unprocessableEntity({
-          error: 'Görsel JPG, PNG, WebP veya GIF olmalı ve 8 MB sınırını aşmamalı.',
-        })
+        return refuse(
+          response.unprocessableEntity({
+            error: 'Görsel JPG, PNG, WebP veya GIF olmalı ve 8 MB sınırını aşmamalı.',
+          })
+        )
       image = await saveImage(file, ['comments'])
     }
-    recordAttempt(key, 60 * 1000)
     try {
       const comment = await comments.create(
         user,
@@ -147,19 +153,19 @@ export default class CommentController {
     }
   }
 
-  /** Legacy like endpoint: toggles an up-vote. */
-  async like(ctx: HttpContext) {
-    return this.castVote(ctx, 1)
-  }
-
   async vote(ctx: HttpContext) {
     return this.castVote(ctx, Number(ctx.request.input('value')) < 0 ? -1 : 1)
   }
 
   private async castVote({ params, auth, response }: HttpContext, value: 1 | -1) {
+    const user = auth.user!
+    if (!takeAttempt(`comment-vote:${user.id}`, 30, 60 * 1000))
+      return response.tooManyRequests({ error: 'Biraz yavaşla.' })
     const comment = await Comment.find(params.id)
     if (!comment || comment.deletedAt) return response.notFound({ error: 'Yorum bulunamadı' })
-    return comments.vote(auth.user!, comment, value)
+    if (!(await threadOpen(user, comment.seriesId, comment.chapterId)))
+      return response.forbidden({ error: 'Bu içeriğin yorumlarına oy veremezsin.' })
+    return comments.vote(user, comment, value)
   }
 
   async destroy({ params, auth, response }: HttpContext) {

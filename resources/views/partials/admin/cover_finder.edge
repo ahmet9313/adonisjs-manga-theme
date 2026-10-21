@@ -1,0 +1,231 @@
+{{--
+  "Otomatik doldur" in the series form (Alpine `coverFinder`, cover_finder.js). Opened from the
+  image panel and from the "Temel bilgiler" panel (`open-cover-finder` window event).
+  Step 1 searches AniList, MyAnimeList, Kitsu and IMDb (video series) with the form's title,
+  alternative titles, content type and year (GET /admin/seriler/kapak-ara) and lists covers and
+  banners, best first. Step 2 reads the chosen work (GET /admin/seriler/kapak-bilgi) and lists the
+  fields it would fill, one checkbox each; missing authors/artists are added on apply
+  (POST /admin/seriler/kapak-kayit). Images come through GET /admin/seriler/kapak-gorsel.
+  Nothing is stored until the series is saved. Props: isNew (create form).
+--}}
+<div class="cover-finder" x-data="coverFinder" @open-cover-finder.window="show()"
+     data-search="/admin/seriler/kapak-ara" data-image="/admin/seriler/kapak-gorsel"
+     data-details="/admin/seriler/kapak-bilgi" data-record="/admin/seriler/kapak-kayit"
+     data-new="{{ isNew ? 'true' : 'false' }}">
+  <div class="cover-finder__bar">
+    @component('components/ui/button', { icon: 'sparkles', '@click': 'show()', 'aria-haspopup': 'dialog' })
+      İnternetten bul
+    @end
+    <p class="cover-finder__hint">AniList, MyAnimeList ve Kitsu'da (anime için IMDb'de de) kapak, banner ve seri bilgilerini arar.</p>
+  </div>
+
+  @component('components/ui/modal', { id: 'cover-finder', title: 'Otomatik doldur', size: 'xl', close: 'close()' })
+    @slot('main')
+      {{-- Step 1: search and pick --}}
+      <div x-show="step === 'pick'">
+        <form class="cover-finder__form" @submit.prevent="search()" role="search">
+          <label for="cover-finder-q" class="sr-only">Aranacak başlık</label>
+          <span class="control control--icon cover-finder__query">
+            @!component('components/icon', { name: 'search' })
+            <input id="cover-finder-q" type="search" x-model="query" maxlength="120" autocomplete="off" spellcheck="false" placeholder="Seri adı (İngilizce veya orijinal ad daha iyi sonuç verir)">
+          </span>
+          @component('components/ui/button', { type: 'submit', variant: 'primary', ':disabled': 'loading || !query.trim()' })
+            Ara
+          @end
+        </form>
+        <p class="cover-finder__context" x-show="context" x-text="context" x-cloak></p>
+
+        <div class="cover-finder__toolbar" x-show="searched && !error" x-cloak>
+          <div class="segmented" role="group" aria-label="Görsel türü">
+            <button type="button" :aria-pressed="String(tab === 'cover')" @click="setTab('cover')">Kapak <span x-text="'(' + results.covers.length + ')'"></span></button>
+            <button type="button" :aria-pressed="String(tab === 'banner')" @click="setTab('banner')">Banner <span x-text="'(' + results.banners.length + ')'"></span></button>
+          </div>
+          <p class="cover-finder__sources" x-text="sourcesNote"></p>
+        </div>
+
+        <p class="sr-only" role="status" aria-live="polite" x-text="announcement"></p>
+
+        {{-- Loading: placeholder cards in the size of the results. --}}
+        <ul class="cover-grid" x-show="loading" x-cloak aria-hidden="true">
+          <template x-for="n in 10" :key="n">
+            <li class="cover-option cover-option--skeleton"><span class="skeleton"></span></li>
+          </template>
+        </ul>
+
+        <div x-show="error && !loading" x-cloak>
+          @component('components/ui/alert', { tone: 'danger', title: 'Arama yapılamadı' })
+            <p x-text="error"></p>
+          @end
+        </div>
+
+        <div x-show="searched && !loading && !error && !items.length" x-cloak>
+          @component('components/ui/empty_state', { icon: 'photo', title: 'Eşleşen sonuç bulunamadı', description: 'Serinin İngilizce, romaji ya da orijinal adını deneyin; Alternatif başlıklar alanındaki adlar da aranır.' })
+          @end
+        </div>
+
+        <ul class="cover-grid" :class="{ 'cover-grid--wide': tab === 'banner' }" x-show="!loading && items.length" x-cloak aria-label="Bulunan görseller">
+          <template x-for="(item, index) in items" :key="item.id">
+            <li>
+              <button type="button" class="cover-option" :aria-pressed="String(selectedId === item.id)" @click="select(item)" @dblclick="select(item); loadDetails()"
+                      :aria-label="item.title + ', ' + item.sourceLabel + ', ' + item.detail">
+                <span class="cover-option__art">
+                  <img :src="thumbUrl(item)" alt="" loading="lazy" decoding="async" @error="thumbFailed($event, item)">
+                  <span class="badge badge--sm badge--solid cover-option__best" data-tone="success" x-show="index === 0">Önerilen</span>
+                  <span class="cover-option__check" aria-hidden="true">
+                    @!component('components/icon', { name: 'check', stroke: 2.6 })
+                  </span>
+                </span>
+                <span class="cover-option__body">
+                  <span class="cover-option__title" x-text="item.title"></span>
+                  <span class="cover-option__detail" x-text="item.detail"></span>
+                  <span class="cover-option__source">
+                    <span x-text="item.sourceLabel"></span>
+                    <span x-show="item.width && item.height" x-text="item.width + '×' + item.height"></span>
+                  </span>
+                </span>
+              </button>
+            </li>
+          </template>
+        </ul>
+      </div>
+
+      {{-- Step 2: what the chosen work fills in --}}
+      <div x-show="step === 'review'" x-cloak>
+        <template x-if="details">
+          <div class="autofill">
+            <div class="autofill__head" id="cover-finder-review" tabindex="-1">
+              <img :src="coverUrl ? proxied(coverUrl) : '/images/no-cover.svg'" alt="" class="autofill__cover" width="96" height="136">
+              <div class="min-w-0">
+                <p class="autofill__title" x-text="details.title"></p>
+                <p class="autofill__meta" x-text="[details.sourceLabel, details.year, details.contentType ? details.contentType.name : ''].filter(Boolean).join(' · ')"></p>
+                <a class="link text-sm" :href="details.link" target="_blank" rel="noopener noreferrer">Kaynakta aç</a>
+                <p class="autofill__note">İşaretli alanlar forma yazılır. Formda dolu olan alanların işareti kapalı gelir; açarsanız üzerine yazılır.</p>
+              </div>
+            </div>
+
+            <ul class="autofill__list">
+              <li class="autofill__row" x-show="coverUrl">
+                <label class="check"><input type="checkbox" x-model="fill.cover"><span>Kapak</span></label>
+                <span class="autofill__value" x-text="selected && selected.kind === 'cover' ? selected.sourceLabel + ' · seçtiğiniz görsel' : details.sourceLabel + ' kapağı'"></span>
+              </li>
+              <li class="autofill__row" x-show="bannerUrl">
+                <label class="check"><input type="checkbox" x-model="fill.banner"><span>Banner</span></label>
+                <span class="autofill__value">
+                  <img :src="bannerUrl ? proxied(bannerUrl) : null" alt="" class="autofill__banner" loading="lazy">
+                </span>
+              </li>
+              <li class="autofill__row" x-show="details.title">
+                <label class="check"><input type="checkbox" x-model="fill.title"><span>Başlık</span></label>
+                <span class="autofill__value">
+                  <span x-text="details.title"></span>
+                  <span class="autofill__was" x-show="currentOf('#f-title')" x-text="'Formda: ' + currentOf('#f-title')"></span>
+                </span>
+              </li>
+              <li class="autofill__row" x-show="newAlternatives.length">
+                <label class="check"><input type="checkbox" x-model="fill.alternatives"><span>Alternatif başlıklar</span></label>
+                <span class="autofill__value autofill__chips">
+                  <template x-for="title in newAlternatives" :key="title">
+                    <span class="chip" x-text="'+ ' + title"></span>
+                  </template>
+                </span>
+              </li>
+              <li class="autofill__row" x-show="details.description">
+                <label class="check"><input type="checkbox" x-model="fill.description"><span>Açıklama</span></label>
+                <span class="autofill__value">
+                  <span class="autofill__text" x-text="details.description"></span>
+                  <span class="autofill__was">Kaynaklar İngilizce yazar; kaydetmeden önce Türkçeye çevirmeyi unutmayın.</span>
+                </span>
+              </li>
+              <li class="autofill__row" x-show="details.contentType">
+                <label class="check"><input type="checkbox" x-model="fill.contentType"><span>İçerik türü</span></label>
+                <span class="autofill__value">
+                  <span x-text="details.contentType ? details.contentType.name : ''"></span>
+                  <span class="autofill__was" x-show="currentOf('#f-content_type_id')" x-text="'Formda: ' + currentOf('#f-content_type_id')"></span>
+                </span>
+              </li>
+              <li class="autofill__row" x-show="details.year">
+                <label class="check"><input type="checkbox" x-model="fill.year"><span>Yayın yılı</span></label>
+                <span class="autofill__value">
+                  <span x-text="details.year"></span>
+                  <span class="autofill__was" x-show="currentOf('#f-publication_year')" x-text="'Formda: ' + currentOf('#f-publication_year')"></span>
+                </span>
+              </li>
+              <li class="autofill__row" x-show="details.status">
+                <label class="check"><input type="checkbox" x-model="fill.status"><span>Yayın durumu</span></label>
+                <span class="autofill__value">
+                  <span x-text="details.status"></span>
+                  <span class="autofill__was" x-show="currentOf('#f-status')" x-text="'Formda: ' + currentOf('#f-status')"></span>
+                </span>
+              </li>
+              <li class="autofill__row" x-show="details.ageRating">
+                <label class="check"><input type="checkbox" x-model="fill.ageRating"><span>Yaş sınırı</span></label>
+                <span class="autofill__value">
+                  <span x-text="details.ageRating"></span>
+                  <span class="autofill__was" x-show="currentOf('#f-age_rating')" x-text="'Formda: ' + currentOf('#f-age_rating')"></span>
+                </span>
+              </li>
+              <li class="autofill__row" x-show="details.genres.matched.length || details.genres.unmatched.length">
+                <label class="check"><input type="checkbox" x-model="fill.genres" :disabled="!details.genres.matched.length"><span>Türler</span></label>
+                <span class="autofill__value">
+                  <span class="autofill__chips">
+                    <template x-for="genre in details.genres.matched" :key="genre.id">
+                      <span class="chip" :title="genre.from" x-text="genre.name"></span>
+                    </template>
+                  </span>
+                  <template x-if="details.genres.unmatched.length">
+                    <span class="autofill__extra">
+                      <span class="autofill__was">Sitede olmayan türler (eklemek için seçin):</span>
+                      <span class="autofill__chips">
+                        <template x-for="name in details.genres.unmatched" :key="name">
+                          <button type="button" class="chip" :class="{ 'chip--active': newGenres.includes(name) }" :aria-pressed="String(newGenres.includes(name))" @click="toggleGenre(name)" x-text="(newGenres.includes(name) ? '✓ ' : '+ ') + name"></button>
+                        </template>
+                      </span>
+                    </span>
+                  </template>
+                </span>
+              </li>
+              <template x-for="role in [{ key: 'authors', label: 'Yazarlar' }, { key: 'artists', label: 'Çizerler' }]" :key="role.key">
+                <li class="autofill__row" x-show="details[role.key].length">
+                  <label class="check"><input type="checkbox" x-model="fill[role.key]"><span x-text="role.label"></span></label>
+                  <span class="autofill__value autofill__chips">
+                    <template x-for="person in details[role.key]" :key="person.name">
+                      <span class="chip">
+                        <span x-text="person.name"></span>
+                        <span class="badge badge--sm" data-tone="accent" x-show="!person.id">yeni</span>
+                      </span>
+                    </template>
+                  </span>
+                </li>
+              </template>
+            </ul>
+            <p class="autofill__note" x-show="details.authors.some((p) => !p.id) || details.artists.some((p) => !p.id)">“yeni” işaretli kişiler Yazarlar/Çizerler sözlüğüne eklenir.</p>
+          </div>
+        </template>
+      </div>
+    @end
+
+    @slot('footer')
+      <p class="cover-finder__picked" x-show="step === 'pick' && selected" x-cloak>
+        <span class="truncate" x-text="selected ? selected.title + ' · ' + selected.sourceLabel : ''"></span>
+        <a class="link shrink-0" :href="selected ? selected.link : '#'" target="_blank" rel="noopener noreferrer">Kaynakta aç</a>
+      </p>
+      <p class="field__error cover-finder__error" x-show="applyError || detailsError" x-text="applyError || detailsError" x-cloak role="alert"></p>
+      <div class="cover-finder__actions" x-show="step === 'pick'">
+        @component('components/ui/button', { variant: 'ghost', '@click': 'applyImage()', ':disabled': '!selected || applying' })
+          <span x-text="tab === 'banner' ? 'Yalnız banner' : 'Yalnız kapak'">Yalnız kapak</span>
+        @end
+        @component('components/ui/button', { variant: 'primary', icon: 'sparkles', '@click': 'loadDetails()', ':disabled': '!selected || detailsLoading' })
+          <span x-text="detailsLoading ? 'Bilgiler getiriliyor…' : 'Bilgileri de getir'">Bilgileri de getir</span>
+        @end
+      </div>
+      <div class="cover-finder__actions" x-show="step === 'review'" x-cloak>
+        @component('components/ui/button', { variant: 'ghost', icon: 'arrow-left', '@click': 'back()' })
+          Sonuçlara dön
+        @end
+        @component('components/ui/button', { variant: 'primary', icon: 'check', '@click': 'applyAll()', ':disabled': 'applying' })
+          <span x-text="applying ? 'Dolduruluyor…' : 'Forma uygula'">Forma uygula</span>
+        @end
+      </div>
+    @end
+  @end
+</div>

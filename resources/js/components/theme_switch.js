@@ -31,21 +31,3 @@ export function registerScheme(Alpine) {
     },
   })
 }
-
-/** Optional component wrapper for a single switch: `x-data="themeSwitch"`. */
-function themeSwitch() {
-  return {
-    get scheme() {
-      return this.$store.scheme.value
-    },
-    set(value) {
-      this.$store.scheme.set(value)
-    },
-    is(value) {
-      return this.$store.scheme.value === value
-    },
-  }
-}
-
-/** Alpine components of this module, registered by resources/js/app.js. */
-export const components = { themeSwitch }

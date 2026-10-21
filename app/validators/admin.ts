@@ -1,4 +1,4 @@
-import site, { accessLevelKeys } from '#config/site'
+import site, { accessLevelKeys, seriesCoverModeKeys } from '#config/site'
 import vine from '@vinejs/vine'
 
 const relationIds = () =>
@@ -18,6 +18,7 @@ export const seriesValidator = vine.compile(
     featured_description: vine.string().maxLength(5000).optional(),
     draft: vine.enum(['on']).optional(),
     access: vine.enum(accessLevelKeys).optional(),
+    cover_mode: vine.enum(seriesCoverModeKeys).optional(),
     keywords: vine.string().maxLength(5000).optional(),
     genres: relationIds(),
     authors: relationIds(),

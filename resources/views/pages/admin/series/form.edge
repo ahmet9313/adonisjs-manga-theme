@@ -3,7 +3,9 @@
   images, showcase and (edit) summary and deletion on the right; a sticky save bar at the end.
   Posted fields are unchanged: title, description, content_type_id, status, translation_status,
   publication_year, age_rating, alternative_titles and keywords (comma separated), featured
-  ('on'), featured_description, genres[], authors[], artists[], cover_image, banner_image.
+  ('on'), featured_description, draft, access, cover_mode, genres[], authors[], artists[], cover_image,
+  banner_image.
+  "Otomatik doldur" (partials/admin/cover_finder) fills these fields, cover_image and banner_image.
 --}}
 @let(isEdit = Boolean(series))
 @let(failed = flashMessages.has('inputErrorsBag'))
@@ -56,10 +58,17 @@
       <div class="admin-form admin-form--split">
         <div class="admin-form__col">
           @component('components/ui/panel', { title: 'Temel bilgiler', id: 'basics' })
+            @slot('actions')
+              @component('components/ui/button', { size: 'sm', icon: 'sparkles', '@click': "$dispatch('open-cover-finder')", 'aria-haspopup': 'dialog' })
+                Otomatik doldur
+              @end
+            @end
+            @slot('main')
             <div class="admin-fields">
               @!component('components/ui/field', { name: 'title', label: 'Başlık', required: true, value: isEdit ? series.title : '', maxlength: 255, autocomplete: 'off', hint: isEdit ? 'Başlık değişse de seri adresi aynı kalır.' : 'Adres (slug) başlıktan oluşturulur, sonradan değişmez.' })
-              @!component('components/ui/field', { name: 'description', label: 'Açıklama', type: 'textarea', rows: 7, required: true, value: isEdit ? series.description : '', hint: 'Seri sayfasında ve arama sonuçlarında görünen özet.' })
+              @!component('components/ui/field', { name: 'description', label: 'Açıklama', type: 'textarea', rows: 7, required: true, value: isEdit ? series.description : '', hint: 'Seri sayfasında ve arama sonuçlarında görünen özet. “Otomatik doldur” AniList, MyAnimeList veya Kitsu’dan açıklama, türler, kişiler ve görsellerle formu doldurur.' })
             </div>
+            @end
           @end
 
           @component('components/ui/panel', { title: 'Yayın bilgileri', id: 'publication' })
@@ -94,11 +103,13 @@
               @!component('components/ui/dropzone', { name: 'cover_image', label: 'Kapak', aspect: 'cover', current: isEdit && series.coverImage !== noCover ? series.coverImage : '', hint: isEdit ? 'Yeni görsel seçmezseniz mevcut kapak kalır.' : 'Kapak seçilmezse varsayılan görsel kullanılır. Önerilen oran 3:4.' })
               @!component('components/ui/dropzone', { name: 'banner_image', label: 'Banner', aspect: 'banner', current: isEdit ? (series.bannerImage || '') : '', hint: 'Seri sayfasının üstünde geniş görsel. Önerilen oran 3:1.' })
             </div>
+            @!component('partials/admin/cover_finder', { isNew: !isEdit })
           @end
 
           @component('components/ui/panel', { title: 'Yayın ve erişim', id: 'access', description: 'Taslaklar yalnız yönetimde görünür. Erişim, bölümleri kimin açabileceğini belirler; yaş uyarısı Yaş sınırı ve Tema → Yaş ve Erişim ayarından gelir.' })
             <div class="admin-fields">
               @!component('components/ui/field', { name: 'draft', label: 'Taslak (yayınlama)', type: 'toggle', value: failed ? flashMessages.has('draft') : (isEdit && series.draft), hint: 'Açıkken seri katalogda, aramada ve ana sayfada görünmez; adresi yalnız yönetici ve editörler açabilir.' })
+              @!component('components/ui/field', { name: 'cover_mode', label: 'Kapak görünümü', type: 'select', value: isEdit ? (series.coverMode || 'auto') : 'auto', options: [{ value: 'auto', label: 'Yaş sınırına göre (Tema → Yaş ve Erişim)' }].concat(Object.entries(site.coverModes).map(([value, mode]) => ({ value, label: mode.label }))), hint: 'Hassas kapaklar listelerde, aramada ve seri sayfasında bulanık ya da varsayılan görselle gösterilir. Asıl kapağı kimlerin göreceği Tema → Yaş ve Erişim → “Gizli kapakları kimler açık görsün?” ayarından gelir.' })
               @!component('components/ui/field', { name: 'access', label: 'Erişim', type: 'select', value: isEdit ? series.access : 'public', options: Object.entries(site.accessLevels).map(([value, level]) => ({ value, label: level.label })), hint: 'Seri sayfası herkese görünür; kilitli bölümler kilit simgesiyle listelenir ve açılırken giriş ya da VIP rolü istenir.' })
             </div>
           @end

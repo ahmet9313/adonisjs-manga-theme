@@ -9,9 +9,20 @@
 @let(saved = Boolean(reading && reading.bookmarked))
 <section class="series-hero" aria-labelledby="series-title">
   <div class="series-hero__grid">
-    <div class="series-hero__cover">
-      <img src="{{ series.coverImage }}" alt="{{ series.title }} kapak görseli" width="460" height="644" decoding="async" fetchpriority="high" data-fallback="/images/no-cover.svg">
+    @if(series.coverVeil === 'blur')
+    {{-- Blurred cover (cover_policy_service): "Göster" uncovers it on this page only. --}}
+    <div class="series-hero__cover" x-data="{ shown: false }">
+      <img src="{{ thumbOf(series.coverImage, 640) }}" srcset="{{ srcsetOf(series.coverImage, [320, 640]) || null }}" sizes="(min-width: 1024px) 240px, 150px" alt="{{ series.title }} kapak görseli" width="460" height="644" decoding="async" fetchpriority="high" data-fallback="/images/no-cover.svg" data-veil="blur" :data-veil="shown ? null : 'blur'">
+      <div class="cover-veil cover-veil--action" x-show="!shown">
+        @!component('components/icon', { name: 'eye-off', stroke: 1.8, class: 'cover-veil__icon' })
+        <button type="button" class="btn btn--sm btn--secondary" @click="shown = true">Kapağı göster</button>
+      </div>
     </div>
+    @else
+    <div class="series-hero__cover">
+      <img src="{{ thumbOf(series.coverImage, 640) }}" srcset="{{ srcsetOf(series.coverImage, [320, 640]) || null }}" sizes="(min-width: 1024px) 240px, 150px" alt="{{ series.title }} kapak görseli" width="460" height="644" decoding="async" fetchpriority="high" data-fallback="/images/no-cover.svg">
+    </div>
+    @end
 
     <div class="series-hero__titles">
       <h1 id="series-title" class="series-hero__title">{{ series.title }}</h1>
@@ -107,7 +118,7 @@
 
         <button type="button" class="btn btn--secondary btn--lg"
           x-data="bookmarkButton"
-          data-bookmark="{{ JSON.stringify({ type: series.type, slug: series.slug, title: series.title, coverImage: series.coverImage }) }}"
+          data-bookmark="{{ JSON.stringify({ type: series.type, slug: series.slug, title: series.title, coverImage: series.coverImage, coverVeil: series.coverVeil }) }}"
           data-saved="{{ saved ? 'true' : 'false' }}"
           aria-pressed="{{ saved ? 'true' : 'false' }}"
           @click="toggle()" :aria-pressed="saved.toString()" :aria-busy="busy.toString()">

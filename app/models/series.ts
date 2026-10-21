@@ -5,7 +5,7 @@ import Genre from '#models/genre'
 import Author from '#models/author'
 import Artist from '#models/artist'
 import Chapter from '#models/chapter'
-import type { AccessLevel } from '#config/site'
+import type { AccessLevel, SeriesCoverMode } from '#config/site'
 
 export default class Series extends BaseModel {
   @column({ isPrimary: true })
@@ -63,6 +63,10 @@ export default class Series extends BaseModel {
   /** Who may open the chapters: everyone, members or VIP members (config/site.ts). */
   @column()
   declare access: AccessLevel
+
+  /** `auto` follows the age rating's cover rule; see cover_policy_service. */
+  @column()
+  declare coverMode: SeriesCoverMode
 
   @column()
   declare featuredDescription: string | null

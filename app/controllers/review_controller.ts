@@ -22,8 +22,12 @@ const listValidator = vine.compile(
 )
 
 export default class ReviewController {
-  async index({ request, auth }: HttpContext) {
+  async index({ request, auth, response }: HttpContext) {
     const { series } = await request.validateUsing(listValidator, { data: request.qs() })
+    // Drafts stay hidden from readers here too (their page is a 404).
+    const target = await SeriesModel.find(series)
+    if (!target || !access.visible(auth.user, { series: target }))
+      return response.notFound({ error: 'Seri bulunamadı' })
     const sortInput = request.input('sort')
     const page = pageNumber(request.input('page'))
     const viewer = auth.user ?? null
@@ -56,6 +60,8 @@ export default class ReviewController {
     const series = await SeriesModel.find(data.series_id)
     if (!series || !access.visible(user, { series }))
       return response.notFound({ error: 'Seri bulunamadı' })
+    if (!access.allows(user, series.access))
+      return response.forbidden({ error: 'Bu seriyi puanlamak için erişimin yok.' })
     recordAttempt(key, 60 * 1000)
     const created = await reviews.save(user, series.id, {
       rating: data.rating,

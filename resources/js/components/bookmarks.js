@@ -1,5 +1,5 @@
 import { isAccount, postJson, readLocal } from './library.js'
-import { toast } from './shared.js'
+import { thumb, toast } from './shared.js'
 
 /** Content types with their own badge colour (components.css `.badge[data-tone]`). */
 const typeTones = ['manga', 'manhwa', 'manhua', 'novel', 'webtoon', 'anime']
@@ -7,7 +7,8 @@ const typeTones = ['manga', 'manhwa', 'manhua', 'novel', 'webtoon', 'anime']
 export function bookmarkCover(item) {
   const cover = item.coverImage
   if (typeof cover !== 'string') return '/images/no-cover.svg'
-  if (cover.startsWith('/content/') || cover.startsWith('/images/')) return cover
+  if (cover.startsWith('/content/')) return thumb(cover, 320)
+  if (cover.startsWith('/images/')) return cover
   if (/^[\w.-]+$/.test(cover))
     return `/content/${encodeURIComponent(item.type)}/${encodeURIComponent(item.slug)}/${cover}`
   return '/images/no-cover.svg'
@@ -33,6 +34,8 @@ export function readBookmarks(storage) {
         slug,
         title: typeof data?.title === 'string' ? data.title : slug.replaceAll('-', ' '),
         coverImage: data?.coverImage,
+        // Hidden cover as it was when the series was saved (cover_policy_service).
+        coverVeil: data?.coverVeil === 'blur' ? 'blur' : null,
         savedAt: Number(data?.savedAt) || 0,
         lastRead: readLocal(type, slug).last,
         latestChapter: null,
@@ -72,6 +75,31 @@ export function bookmarkPage() {
         this.bookmarks = readBookmarks(window.localStorage)
       } catch {
         this.error = 'Tarayıcı depolamasına erişilemiyor. Gizli pencere ya da site verisi engeli kapalı olmalı.'
+      }
+      this.refresh()
+    },
+    /**
+     * A guest's list keeps covers as they were when saved; the server gives the current ones
+     * (hidden-cover rules may have changed, or the visitor confirmed their age since), the
+     * title and the newest chapter.
+     */
+    async refresh() {
+      if (!this.bookmarks.length) return
+      const items = this.bookmarks.slice(0, 200).map((item) => `${item.type}/${item.slug}`)
+      try {
+        const response = await fetch(`/kutuphane/kapaklar?items=${encodeURIComponent(items.join(','))}`, {
+          headers: { accept: 'application/json' },
+        })
+        if (!response.ok) return
+        const current = new Map((await response.json()).map((item) => [`${item.type}/${item.slug}`, item]))
+        this.bookmarks = this.bookmarks.map((item) => {
+          const fresh = current.get(`${item.type}/${item.slug}`)
+          return fresh
+            ? { ...item, title: fresh.title, coverImage: fresh.coverImage, coverVeil: fresh.coverVeil, latestChapter: fresh.latestChapter }
+            : item
+        })
+      } catch {
+        /* Offline: the stored list stays. */
       }
     },
     /** "12 seri · 3 seride yeni bölüm" under the page title. */

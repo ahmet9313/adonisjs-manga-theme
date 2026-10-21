@@ -7,14 +7,16 @@ import { serializeSeries, serializeChapter, calculateTimeAgo } from '#services/s
 import type { SeriesInfo, ChapterInfo, ChapterWithPages } from '#services/series_presenter'
 import { episodeVideo } from '#services/video_service'
 
-/** Published series with their relations; `drafts` (staff previews) also finds drafts. */
-function baseSeriesQuery({ drafts = false } = {}) {
+/**
+ * Published series with their relations; `drafts` (staff previews) also finds drafts. Authors
+ * and artists are only shown on the series page, so lists skip them (`people`).
+ */
+function baseSeriesQuery({ drafts = false, people = false } = {}) {
   return SeriesModel.query()
     .if(!drafts, (query) => query.where('draft', false))
     .preload('contentType')
     .preload('genres')
-    .preload('authors')
-    .preload('artists')
+    .if(people, (query) => query.preload('authors').preload('artists'))
 }
 
 /** Staff previews see drafts; everyone else gets published series and chapters only. */
@@ -36,7 +38,7 @@ class SeriesService {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return null
 
-    const series = await baseSeriesQuery({ drafts })
+    const series = await baseSeriesQuery({ drafts, people: true })
       .where('contentTypeId', ctId)
       .where('slug', slug)
       .first()

@@ -153,7 +153,10 @@ class CommentService {
     // Deleted top-level comments only stay visible while they still have replies.
     query.where((builder) => builder.whereNull('deletedAt').orWhere('replyCount', '>', 0))
     if (sort === 'top')
-      query.orderByRaw('(like_count - dislike_count) desc').orderBy('replyCount', 'desc')
+      // Signed casts: MySQL refuses a negative result of two unsigned columns (ERROR 1690).
+      query
+        .orderByRaw('(cast(like_count as signed) - cast(dislike_count as signed)) desc')
+        .orderBy('replyCount', 'desc')
     query.orderBy('createdAt', 'desc').orderBy('id', 'desc')
 
     const result = await query.paginate(page, commentPageSize)
