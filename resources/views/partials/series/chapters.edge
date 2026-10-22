@@ -74,6 +74,7 @@
             <span class="chapter-row__name">{{ chapter.title }}</span>
             @end
           </span>
+          @include('partials/teams/chapter_row')
           @if(chapter.draft)
           <span class="badge badge--sm" data-tone="warning">Taslak</span>
           @end

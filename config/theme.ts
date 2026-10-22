@@ -381,6 +381,12 @@ export const flags: Flag[] = [
     default: true,
   },
   { key: 'reader_comments', label: 'Bölüm okuyucusunda yorumlar', group: 'series', default: true },
+  {
+    key: 'team_credits',
+    label: 'Çeviri ekibi (okuyucu başlığı, bölüm listesi, seri bilgileri)',
+    group: 'series',
+    default: true,
+  },
 
   { key: 'footer', label: 'Alt bilgiyi göster', group: 'footer', default: true },
   { key: 'footer_social', label: 'Sosyal bağlantılar', group: 'footer', default: true },

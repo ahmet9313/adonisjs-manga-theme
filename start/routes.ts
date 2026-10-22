@@ -58,6 +58,12 @@ router
   .prefix('/incelemeler')
   .use(middleware.auth())
 
+// Translation teams (config/teams.ts)
+const TeamController = () => import('#controllers/team_controller')
+router.get('/ekipler', [TeamController, 'index']).as('teams.index')
+router.get('/ekip/:slug', [TeamController, 'show']).as('teams.show')
+router.get('/ekibe-katil', [TeamController, 'recruit']).as('teams.recruit')
+
 // Accounts: sign in, registration and member profiles
 const AuthController = () => import('#controllers/auth_controller')
 const AccountController = () => import('#controllers/account_controller')
@@ -140,6 +146,7 @@ const AdminCosmeticController = () => import('#controllers/admin/cosmetic_contro
 const AdminCardController = () => import('#controllers/admin/card_controller')
 const AdminRoleController = () => import('#controllers/admin/role_controller')
 const AdminThemeController = () => import('#controllers/admin/theme_controller')
+const AdminTeamController = () => import('#controllers/admin/team_controller')
 
 router
   .group(() => {
@@ -211,6 +218,20 @@ router
           .post('/kartlar/:id/duzenle', [AdminCardController, 'update'])
           .as('admin.cards.update')
         router.post('/kartlar/:id/sil', [AdminCardController, 'destroy']).as('admin.cards.destroy')
+      })
+      .use(middleware.role(['admin']))
+
+    // Translation teams (administrators only; editors pick teams on the series/chapter forms)
+    router
+      .group(() => {
+        router.get('/ekipler', [AdminTeamController, 'index']).as('admin.teams.index')
+        router.get('/ekipler/ekle', [AdminTeamController, 'create']).as('admin.teams.create')
+        router.post('/ekipler/ekle', [AdminTeamController, 'store']).as('admin.teams.store')
+        router.get('/ekipler/:id/duzenle', [AdminTeamController, 'edit']).as('admin.teams.edit')
+        router
+          .post('/ekipler/:id/duzenle', [AdminTeamController, 'update'])
+          .as('admin.teams.update')
+        router.post('/ekipler/:id/sil', [AdminTeamController, 'destroy']).as('admin.teams.destroy')
       })
       .use(middleware.role(['admin']))
 

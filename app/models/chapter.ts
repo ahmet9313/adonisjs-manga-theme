@@ -41,6 +41,10 @@ export default class Chapter extends BaseModel {
   @column()
   declare warning: string | null
 
+  /** Optional free-text credit line ("Çeviri: X · Edit: Y"); teams are in `chapter_teams`. */
+  @column()
+  declare credits: string | null
+
   @column()
   declare createdAt: string
 

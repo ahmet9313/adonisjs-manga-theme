@@ -1,0 +1,18 @@
+/*
+ * Admin → Topluluk → Ekipler: logo next to the name in the list and the square logo drop zone of
+ * the team form (components/ui/dropzone, aspect "square").
+ */
+
+@layer components {
+  .admin-team {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .admin-drop--square {
+    max-width: 10rem;
+    aspect-ratio: 1;
+  }
+}

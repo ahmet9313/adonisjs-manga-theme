@@ -1,0 +1,56 @@
+{{--
+  /ekipler: every translation team (recruiting ones first) as cards with logo, people and series
+  counts (published series only) and the "Üye arıyor" badge.
+  Data: items [{ team, links, memberCount, seriesCount }] (team_service.directory).
+--}}
+@let(recruitingCount = items.filter((item) => item.team.recruiting).length)
+@component('components/layout/main', { title, description })
+
+@slot('main')
+  @component('components/ui/page_header', { title: 'Çeviri Ekipleri', description: 'Sitedeki serileri gönüllü olarak Türkçeye kazandıran ekipler. Ekip sayfasında üyeleri, serileri ve son bölümlerini görebilirsin.' })
+    @slot('actions')
+      @if(recruitingCount)
+      @component('components/ui/button', { variant: 'primary', href: '/ekibe-katil', icon: 'user-plus' })
+        Ekibe katıl
+      @end
+      @end
+    @end
+  @end
+
+  @if(items.length)
+  <ul class="team-grid mt-6" aria-label="Ekipler">
+    @each(item in items)
+    @let(team = item.team)
+    <li>
+      <article class="panel team-card">
+        <div class="team-card__head">
+          @!component('components/teams/logo', { team, size: 'lg' })
+          <div class="min-w-0">
+            <h2 class="team-card__title"><a href="/ekip/{{ team.slug }}" class="team-card__link">{{ team.name }}</a></h2>
+            <p class="team-card__meta">
+              <span>{{ item.memberCount }} üye</span>
+              <span aria-hidden="true">·</span>
+              <span>{{ item.seriesCount }} seri</span>
+            </p>
+          </div>
+        </div>
+        @if(team.description)
+        <p class="team-card__desc">{{ team.description }}</p>
+        @end
+        @if(team.recruiting)
+        <p class="team-card__foot">
+          @!component('components/ui/badge', { kind: 'success', text: 'Üye arıyor', size: 'sm' })
+        </p>
+        @end
+      </article>
+    </li>
+    @end
+  </ul>
+  @else
+  <div class="mt-6">
+    @!component('components/ui/empty_state', { icon: 'users', title: 'Henüz ekip yok', description: 'Çeviri ekipleri eklendiğinde burada listelenecek.' })
+  </div>
+  @end
+@end
+
+@end
