@@ -8,6 +8,7 @@ import Author from '#models/author'
 import Artist from '#models/artist'
 import ContentType from '#models/content_type'
 import access, { AGE_COOKIE } from '#services/access_service'
+import seo from '#services/seo_service'
 
 export default class SeriesController {
   async index({ view, request }: HttpContext) {
@@ -100,6 +101,7 @@ export default class SeriesController {
       { series: { ...series, access: 'public' } },
       { confirmedAge: access.confirmedAge(request.plainCookie(AGE_COOKIE, { encoded: false })) }
     )
+    view.share({ seo: seo.seriesPage(series, { gated: Boolean(gate) }) })
     if (gate) {
       if (gate.kind === 'login') response.status(403)
       return view.render('pages/content_gate', {

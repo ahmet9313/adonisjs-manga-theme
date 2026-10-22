@@ -11,6 +11,8 @@ const defaults: Record<string, string> = {
   logo_url: site.logo || '',
   logo_mobile_url: '',
   favicon_url: '',
+  /** Public address for canonical links, sitemaps and feeds (seo_service); empty: APP_URL. */
+  site_url: '',
   ...Object.fromEntries(
     Object.entries(site.agePolicies).map(([rating, policy]) => [agePolicyKey(rating), policy])
   ),

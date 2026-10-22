@@ -1,5 +1,4 @@
 import { isAccount, readLocal } from './library.js'
-import { toast } from './shared.js'
 
 /** Rows shown before "Tümünü göster". */
 const preview = 10
@@ -115,50 +114,5 @@ export function textClamp() {
   }
 }
 
-/** Copies `text` with the Clipboard API, or with a hidden field on insecure origins. */
-async function copyText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text)
-    return
-  }
-  const field = document.createElement('textarea')
-  field.value = text
-  field.setAttribute('readonly', '')
-  field.style.position = 'fixed'
-  field.style.opacity = '0'
-  document.body.append(field)
-  field.select()
-  const copied = document.execCommand('copy')
-  field.remove()
-  if (!copied) throw new Error('copy failed')
-}
-
-/**
- * "Paylaş": the share sheet on touch devices that have one, otherwise the page address is copied.
- * The title comes from data-share-title.
- */
-export function seriesShare() {
-  return {
-    async share() {
-      const url = window.location.origin + window.location.pathname
-      const title = this.$el.dataset.shareTitle || document.title
-      if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
-        try {
-          await navigator.share({ title, url })
-          return
-        } catch (error) {
-          if (error?.name === 'AbortError') return
-        }
-      }
-      try {
-        await copyText(url)
-        toast('Bağlantı kopyalandı.', 'success')
-      } catch {
-        toast('Bağlantı kopyalanamadı. Adres çubuğundan kopyalayabilirsin.', 'error')
-      }
-    },
-  }
-}
-
 /** Alpine components of this module, registered by resources/js/app.js. */
-export const components = { chapterList, textClamp, seriesShare }
+export const components = { chapterList, textClamp }

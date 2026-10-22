@@ -21,6 +21,8 @@ vine.messagesProvider = new SimpleMessagesProvider(
     'username.regex':
       'Kullanıcı adı 3-20 karakter olmalı; yalnızca harf, rakam ve alt çizgi içermelidir.',
     'password.confirmed': 'Parolalar eşleşmiyor.',
+    'site_url.regex':
+      'Site adresi https://alanadi.com biçiminde olmalı; yol ya da sorgu eklemeyin.',
   },
   {
     // Accounts
@@ -66,6 +68,7 @@ vine.messagesProvider = new SimpleMessagesProvider(
     site_name: 'Site adı',
     site_description: 'Site açıklaması',
     logo_url: 'Logo adresi',
+    site_url: 'Site adresi',
     announcement_text: 'Duyuru metni',
     announcement_url: 'Duyuru bağlantısı',
     // Comments and reviews

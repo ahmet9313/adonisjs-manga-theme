@@ -11,6 +11,7 @@ import type User from '#models/user'
 import type { Scheme } from '#config/theme'
 import { coverView, type CoverSource } from '#services/cover_policy_service'
 import { variantSrcset, variantUrl } from '#services/media_service'
+import seo, { type HeadProps, type RequestLike } from '#services/seo_service'
 
 edge.global('site', site)
 edge.global('adminNav', adminNav)
@@ -67,6 +68,15 @@ edge.global('thumbOf', variantUrl)
 edge.global('srcsetOf', variantSrcset)
 
 edge.global('coverOf', (series: CoverSource) => coverView(series))
+/**
+ * Search engine and link preview tags of a public page (seo_service; layout/main):
+ * `seoHead(request, { title, description, noindex, seo })`, `seo` being what the controller
+ * shared. `siteUrl(request, path)` is the absolute address (Tema → Genel → Site adresi, APP_URL
+ * or the request) and `shareLinksOf(url, title)` the share targets of partials/share/*.
+ */
+edge.global('seoHead', (request: RequestLike, props: HeadProps) => seo.head(request, props))
+edge.global('siteUrl', (request: RequestLike, path: string) => seo.url(request, path))
+edge.global('shareLinksOf', (url: string, title: string) => seo.shareLinks(url, title))
 /** "5 dk önce", "3 sa önce", "2 gün önce" for a database timestamp. */
 edge.global('agoOf', (value: string) => {
   const seconds = Math.max(0, (Date.now() - parseTimestamp(value)) / 1000)

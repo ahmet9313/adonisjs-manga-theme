@@ -37,6 +37,12 @@ const genelValidator = vine.compile(
     logo_url: link,
     logo_mobile_url: link,
     favicon_url: link,
+    site_url: vine
+      .string()
+      .trim()
+      .maxLength(200)
+      .regex(/^https?:\/\/[^\s/?#]+\/?$/)
+      .optional(),
   })
 )
 const erisimValidator = vine.compile(
@@ -136,6 +142,7 @@ export default class ThemeController {
           'logo_url',
           'logo_mobile_url',
           'favicon_url',
+          'site_url',
           'announcement_enabled',
           'announcement_text',
           'announcement_url',
@@ -206,6 +213,7 @@ export default class ThemeController {
         logo_url: data.logo_url ?? '',
         logo_mobile_url: data.logo_mobile_url ?? '',
         favicon_url: data.favicon_url ?? '',
+        site_url: (data.site_url ?? '').replace(/\/+$/, ''),
       }
     } else if (section === 'duyuru') {
       const data = await request.validateUsing(duyuruValidator)

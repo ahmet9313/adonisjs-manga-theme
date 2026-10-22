@@ -2,7 +2,7 @@
   Series header over the banner art: cover, title, other names, metadata, genres, description and
   the main actions (start/continue reading or watching, save, share).
   Hooks: continueReading (data-config with the account's last chapter), bookmarkButton (the first
-  [data-bookmark] on the page), textClamp and seriesShare (chapter_list.js).
+  [data-bookmark] on the page), textClamp (chapter_list.js) and the share menu (partials/share).
 --}}
 @let(firstChapter = chapters.length ? chapters[chapters.length - 1] : null)
 @let(resume = reading && reading.last !== null && chapters.some((chapter) => chapter.number === reading.last) ? reading.last : null)
@@ -126,10 +126,9 @@
           <span x-text="saved ? 'Kaydedildi' : 'Kaydet'">{{ saved ? 'Kaydedildi' : 'Kaydet' }}</span>
         </button>
 
-        <button type="button" class="btn btn--secondary btn--lg series-share" x-data="seriesShare" data-share-title="{{ series.title }}" @click="share()" title="Bağlantıyı paylaş">
-          @!component('components/icon', { name: 'share', class: 'btn__icon' })
-          <span class="series-share__label">Paylaş</span>
-        </button>
+        @if(ui('share_buttons'))
+        @!component('partials/share/menu', { url: siteUrl(request, seriesUrl), title: series.title, id: 'series-share' })
+        @end
       </div>
     </div>
   </div>

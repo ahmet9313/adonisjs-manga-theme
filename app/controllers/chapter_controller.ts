@@ -4,6 +4,7 @@ import library from '#services/library_service'
 import progress from '#services/progress_service'
 import watch from '#config/watch'
 import access, { AGE_COOKIE } from '#services/access_service'
+import seo from '#services/seo_service'
 
 /**
  * Reading mode and page size from the plain `reader` cookie ("paged-125", written by reader.js),
@@ -43,6 +44,7 @@ export default class ChapterController {
         warningConfirmed: request.input('onay') === '1',
       }
     )
+    view.share({ seo: seo.chapterPage(series, chapter, { gated: Boolean(gate) }) })
     if (gate) {
       if (gate.kind === 'login' || gate.kind === 'vip') response.status(403)
       return view.render('pages/content_gate', {
