@@ -1,12 +1,13 @@
 {{--
   Chapter content. Images: the first two load eagerly with high priority, the rest lazily; each
   page keeps a placeholder height until its image has loaded (reader.js sets data-state) and
-  offers a retry when it fails. Novel text: paragraphs in a readable column (.reader-prose).
+  offers a retry when it fails. In paged mode (reader.js) only the [data-current] page shows,
+  halves of the page area turn pages and the pager below counts them. Novel text: paragraphs in a readable column (.reader-prose).
 --}}
 @if(pageCount)
-<div class="reader-pages">
+<div class="reader-pages" @click="tap($event)">
   @each((page, index) in chapter.pages)
-  <figure class="reader-page" data-page data-state="loading">
+  <figure class="reader-page" data-page data-state="loading" {{ index === 0 ? 'data-current' : '' }}>
     <img src="{{ page }}" alt="{{ series.title }}, Bölüm {{ chapter.number }}, sayfa {{ index + 1 }} / {{ pageCount }}" decoding="async"
       @if(index < 2)
       loading="eager" fetchpriority="high"
@@ -24,6 +25,17 @@
     </div>
   </figure>
   @end
+</div>
+<div class="reader-pager" x-show="paged" x-cloak>
+  <button type="button" class="btn btn--secondary btn--md" @click="turn(-1)" :disabled="page <= 0">
+    @!component('components/icon', { name: 'chevron-left', class: 'btn__icon' })
+    <span>Önceki</span>
+  </button>
+  <output class="reader-pager__count t-num" aria-live="polite"><span x-text="page + 1">1</span> / {{ pageCount }}</output>
+  <button type="button" class="btn btn--secondary btn--md" @click="turn(1)">
+    <span x-text="page + 1 < pages.length ? 'Sonraki' : 'Bitir'">Sonraki</span>
+    @!component('components/icon', { name: 'chevron-right', class: 'btn__icon' })
+  </button>
 </div>
 @elseif(isNovel)
 <article class="reader-prose" aria-label="Bölüm metni" :style="'--reader-font:' + fontSize">

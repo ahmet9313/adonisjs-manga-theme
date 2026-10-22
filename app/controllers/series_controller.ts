@@ -111,7 +111,7 @@ export default class SeriesController {
       })
     }
 
-    const chapters = await seriesService.getChapters(type, slug, { drafts })
+    const chapters = await seriesService.getChaptersOf(series.id, { drafts })
     const similar = await seriesService.getSimilarSeries(type, slug)
     const reading = auth.user ? await library.state(auth.user.id, series.id) : null
 

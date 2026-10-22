@@ -60,6 +60,33 @@ test.group('Catalog and administration', (group) => {
     })
   })
 
+  test('the reader lays out the reading mode and page size from the reader cookie', async ({
+    assert,
+  }) => {
+    const page = (cookie?: string) =>
+      timedFetch(base + `/series/manga/${series.slug}/1`, {
+        headers: cookie ? { cookie } : {},
+      }).then((response) => response.text())
+    const layout = (html: string) => ({
+      mode: /class="reader"[^>]*data-mode="(\w+)"/s.exec(html)?.[1],
+      zoom: /--reader-zoom: ([\d.]+)/.exec(html)?.[1],
+      current: html.match(/data-page data-state="loading" data-current/g)?.length ?? 0,
+    })
+
+    assert.deepEqual(layout(await page()), { mode: 'webtoon', zoom: '1', current: 1 })
+    assert.deepEqual(layout(await page('reader=paged-150')), {
+      mode: 'paged',
+      zoom: '1.5',
+      current: 1,
+    })
+    for (const bad of ['reader=paged-999', 'reader=sideways-100', 'reader=paged-10'])
+      assert.deepEqual(layout(await page(bad)), {
+        mode: bad.includes('sideways') ? 'webtoon' : 'paged',
+        zoom: '1',
+        current: 1,
+      })
+  })
+
   test('pagination and aggregates return only the requested page with the correct chapters', async ({
     assert,
   }) => {

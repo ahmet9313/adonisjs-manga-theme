@@ -4,7 +4,7 @@
   reading-progress bar. readerToolbar (reader.js) navigates, saves the settings (localStorage
   "reader-prefs") and slides the bar away while reading downwards.
 --}}
-<div class="reader-bar" x-data="readerToolbar" data-base="{{ seriesUrl }}/"
+<div class="reader-bar" x-data="readerToolbar" data-base="{{ seriesUrl }}/" data-images="{{ pageCount ? '1' : '' }}"
   data-offset="{{ ui('header') && ui('header_sticky') ? 'header' : 'top' }}"
   data-hidden="false" :data-hidden="hidden.toString()">
   <nav class="reader-bar__inner" aria-label="Okuyucu">
@@ -62,10 +62,22 @@
       </div>
       @else
       <div class="reader-setting">
-        <span id="reader-fit-label" class="reader-setting__label">Sayfa genişliği</span>
-        <div class="segmented reader-setting__choice" role="group" aria-labelledby="reader-fit-label">
-          <button type="button" @click="setFit('width')" aria-pressed="true" :aria-pressed="(prefs.fit === 'width').toString()">Ekrana sığdır</button>
-          <button type="button" @click="setFit('original')" aria-pressed="false" :aria-pressed="(prefs.fit === 'original').toString()">Orijinal boyut</button>
+        <span id="reader-mode-label" class="reader-setting__label">Okuma modu</span>
+        <div class="segmented reader-setting__choice" role="group" aria-labelledby="reader-mode-label">
+          <button type="button" @click="setMode('webtoon')" aria-pressed="true" :aria-pressed="(prefs.mode === 'webtoon').toString()">Webtoon</button>
+          <button type="button" @click="setMode('paged')" aria-pressed="false" :aria-pressed="(prefs.mode === 'paged').toString()">Sayfa sayfa</button>
+        </div>
+      </div>
+      <div class="reader-setting">
+        <span id="reader-zoom-label" class="reader-setting__label">Boyut</span>
+        <div class="reader-stepper" role="group" aria-labelledby="reader-zoom-label">
+          <button type="button" class="btn btn--secondary btn--sm btn--icon" @click="zoomBy(-1)" :disabled="prefs.zoom <= zoomMin" aria-label="Sayfaları küçült">
+            @!component('components/icon', { name: 'minus', class: 'btn__icon' })
+          </button>
+          <output class="reader-stepper__value t-num" aria-live="polite" x-text="zoomLabel()">100%</output>
+          <button type="button" class="btn btn--secondary btn--sm btn--icon" @click="zoomBy(1)" :disabled="prefs.zoom >= zoomMax" aria-label="Sayfaları büyüt">
+            @!component('components/icon', { name: 'plus', class: 'btn__icon' })
+          </button>
         </div>
       </div>
       @end
@@ -73,7 +85,7 @@
       <p class="reader-setting__hint">
         <kbd class="kbd">←</kbd>
         <kbd class="kbd">→</kbd>
-        <span>önceki / sonraki bölüm</span>
+        <span x-text="images && prefs.mode === 'paged' ? 'önceki / sonraki sayfa' : 'önceki / sonraki bölüm'">önceki / sonraki bölüm</span>
       </p>
     @end
   </nav>

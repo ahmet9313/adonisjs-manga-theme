@@ -2,7 +2,8 @@
   Chapter reader: sticky toolbar (banner slot, ui('reader_toolbar')), chapter header, pages or
   novel text, end-of-chapter card, bottom navigation and the chapter's comments.
   Hooks: readingTracker + data-chapter (guest history), data-reward-toast (EXP and card drops),
-  reader (reading settings, page states, ← / → keys) and commentSection (loads when visible).
+  reader (reading settings, webtoon/paged mode, page states, ← / → keys). readerView (mode and
+  size from the `reader` cookie) lays the pages out before any script runs. and commentSection (loads when visible).
 --}}
 @let(seriesUrl = '/series/' + series.type + '/' + series.slug)
 @let(chapterUrl = (number) => seriesUrl + '/' + number)
@@ -11,6 +12,7 @@
 @let(isNovel = !pageCount && Boolean(chapter.textContent))
 @let(readMinutes = isNovel ? Math.max(1, Math.round(chapter.textContent.trim().split(/\s+/).length / 200)) : 0)
 @let(navId = 'top')
+@let(layout = readerView || { mode: 'webtoon', zoom: 100 })
 @component('components/layout/main', { title, description: series.title + ', Bölüm ' + chapter.number + (chapter.title ? ': ' + chapter.title : '') + '. ' + site.name + ' üzerinde oku.' })
 
 @slot('banner')
@@ -29,7 +31,9 @@
   @end
   @end
 
-  <div class="reader" x-data="reader" data-fit="width" :data-fit="prefs.fit"
+  <div class="reader" x-data="reader"
+    data-mode="{{ pageCount ? layout.mode : 'webtoon' }}" :data-mode="paged ? 'paged' : 'webtoon'"
+    style="--reader-zoom: {{ layout.zoom / 100 }}" :style="'--reader-zoom:' + zoomScale"
     data-config="{{ JSON.stringify({ base: seriesUrl + '/', prev: prevChapter ? chapterUrl(prevChapter.number) : null, next: nextChapter ? chapterUrl(nextChapter.number) : null }) }}">
     <header class="reader-head">
       <a href="{{ seriesUrl }}" class="reader-head__series">

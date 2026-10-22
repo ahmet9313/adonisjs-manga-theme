@@ -245,11 +245,13 @@
   }
 
   /* ---- Pages ------------------------------------------------------------------------------ */
+  /* Pages wider than the screen (size above 100%) scroll sideways; "safe" keeps their left edge. */
   .reader-pages {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: safe center;
     margin-inline: -1rem;
+    overflow-x: auto;
   }
 
   @media (width >= 640px) {
@@ -260,9 +262,16 @@
 
   .reader-page {
     position: relative;
-    width: 100%;
-    max-width: 52rem;
+    scroll-margin-top: calc(7.5rem + 2px);
+    width: calc(min(52rem, 100%) * var(--reader-zoom, 1));
+    max-width: none;
+    flex: none;
     margin: 0;
+  }
+
+  /* Pages come into view under the site header and the reader toolbar. */
+  .reader-content {
+    scroll-margin-top: calc(7.5rem + 2px);
   }
 
   .reader-page > img {
@@ -321,23 +330,31 @@
     color: var(--t-muted);
   }
 
-  /* "Orijinal boyut": images at their own width, never wider than the screen. */
-  .reader[data-fit='original'] .reader-page {
-    width: auto;
-    max-width: 100%;
+  /* ---- Paged mode: one page at a time, as wide as a webtoon page ------------------------- */
+  .reader[data-mode='paged'] .reader-pages {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .reader[data-fit='original'] .reader-page > img {
-    width: auto;
-    max-width: 100%;
+  .reader[data-mode='paged'] .reader-page:not([data-current]) {
+    display: none;
   }
 
-  .reader[data-fit='original'] .reader-page[data-state='loading'] {
-    width: min(100%, 45rem);
+  .reader-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
   }
 
-  .reader[data-fit='original'] .reader-page[data-state='loading'] > img {
-    width: 100%;
+  .reader-pager__count {
+    min-width: 4.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--t-heading);
   }
 
   /* ---- Novel text --------------------------------------------------------------------------- */

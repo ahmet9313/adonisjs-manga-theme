@@ -30,15 +30,16 @@ class SeriesService {
     return ct?.id ?? null
   }
 
+  /** `people: false` skips authors and artists (the reader does not show them). */
   async getSeriesBySlug(
     type: string,
     slug: string,
-    { drafts = false }: Visibility = {}
+    { drafts = false, people = true }: Visibility & { people?: boolean } = {}
   ): Promise<SeriesInfo | null> {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return null
 
-    const series = await baseSeriesQuery({ drafts, people: true })
+    const series = await baseSeriesQuery({ drafts, people })
       .where('contentTypeId', ctId)
       .where('slug', slug)
       .first()
@@ -47,50 +48,28 @@ class SeriesService {
     return serializeSeries(series)
   }
 
-  async getChapters(
-    type: string,
-    slug: string,
+  /** Chapter list (newest first) of a series already looked up by the caller. */
+  async getChaptersOf(
+    seriesId: number,
     { drafts = false }: Visibility = {}
   ): Promise<ChapterInfo[]> {
-    const ctId = await this.getContentTypeId(type)
-    if (!ctId) return []
-
-    const series = await SeriesModel.query()
-      .where('contentTypeId', ctId)
-      .where('slug', slug)
-      .if(!drafts, (query) => query.where('draft', false))
-      .first()
-
-    if (!series) return []
-
     const chapters = await Chapter.query()
       .select('id', 'seriesId', 'number', 'title', 'publishedAt', 'access', 'draft')
-      .where('seriesId', series.id)
+      .where('seriesId', seriesId)
       .if(!drafts, (query) => query.where('draft', false))
       .orderBy('number', 'desc')
 
     return chapters.map(serializeChapter)
   }
 
-  async getChapter(
-    type: string,
-    slug: string,
+  /** One chapter with its pages, text or video sources, of a series the caller already has. */
+  async getChapterOf(
+    seriesId: number,
     chapterNum: number,
     { drafts = false }: Visibility = {}
   ): Promise<ChapterWithPages | null> {
-    const ctId = await this.getContentTypeId(type)
-    if (!ctId) return null
-
-    const series = await SeriesModel.query()
-      .where('contentTypeId', ctId)
-      .where('slug', slug)
-      .if(!drafts, (query) => query.where('draft', false))
-      .first()
-
-    if (!series) return null
-
     const chapter = await Chapter.query()
-      .where('seriesId', series.id)
+      .where('seriesId', seriesId)
       .where('number', chapterNum)
       .if(!drafts, (query) => query.where('draft', false))
       .first()

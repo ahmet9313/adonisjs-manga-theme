@@ -5,6 +5,19 @@ import progress from '#services/progress_service'
 import watch from '#config/watch'
 import access, { AGE_COOKIE } from '#services/access_service'
 
+/**
+ * Reading mode and page size from the plain `reader` cookie ("paged-125", written by reader.js),
+ * so the first paint already has the visitor's layout. Sizes match reader.js (30–200 %).
+ */
+function readerViewOf(value: unknown) {
+  const match = /^(webtoon|paged)-(\d{2,3})$/.exec(typeof value === 'string' ? value : '')
+  const zoom = match ? Number(match[2]) : 100
+  return {
+    mode: match?.[1] ?? 'webtoon',
+    zoom: zoom >= 30 && zoom <= 200 ? zoom : 100,
+  }
+}
+
 export default class ChapterController {
   async show({ view, params, request, response, auth }: HttpContext) {
     const { type, slug, chapter: chapterNum } = params
@@ -15,10 +28,10 @@ export default class ChapterController {
     if (!Number.isSafeInteger(Number(chapterNum)) || Number(chapterNum) < 0)
       return missing('chapter')
     const drafts = access.canSeeDrafts(auth.user)
-    const series = await seriesService.getSeriesBySlug(type, slug, { drafts })
+    const series = await seriesService.getSeriesBySlug(type, slug, { drafts, people: false })
     if (!series) return missing('series')
 
-    const chapter = await seriesService.getChapter(type, slug, Number(chapterNum), { drafts })
+    const chapter = await seriesService.getChapterOf(series.id, Number(chapterNum), { drafts })
     if (!chapter) return missing('chapter')
 
     // Nothing is recorded or rewarded until the visitor passes every gate.
@@ -49,7 +62,13 @@ export default class ChapterController {
       if (reward) view.share({ account: await progress.summary(auth.user) })
     }
 
-    const allChapters = await seriesService.getChapters(type, slug, { drafts })
+    const allChapters = await seriesService.getChaptersOf(series.id, { drafts })
+    let readerCookie: unknown = null
+    try {
+      readerCookie = request.plainCookie('reader', { encoded: false })
+    } catch {
+      readerCookie = null
+    }
     const currentIndex = allChapters.findIndex((c) => c.number === Number(chapterNum))
     const prevChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null
     const nextChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null
@@ -63,6 +82,7 @@ export default class ChapterController {
       prevChapter,
       nextChapter,
       commentThread: { seriesId: series.id, chapterId: chapter.id },
+      readerView: readerViewOf(readerCookie),
       reward: reward
         ? {
             exp: reward.exp,
