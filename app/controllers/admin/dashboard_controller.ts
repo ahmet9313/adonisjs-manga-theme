@@ -6,6 +6,7 @@ import Genre from '#models/genre'
 import Author from '#models/author'
 import Artist from '#models/artist'
 import ContentType from '#models/content_type'
+import views from '#services/view_service'
 
 const totalOf = (row: unknown) => Number((row as any)?.$extras?.total || 0)
 
@@ -49,6 +50,7 @@ export default class DashboardController {
 
     return view.render('pages/admin/dashboard', {
       title: 'Panel',
+      viewStats: await views.dashboard(),
       stats: {
         series: totalOf(seriesCount),
         chapters: totalOf(chapterCount),

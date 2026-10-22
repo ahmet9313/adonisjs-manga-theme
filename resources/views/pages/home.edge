@@ -28,7 +28,9 @@
   @include('partials/home/updates')
   @end
 
-  @if(ui('home_popular') && popular.length)
+  @if(ui('home_popular') && popularTabs)
+  @include('partials/home/popular_tabs')
+  @elseif(ui('home_popular') && popular.length)
   @include('partials/home/popular')
   @end
 

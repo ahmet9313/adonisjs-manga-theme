@@ -88,6 +88,12 @@
           @end
           <span class="badge badge--sm chapter-row__current" data-tone="accent">{{ isVideo ? 'Son izlenen' : 'Son okunan' }}</span>
           <span class="sr-only chapter-row__read-label">{{ isVideo ? ', izlendi' : ', okundu' }}</span>
+          @if(chapter.viewCount)
+          <span class="view-count chapter-row__views" title="{{ chapter.viewCount.toLocaleString('tr-TR') }} görüntülenme">
+            @!component('components/icon', { name: 'eye', class: 'view-count__icon' })
+            {{ countOf(chapter.viewCount) }}<span class="sr-only"> görüntülenme</span>
+          </span>
+          @end
           <span class="chapter-row__time">{{ chapter.timeAgo }}</span>
         </a>
       </li>

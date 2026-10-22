@@ -55,6 +55,7 @@
             <th scope="col">Durum</th>
             <th scope="col" class="max-xl:hidden">Çeviri</th>
             <th scope="col" class="num">Bölüm</th>
+            <th scope="col" class="num max-md:hidden">Görüntülenme</th>
             <th scope="col">Güncellendi</th>
             <th scope="col"><span class="sr-only">İşlemler</span></th>
           </tr>
@@ -83,7 +84,7 @@
                     @end
                     <span class="admin-mono truncate max-lg:hidden">/{{ series.slug }}</span>
                   </div>
-                  <p class="admin-cell__meta md:hidden">Çeviri: {{ series.translationStatus }} · {{ number(chapterCount) }} bölüm · {{ agoOf(series.updatedAt) }}</p>
+                  <p class="admin-cell__meta md:hidden">Çeviri: {{ series.translationStatus }} · {{ number(chapterCount) }} bölüm · {{ countOf(series.viewCount) }} görüntülenme · {{ agoOf(series.updatedAt) }}</p>
                 </div>
               </div>
             </td>
@@ -103,6 +104,7 @@
               <span class="text-muted">0</span>
               @end
             </td>
+            <td data-label="Görüntülenme" class="num max-md:hidden" title="{{ number(series.viewCount) }} görüntülenme">{{ countOf(series.viewCount) }}</td>
             <td data-label="Güncellendi" class="whitespace-nowrap text-muted max-md:hidden">
               <time datetime="{{ series.updatedAt }}" title="{{ dateOf(series.updatedAt) }}">{{ agoOf(series.updatedAt) }}</time>
             </td>

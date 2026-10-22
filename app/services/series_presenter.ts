@@ -42,6 +42,8 @@ export interface SeriesInfo {
   ratingAverage: number
   ratingCount: number
   reviewCount: number
+  /** All-time views (view_service). */
+  viewCount: number
   createdAt: string
   updatedAt: string
 }
@@ -54,6 +56,8 @@ export interface ChapterInfo {
   /** The chapter's own access (`public` = same as the series) and draft flag (staff only). */
   access?: AccessLevel
   draft?: boolean
+  /** All-time views (view_service); lists that do not select it leave it out. */
+  viewCount?: number
 }
 
 export interface ChapterWithPages extends ChapterInfo {
@@ -109,6 +113,7 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
     ratingAverage: Number(s.ratingAvg) || 0,
     ratingCount: s.ratingCount || 0,
     reviewCount: s.reviewCount || 0,
+    viewCount: s.viewCount || 0,
     keywords:
       s.keywords && s.keywords.length > 0
         ? s.keywords
@@ -126,6 +131,7 @@ export function serializeChapter(c: Chapter): ChapterInfo {
     timeAgo: calculateTimeAgo(c.publishedAt),
     access: c.access || 'public',
     draft: Boolean(c.draft),
+    ...(c.viewCount === undefined ? {} : { viewCount: c.viewCount }),
   }
 }
 

@@ -1,0 +1,14 @@
+{{--
+  Audience facts of the "Seri bilgileri" box (inside its <dl>): all-time views (view_service)
+  and how many accounts saved the series (`savers`, series controller).
+--}}
+<div>
+  <dt>Görüntülenme</dt>
+  <dd class="t-num" title="{{ series.viewCount.toLocaleString('tr-TR') }} görüntülenme">{{ countOf(series.viewCount) }}</dd>
+</div>
+@if(savers)
+<div>
+  <dt>Kaydeden</dt>
+  <dd>{{ savers.toLocaleString('tr-TR') }} kişi kaydetti</dd>
+</div>
+@end

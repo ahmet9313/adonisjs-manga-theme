@@ -6,6 +6,7 @@ import Chapter from '#models/chapter'
 import { serializeSeries, serializeChapter, calculateTimeAgo } from '#services/series_presenter'
 import type { SeriesInfo, ChapterInfo, ChapterWithPages } from '#services/series_presenter'
 import { episodeVideo } from '#services/video_service'
+import views from '#services/view_service'
 
 /**
  * Published series with their relations; `drafts` (staff previews) also finds drafts. Authors
@@ -54,7 +55,7 @@ class SeriesService {
     { drafts = false }: Visibility = {}
   ): Promise<ChapterInfo[]> {
     const chapters = await Chapter.query()
-      .select('id', 'seriesId', 'number', 'title', 'publishedAt', 'access', 'draft')
+      .select('id', 'seriesId', 'number', 'title', 'publishedAt', 'access', 'draft', 'viewCount')
       .where('seriesId', seriesId)
       .if(!drafts, (query) => query.where('draft', false))
       .orderBy('number', 'desc')
@@ -183,6 +184,10 @@ class SeriesService {
       query.orderByRaw('((rating_avg * rating_count) + 35.0) / (rating_count + 5) desc')
     } else if (filters.orderBy === 'votes') {
       query.orderBy('ratingCount', 'desc')
+    } else if (filters.orderBy === 'views') {
+      query.orderBy('viewCount', 'desc')
+    } else if (filters.orderBy === 'trending') {
+      views.orderByTrend(query)
     } else {
       query.orderBy('updatedAt', 'desc')
     }

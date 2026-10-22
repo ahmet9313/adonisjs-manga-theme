@@ -81,6 +81,10 @@ export default class Series extends BaseModel {
   @column()
   declare reviewCount: number
 
+  /** All-time views (view_service): one per visitor, chapter and day. */
+  @column({ consume: (value) => Number(value) || 0 })
+  declare viewCount: number
+
   @column()
   declare createdAt: string
 

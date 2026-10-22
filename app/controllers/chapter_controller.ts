@@ -4,6 +4,7 @@ import library from '#services/library_service'
 import progress from '#services/progress_service'
 import watch from '#config/watch'
 import access, { AGE_COOKIE } from '#services/access_service'
+import views from '#services/view_service'
 
 /**
  * Reading mode and page size from the plain `reader` cookie ("paged-125", written by reader.js),
@@ -53,6 +54,16 @@ export default class ChapterController {
         next: request.url(true),
       })
     }
+
+    // One view per browser, chapter and day; staff previews of drafts are not counted.
+    views.track(
+      { request, response },
+      {
+        seriesId: series.id,
+        chapterId: chapter.id,
+        preview: Boolean(series.draft || chapter.draft),
+      }
+    )
 
     let reward = null
     if (auth.user) {

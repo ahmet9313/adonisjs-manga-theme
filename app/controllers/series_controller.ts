@@ -8,6 +8,7 @@ import Author from '#models/author'
 import Artist from '#models/artist'
 import ContentType from '#models/content_type'
 import access, { AGE_COOKIE } from '#services/access_service'
+import views from '#services/view_service'
 
 export default class SeriesController {
   async index({ view, request }: HttpContext) {
@@ -114,6 +115,7 @@ export default class SeriesController {
     const chapters = await seriesService.getChaptersOf(series.id, { drafts })
     const similar = await seriesService.getSimilarSeries(type, slug)
     const reading = auth.user ? await library.state(auth.user.id, series.id) : null
+    const savers = await views.saversOf(series.id)
 
     return view.render('pages/series_detail', {
       title: series.title,
@@ -122,6 +124,7 @@ export default class SeriesController {
       chapters,
       similar,
       reading,
+      savers,
       commentThread: { seriesId: series.id, chapterId: null },
       reviewConfig: {
         seriesId: series.id,

@@ -7,6 +7,7 @@ import reviews from '#services/review_service'
 import recommendations from '#services/recommendation_service'
 import stats from '#services/community_stats_service'
 import theme from '#services/theme_service'
+import views from '#services/view_service'
 
 /** Chapters published in the last three days carry a "Yeni" label. */
 const freshFor = 3 * 86_400_000
@@ -56,7 +57,17 @@ export default class HomeController {
         theme.flag('home_updates')
           ? seriesService.getRecentlyUpdated(page, perPage)
           : { items: [], hasNextPage: false, totalPages: 1 },
-        shown('home_popular') ? recommendations.popular(auth.user?.id ?? null, 12) : [],
+        // Most viewed series (Günlük / Haftalık / Aylık / Tümü); the readers rail until the
+        // site has counted its first views.
+        shown('home_popular')
+          ? views
+              .tabs()
+              .then(async (tabs) =>
+                tabs.all.length
+                  ? { tabs, rail: [] }
+                  : { tabs: null, rail: await recommendations.popular(auth.user?.id ?? null, 12) }
+              )
+          : { tabs: null, rail: [] },
         shown('home_genres') ? stats.genres() : [],
         shown('home_community') ? comments.latest(5) : [],
         shown('home_community') ? reviews.featured(4) : [],
@@ -74,7 +85,8 @@ export default class HomeController {
     return view.render('pages/home', {
       featured,
       recentlyUpdated,
-      popular,
+      popular: popular.rail,
+      popularTabs: popular.tabs,
       genres,
       latestComments,
       topReviews,

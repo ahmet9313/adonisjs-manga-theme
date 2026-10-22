@@ -41,6 +41,10 @@ export default class Chapter extends BaseModel {
   @column()
   declare warning: string | null
 
+  /** All-time views (view_service): one per visitor and day. */
+  @column({ consume: (value) => Number(value) || 0 })
+  declare viewCount: number
+
   @column()
   declare createdAt: string
 

@@ -11,6 +11,7 @@ import type User from '#models/user'
 import type { Scheme } from '#config/theme'
 import { coverView, type CoverSource } from '#services/cover_policy_service'
 import { variantSrcset, variantUrl } from '#services/media_service'
+import { countOf } from '#services/view_service'
 
 edge.global('site', site)
 edge.global('adminNav', adminNav)
@@ -77,6 +78,8 @@ edge.global('agoOf', (value: string) => {
   if (seconds < 7 * 86400) return `${Math.floor(seconds / 86400)} gün önce`
   return `${Math.floor(seconds / (7 * 86400))} hafta önce`
 })
+/** Short Turkish view count: "950", "12,4 B", "2,7 Mn" (view_service). */
+edge.global('countOf', countOf)
 edge.global('levelOf', (user: User | null) => levelFor(user?.exp || 0))
 /**
  * Extra attributes forwarded by design-system components (`{{{ attrs(rest.all()) }}}`):
