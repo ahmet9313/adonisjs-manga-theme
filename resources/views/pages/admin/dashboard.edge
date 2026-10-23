@@ -44,6 +44,7 @@
           </span>
           @!component('components/icon', { name: 'arrow-right', class: 'admin-quick__arrow' })
         </a>
+        @include('partials/admin/moderation_quick')
         @if(me.isAdmin)
         <a href="/admin/kullanicilar" class="admin-quick__item">
           <span class="admin-quick__icon">

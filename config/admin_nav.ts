@@ -9,6 +9,8 @@ export interface AdminNavItem {
   icon: string
   /** Matching is exact for the dashboard so it is not active everywhere. */
   exact?: boolean
+  /** Counter shown next to the label (start/view.ts → navBadge), e.g. open reports. */
+  badge?: 'reports'
 }
 
 export interface AdminNavGroup {
@@ -30,6 +32,20 @@ export const adminNav: AdminNavGroup[] = [
         href: '/admin',
         exact: true,
         icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z',
+      },
+    ],
+  },
+  {
+    // Its own group so editors reach it too (Topluluk is for administrators only).
+    key: 'moderation',
+    label: null,
+    roles: ['admin', 'editor'],
+    items: [
+      {
+        label: 'Moderasyon',
+        href: '/admin/moderasyon',
+        badge: 'reports',
+        icon: 'M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5',
       },
     ],
   },

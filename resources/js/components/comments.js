@@ -108,7 +108,9 @@ export default function commentSection() {
     init() {
       const config = JSON.parse(this.$el.dataset.config)
       Object.assign(this, { seriesId: config.seriesId, chapterId: config.chapterId, me: config.me })
-      if (this.$el.dataset.lazy && 'IntersectionObserver' in window) {
+      // A link to one comment (#yorum-<id>, e.g. from Admin → Moderasyon) loads at once.
+      const linked = window.location.hash.startsWith('#yorum-')
+      if (this.$el.dataset.lazy && !linked && 'IntersectionObserver' in window) {
         this.observer = new IntersectionObserver(
           (entries) => {
             if (!entries.some((entry) => entry.isIntersecting)) return
@@ -164,6 +166,7 @@ export default function commentSection() {
         this.hasMore = data.hasMore
         this.total = data.total
         this.counts = { roots: data.roots ?? data.total, replies: data.replies ?? 0 }
+        if (page === 1) this.showLinked()
       } catch {
         this.loadError = 'Yorumlar yüklenemedi. Bağlantını kontrol edip tekrar dene.'
       }
@@ -655,6 +658,28 @@ export default function commentSection() {
       } catch {
         toast('Yorum silinemedi. Lütfen tekrar dene.', 'error')
       }
+    },
+
+    /** Members may report other people's comments (the server checks again). */
+    canReport(node) {
+      return Boolean(this.me && node && !node.deleted && node.author && node.author.username !== this.me.username)
+    },
+
+    /** Opens the report dialog (partials/report/dialog.edge) for a comment. */
+    report(node) {
+      this.$dispatch('open-report', {
+        type: 'comment',
+        id: node.id,
+        set: 'content',
+        label: `@${node.author.username} kişisinin yorumu`,
+      })
+    },
+
+    /** A link to #yorum-<id> (e.g. from the moderation page) points at that comment once loaded. */
+    showLinked() {
+      const match = /^#yorum-(\d+)$/.exec(window.location.hash)
+      if (match && this.nodes[match[1]])
+        this.$nextTick(() => flash(document.getElementById(`yorum-${match[1]}`)))
     },
 
     wallStyle(visual) {

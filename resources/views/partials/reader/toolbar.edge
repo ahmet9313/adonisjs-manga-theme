@@ -113,6 +113,8 @@
           <span>Araç çubuğunu gizle / göster</span>
         </li>
       </ul>
+      <div class="menu__sep"></div>
+      @!component('components/report_button', { chapter, series, menu: true })
     @end
   </nav>
   <div class="reader-progress" role="progressbar" aria-label="Okuma ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" :aria-valuenow="percent">

@@ -7,6 +7,7 @@ import Author from '#models/author'
 import Artist from '#models/artist'
 import ContentType from '#models/content_type'
 import views from '#services/view_service'
+import moderation from '#services/moderation_service'
 
 const totalOf = (row: unknown) => Number((row as any)?.$extras?.total || 0)
 
@@ -63,6 +64,7 @@ export default class DashboardController {
       },
       recentSeries,
       recentChapters,
+      reportCounts: await moderation.openCounts(),
     })
   }
 }

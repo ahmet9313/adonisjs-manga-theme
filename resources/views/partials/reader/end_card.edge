@@ -31,6 +31,7 @@
       <span>Seriyi puanla</span>
     </a>
     @end
+    @!component('components/report_button', { chapter, series, size: 'lg' })
   </div>
   @if(ui('share_buttons'))
   @!component('partials/share/row', { url: siteUrl(request, chapterUrl(chapter.number)), title: series.title + ' — Bölüm ' + chapter.number, label: 'Bu bölümü paylaş' })

@@ -94,6 +94,9 @@ const TeamController = () => import('#controllers/team_controller')
 router.get('/ekipler', [TeamController, 'index']).as('teams.index')
 router.get('/ekip/:slug', [TeamController, 'show']).as('teams.show')
 router.get('/ekibe-katil', [TeamController, 'recruit']).as('teams.recruit')
+// Reports: chapter errors (guests too, throttled per address) and comment / review complaints
+const ReportController = () => import('#controllers/report_controller')
+router.post('/bildir', [ReportController, 'store']).as('reports.store')
 
 // Accounts: sign in, registration and member profiles
 const AuthController = () => import('#controllers/auth_controller')
@@ -178,6 +181,7 @@ const AdminCardController = () => import('#controllers/admin/card_controller')
 const AdminRoleController = () => import('#controllers/admin/role_controller')
 const AdminThemeController = () => import('#controllers/admin/theme_controller')
 const AdminTeamController = () => import('#controllers/admin/team_controller')
+const AdminModerationController = () => import('#controllers/admin/moderation_controller')
 
 router
   .group(() => {
@@ -265,6 +269,27 @@ router
         router.post('/ekipler/:id/sil', [AdminTeamController, 'destroy']).as('admin.teams.destroy')
       })
       .use(middleware.role(['admin']))
+
+    // Moderation queue, mutes and blocked words (administrators and editors)
+    router.get('/moderasyon', [AdminModerationController, 'index']).as('admin.moderation.index')
+    router
+      .post('/moderasyon/kelimeler', [AdminModerationController, 'words'])
+      .as('admin.moderation.words')
+    router
+      .post('/moderasyon/uye/:id/sustur', [AdminModerationController, 'mute'])
+      .as('admin.moderation.mute')
+    router
+      .post('/moderasyon/uye/:id/susturma-kaldir', [AdminModerationController, 'unmute'])
+      .as('admin.moderation.unmute')
+    router
+      .post('/moderasyon/:type/:id/coz', [AdminModerationController, 'resolve'])
+      .as('admin.moderation.resolve')
+    router
+      .post('/moderasyon/:type/:id/reddet', [AdminModerationController, 'dismiss'])
+      .as('admin.moderation.dismiss')
+    router
+      .post('/moderasyon/:type/:id/sil', [AdminModerationController, 'destroy'])
+      .as('admin.moderation.destroy')
 
     // Series CRUD
     router.get('/seriler', [AdminSeriesController, 'index']).as('admin.series.index')
