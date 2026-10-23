@@ -12,6 +12,7 @@ import {
   sessionStamp,
 } from '#services/account_service'
 import { now } from '#services/input_service'
+import accountMail from '#services/account_mail_service'
 import {
   clearAttempts,
   recordAttempt,
@@ -124,9 +125,13 @@ export default class AuthController {
       updatedAt: timestamp,
     })
     await progress.welcome(user)
+    await accountMail.verification(user, request)
     await auth.use('web').login(user)
     session.put(SESSION_STAMP, sessionStamp(user))
-    session.flash('success', 'Hesabın oluşturuldu. Aramıza hoş geldin!')
+    session.flash(
+      'success',
+      `Hesabın oluşturuldu, aramıza hoş geldin! ${user.email} adresine bir doğrulama bağlantısı gönderdik.`
+    )
     return response.redirect(safeNext(data.next))
   }
 

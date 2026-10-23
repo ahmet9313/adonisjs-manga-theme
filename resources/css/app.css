@@ -20,6 +20,7 @@
 @import './pages/gate.css';
 @import './pages/profile.css';
 @import './pages/account.css';
+@import './pages/account_security.css';
 @import './pages/community.css';
 @import './pages/rewards.css';
 /* Admin panel styles are a separate file (resources/css/admin.css, layout/admin only). */

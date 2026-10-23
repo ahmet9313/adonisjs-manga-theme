@@ -19,6 +19,7 @@ import notifications from '#services/notification_service'
 import { recordAttempt, takeAttempt, tooManyAttempts } from '#services/throttle'
 import { now } from '#services/input_service'
 import { removeContentFile, saveImage, invalidField } from '#services/upload_service'
+import accountMail from '#services/account_mail_service'
 
 const extnames = ['jpg', 'jpeg', 'png', 'webp']
 const imageRules = {
@@ -193,12 +194,24 @@ export default class AccountController {
     const email = data.email.toLowerCase()
     await this.checkPassword(user, data.current_password)
     await assertUniqueIdentity(null, email, user.id)
-    const changed = email !== user.email
+    const previous = user.email
+    const changed = email !== previous
     user.email = email
+    // A new address is unconfirmed until its mailed link is opened (account_mail_service).
+    if (changed) user.emailVerifiedAt = null
     user.updatedAt = now()
     await user.save()
-    if (changed) await signOutOtherDevices(user, ctx)
-    session.flash('success', 'E-posta adresi güncellendi')
+    if (changed) {
+      await signOutOtherDevices(user, ctx)
+      await accountMail.verification(user, request, 'email_change')
+      await accountMail.emailChanged(user, previous)
+    }
+    session.flash(
+      'success',
+      changed
+        ? `E-posta adresi güncellendi. ${email} adresine gönderdiğimiz bağlantıyla doğrula.`
+        : 'E-posta adresi güncellendi'
+    )
     return response.redirect('/ayarlar')
   }
 

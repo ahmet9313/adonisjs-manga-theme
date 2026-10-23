@@ -119,6 +119,13 @@ const site = {
     age: Record<string, string>
   },
   socialLinks: [] as { label: string; url: string }[],
+  /**
+   * Accounts whose e-mail is not confirmed yet always keep reading and saving series. When
+   * true, they cannot write comments or reviews until they confirm (false limits nothing).
+   */
+  requireVerifiedToPost: false as boolean,
+  /** Lifetimes of mailed account links (single use). */
+  accountLinks: { resetMinutes: 60, verifyDays: 7 },
 }
 
 export type ContentFormat = keyof typeof site.contentFormats

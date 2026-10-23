@@ -46,6 +46,10 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare bannedAt: string | null
 
+  /** Null until the address is confirmed from a mailed link (accounts before 0034 count as confirmed). */
+  @column()
+  declare emailVerifiedAt: string | null
+
   @column()
   declare lastLoginAt: string | null
 

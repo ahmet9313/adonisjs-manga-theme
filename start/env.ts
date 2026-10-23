@@ -33,4 +33,17 @@ export default await Env.create(new URL('../', import.meta.url), {
   DB_USER: Env.schema.string.optional(),
   DB_PASSWORD: Env.schema.string.optional(),
   DB_DATABASE: Env.schema.string.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Account mails (all optional; without SMTP_HOST mails go to the log)
+  |----------------------------------------------------------
+  */
+  APP_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  SMTP_HOST: Env.schema.string.optional({ format: 'host' }),
+  SMTP_PORT: Env.schema.number.optional(),
+  SMTP_USERNAME: Env.schema.string.optional(),
+  SMTP_PASSWORD: Env.schema.string.optional(),
+  MAIL_FROM_ADDRESS: Env.schema.string.optional({ format: 'email' }),
+  MAIL_FROM_NAME: Env.schema.string.optional(),
 })

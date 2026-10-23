@@ -1,0 +1,32 @@
+{{--
+  Settings → Hesap: whether the address is confirmed, with a "send again" form when it is not.
+  Props: member.
+--}}
+<section class="panel email-status" aria-labelledby="email-status-title">
+  <div class="email-status__main">
+    <span class="tone-icon" data-tone="{{ member.emailVerifiedAt ? 'success' : 'warning' }}" aria-hidden="true">
+      @!component('components/icon', { name: member.emailVerifiedAt ? 'check-circle' : 'mail' })
+    </span>
+    <div class="min-w-0">
+      <h2 id="email-status-title" class="panel__title">
+        {{ member.emailVerifiedAt ? 'E-posta adresin doğrulandı' : 'E-posta adresin doğrulanmadı' }}
+      </h2>
+      <p class="panel__desc">
+        @if(member.emailVerifiedAt)
+        Parola sıfırlama bağlantıları {{ member.email }} adresine gönderilir.
+        @else
+        {{ member.email }} adresine gönderdiğimiz bağlantıya bas. Bağlantı {{ site.accountLinks.verifyDays }} gün geçerlidir; gelmediyse yenisini iste.
+        @end
+      </p>
+    </div>
+  </div>
+  @if(!member.emailVerifiedAt)
+  <form action="/ayarlar/dogrulama" method="POST" class="email-status__action" data-submit-once>
+    {{ csrfField() }}
+    <input type="hidden" name="next" value="/ayarlar#account">
+    @component('components/ui/button', { type: 'submit', icon: 'refresh' })
+      Bağlantıyı tekrar gönder
+    @end
+  </form>
+  @end
+</section>
