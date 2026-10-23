@@ -21,6 +21,7 @@ import { localVideoPaths, removeUnusedVideos } from '#services/video_service'
 import teamService from '#services/team_service'
 import { refreshSearchText } from '#services/search_index_service'
 import publishing, { releaseDaysOf, schedule } from '#services/publishing_service'
+import adminLog from '#services/admin_log_service'
 
 export default class SeriesAdminController {
   /** Series list with read-only filters: ?search (title, address, alternative titles), ?status, ?type (slug). */
@@ -169,6 +170,7 @@ export default class SeriesAdminController {
           keywords: split(data.keywords),
           featured: data.featured === 'on',
           featuredDescription: data.featured_description || null,
+          pinned: data.pinned === 'on',
           draft: data.draft === 'on',
           publishAt,
           releaseDays: releaseDaysOf(data.release_days),
@@ -204,8 +206,15 @@ export default class SeriesAdminController {
     return series.publishAt ? `Seri planlandı: ${schedule.label(series.publishAt)}` : fallback
   }
 
-  async store({ request, session, response }: HttpContext) {
+  async store({ request, session, response, auth }: HttpContext) {
     const series = await this.save(request)
+    await adminLog.record(
+      auth.user,
+      'create',
+      'series',
+      series.id,
+      `"${series.title}" serisini ekledi`
+    )
     session.flash('success', this.savedMessage(series, 'Seri eklendi'))
     return response.redirect('/admin/seriler')
   }
@@ -248,13 +257,20 @@ export default class SeriesAdminController {
     })
   }
 
-  async update({ request, params, session, response }: HttpContext) {
+  async update({ request, params, session, response, auth }: HttpContext) {
     const series = await this.save(request, await SeriesModel.findOrFail(params.id))
+    await adminLog.record(
+      auth.user,
+      'update',
+      'series',
+      series.id,
+      `"${series.title}" serisini güncelledi`
+    )
     session.flash('success', this.savedMessage(series, 'Seri güncellendi'))
     return response.redirect('/admin/seriler')
   }
 
-  async destroy({ params, session, response }: HttpContext) {
+  async destroy({ params, session, response, auth }: HttpContext) {
     const series = await SeriesModel.findOrFail(params.id)
     // Chapters and comments cascade with the series; their files go afterwards: videos, page
     // images, comment images, and the cover/banner unless a card still shows them.
@@ -267,6 +283,13 @@ export default class SeriesAdminController {
       .whereNotNull('image')
       .select('image')
     await series.delete()
+    await adminLog.record(
+      auth.user,
+      'delete',
+      'series',
+      series.id,
+      `"${series.title}" serisini ${chapters.length} bölümüyle sildi`
+    )
     await removeUnusedVideos(videos)
     await removeContentFiles([...pages, ...images.map((row) => row.image as string)])
     await removeUnreferencedImages([series.coverImage, series.bannerImage])

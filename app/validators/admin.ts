@@ -17,6 +17,7 @@ export const seriesValidator = vine.compile(
     alternative_titles: vine.string().maxLength(5000).optional(),
     featured: vine.enum(['on']).optional(),
     featured_description: vine.string().maxLength(5000).optional(),
+    pinned: vine.enum(['on']).optional(),
     draft: vine.enum(['on']).optional(),
     access: vine.enum(accessLevelKeys).optional(),
     cover_mode: vine.enum(seriesCoverModeKeys).optional(),
@@ -49,5 +50,12 @@ export const chapterValidator = vine.compile(
     /** Translation teams of this chapter (empty: the series' teams) and a free-text credit. */
     teams: relationIds(),
     credits: vine.string().trim().maxLength(200).optional(),
+    /**
+     * "Son Güncellenenler" switches; `latest_controls` marks a form that has them, so a request
+     * without it (older clients) keeps the defaults: move the series up and notify readers.
+     */
+    latest_controls: vine.enum(['1']).optional(),
+    bump: vine.enum(['on']).optional(),
+    notify: vine.enum(['on']).optional(),
   })
 )

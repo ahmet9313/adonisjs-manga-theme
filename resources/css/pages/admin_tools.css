@@ -1,0 +1,197 @@
+/*
+ * Page styles: admin tools — Toplu Yükle (bulk chapter upload), Dosya Denetimi and Etkinlik
+ * Kaydı. Tokens and component classes only.
+ */
+@layer components {
+  /* ---- Toplu Yükle ----------------------------------------------------------------------- */
+  .bulk {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .bulk-pick {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .bulk-file {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .bulk-help {
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-control);
+    background: var(--t-surface-2);
+    font-size: 0.8125rem;
+    color: var(--t-text);
+  }
+
+  .bulk-help > summary {
+    cursor: pointer;
+    padding: 0.625rem 0.875rem;
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .bulk-help > summary:focus-visible {
+    outline: 2px solid var(--t-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-control);
+  }
+
+  .bulk-help__body {
+    display: grid;
+    gap: 0.625rem;
+    padding: 0 0.875rem 0.875rem;
+  }
+
+  .bulk-tree {
+    overflow-x: auto;
+    border-radius: var(--radius-control);
+    background: var(--t-field);
+    padding: 0.625rem 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--t-text);
+  }
+
+  .bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem 0.75rem;
+  }
+
+  .bulk-actions > :first-child:not(button, a) {
+    margin-right: auto;
+  }
+
+  .bulk-progress {
+    display: flex;
+    min-width: 12rem;
+    flex: 1 1 16rem;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .bulk-progress > .progress {
+    flex: 1;
+  }
+
+  .bulk-options {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (width >= 1024px) {
+    .bulk-options {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .bulk-switches {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .bulk-options fieldset {
+    min-width: 0;
+  }
+
+  .bulk-switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+  }
+
+  .bulk-warnings {
+    margin-top: 0.25rem;
+    max-height: 9rem;
+    overflow-y: auto;
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+  }
+
+  .bulk-table .bulk-number {
+    width: 6.5rem;
+  }
+
+  .bulk-table__pick {
+    width: 2.5rem;
+  }
+
+  .bulk-check {
+    height: 1.125rem;
+    width: 1.125rem;
+    accent-color: var(--t-accent);
+  }
+
+  .bulk-table tr.is-off td:not(.bulk-table__pick) {
+    opacity: 0.55;
+  }
+
+  .bulk-folder-cell {
+    min-width: 0;
+  }
+
+  .bulk-folder {
+    font-weight: 700;
+    color: var(--t-heading);
+    overflow-wrap: anywhere;
+  }
+
+  .bulk-row-warning {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--t-warning);
+  }
+
+  .bulk-result {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--t-text);
+  }
+
+  .bulk-result > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .bulk-result svg {
+    margin-top: 0.125rem;
+    height: 1.125rem;
+    width: 1.125rem;
+    flex-shrink: 0;
+  }
+
+  /* ---- Dosya Denetimi --------------------------------------------------------------------- */
+  .file-path {
+    display: block;
+    max-width: 32rem;
+    overflow-wrap: anywhere;
+  }
+
+  .file-samples {
+    display: grid;
+    gap: 0.375rem;
+    padding: 0 0.875rem 0.875rem;
+  }
+
+  /* ---- Etkinlik Kaydı ------------------------------------------------------------------- */
+  .activity-summary {
+    font-size: 0.875rem;
+    color: var(--t-heading);
+    overflow-wrap: anywhere;
+  }
+
+  @media (width >= 768px) {
+    .admin-filters.activity-filters {
+      grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 10rem)) auto;
+    }
+  }
+}

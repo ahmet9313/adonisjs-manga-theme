@@ -71,6 +71,7 @@
     "@types/compression": "^1.8.1",
     "@types/luxon": "^3.7.1",
     "@types/node": "^25.9.3",
+    "@types/yauzl": "^3.4.0",
     "axe-core": "^4.14.0",
     "eslint": "^10.5.0",
     "hot-hook": "^1.0.0",
@@ -98,7 +99,8 @@
     "luxon": "^3.7.2",
     "mysql2": "^3.22.5",
     "reflect-metadata": "^0.2.2",
-    "sharp": "^0.34.4"
+    "sharp": "^0.34.4",
+    "yauzl": "^3.4.0"
   },
   "hotHook": {
     "boundaries": [

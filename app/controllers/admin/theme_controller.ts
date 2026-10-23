@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import adminLog from '#services/admin_log_service'
 import vine from '@vinejs/vine'
 import {
   colorGroups,
@@ -225,7 +226,7 @@ export default class ThemeController {
     return view.render(`pages/admin/theme/${section}`, data)
   }
 
-  async update({ request, params, session, response }: HttpContext) {
+  async update({ request, params, session, response, auth }: HttpContext) {
     if (!isSection(params.section)) return response.redirect('/admin/tema/genel')
     const section = params.section as Section
     const body = request.all()
@@ -288,6 +289,13 @@ export default class ThemeController {
     const before = brandKeys().map((key) => settings.get(key))
     await settings.save(entries)
     await removeReplacedBranding(before)
+    await adminLog.record(
+      auth.user,
+      'theme',
+      'theme',
+      null,
+      `${titles[section].replace('Tema: ', 'Tema → ')} ayarlarını kaydetti`
+    )
     session.flash('success', 'Tema ayarları kaydedildi')
     return response.redirect(`/admin/tema/${section}`)
   }
@@ -330,7 +338,7 @@ export default class ThemeController {
     return JSON.stringify(this.snapshot(), null, 2)
   }
 
-  async import({ request, session, response }: HttpContext) {
+  async import({ request, session, response, auth }: HttpContext) {
     let data: {
       colors?: Record<string, unknown>
       lightColors?: Record<string, unknown>
@@ -365,12 +373,13 @@ export default class ThemeController {
       ...theme.readCss(data.css),
     })
     await removeReplacedBranding(before)
+    await adminLog.record(auth.user, 'theme', 'theme', null, 'Temayı JSON dosyasından içe aktardı')
     session.flash('success', 'Tema içe aktarıldı')
     return response.redirect('/admin/tema/gelismis')
   }
 
   /** Drops every colour, look, switch and custom CSS value; site name and announcement stay. */
-  async reset({ session, response }: HttpContext) {
+  async reset({ session, response, auth }: HttpContext) {
     const entries: Record<string, string> = { [CUSTOM_CSS_KEY]: '' }
     for (const token of colorTokens) {
       entries[colorKey(token.key)] = ''
@@ -381,6 +390,7 @@ export default class ThemeController {
     const before = brandKeys().map((key) => settings.get(key))
     await settings.save(entries)
     await removeReplacedBranding(before)
+    await adminLog.record(auth.user, 'theme', 'theme', null, 'Temayı varsayılan değerlere döndürdü')
     session.flash('success', 'Tema varsayılan değerlere döndürüldü')
     return response.redirect('/admin/tema/gelismis')
   }

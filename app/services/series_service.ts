@@ -121,12 +121,15 @@ class SeriesService {
           .groupOrderBy('number', 'desc')
           .groupLimit(3)
       )
+      // Pinned series (admin series form) stay on top of the list.
+      .orderBy('pinned', 'desc')
       .orderBy('updatedAt', 'desc')
       .orderBy('id', 'desc')
       .paginate(page, perPage)
     return {
       items: results.all().map((series) => ({
         ...serializeSeries(series),
+        pinned: Boolean(series.pinned),
         latestChapters: series.chapters.map(serializeChapter),
       })),
       hasNextPage: results.hasMorePages,

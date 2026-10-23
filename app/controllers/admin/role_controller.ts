@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import adminLog from '#services/admin_log_service'
 import vine from '@vinejs/vine'
 import db from '@adonisjs/lucid/services/db'
 import { isRole, permissions, roleNames, roles } from '#config/roles'
@@ -37,13 +38,20 @@ export default class RoleController {
     })
   }
 
-  async update({ request, params, session, response }: HttpContext) {
+  async update({ request, params, session, response, auth }: HttpContext) {
     if (!roleNames.includes(params.role)) return response.redirect('/admin/roller')
     const data = await request.validateUsing(roleValidator)
     await settings.save({
       [`role_${params.role}_label`]: data.label,
       [`role_${params.role}_color`]: data.color.toLowerCase(),
     })
+    await adminLog.record(
+      auth.user,
+      'update',
+      'role',
+      null,
+      `${params.role} rolünü "${data.label}" (${data.color.toLowerCase()}) olarak kaydetti`
+    )
     session.flash('success', 'Rol güncellendi')
     return response.redirect(`/admin/roller?rol=${params.role}`)
   }

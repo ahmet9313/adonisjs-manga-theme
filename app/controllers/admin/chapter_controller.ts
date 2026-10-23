@@ -2,6 +2,7 @@ import { now, pageNumber, pageSize } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import publishing, { schedule } from '#services/publishing_service'
+import adminLog from '#services/admin_log_service'
 import Chapter from '#models/chapter'
 import SeriesModel from '#models/series'
 import { chapterValidator } from '#validators/admin'
@@ -143,6 +144,10 @@ export default class ChapterAdminController {
     const before = new Set(pageImages(previous))
     const added = pageImages(chapterBody).filter((page) => !before.has(page))
     const today = publishing.dayOf(new Date())
+    // "Son Güncellenenler" switches of the form (both on when the form does not send them).
+    const controls = data.latest_controls === '1'
+    const bump = !controls || data.bump === 'on'
+    const notify = !controls || data.notify === 'on'
     try {
       await db.transaction(async (trx) => {
         chapter.useTransaction(trx)
@@ -163,8 +168,8 @@ export default class ChapterAdminController {
         })
         await chapter.save()
         await teamService.sync('chapter_teams', chapter.id, teamIds, trx)
-        // Drafts do not move the series up in "Son Güncellenenler".
-        if (!draft) await publishing.bumpSeries([series.id, oldSeriesId], timestamp, trx)
+        // Drafts, and chapters saved with the switch off, do not move the series up.
+        if (!draft && bump) await publishing.bumpSeries([series.id, oldSeriesId], timestamp, trx)
       })
     } catch (error) {
       // Pages written for this save are not kept when the save itself fails.
@@ -176,7 +181,7 @@ export default class ChapterAdminController {
     await removeContentFiles(pageImages(previous).filter((page) => !keptPages.has(page)))
     const kept = new Set(localVideoPaths(chapterBody))
     await removeUnusedVideos(localVideoPaths(previous).filter((path) => !kept.has(path)))
-    return { chapter, published }
+    return { chapter, series, published, notify }
   }
 
   /**
@@ -193,9 +198,21 @@ export default class ChapterAdminController {
     }
   }
 
-  async store({ request, session, response }: HttpContext) {
-    const { chapter, published } = await this.save(request)
-    if (published) await this.announce(chapter)
+  /** Activity log line: "Naruto · Bölüm 12 — Başlık". */
+  private describe(series: SeriesModel, chapter: Chapter) {
+    return `"${series.title}" · Bölüm ${chapter.number}${chapter.title ? ` — ${chapter.title}` : ''}`
+  }
+
+  async store({ request, session, response, auth }: HttpContext) {
+    const { chapter, series, published, notify } = await this.save(request)
+    if (published && notify) await this.announce(chapter)
+    await adminLog.record(
+      auth.user,
+      'create',
+      'chapter',
+      chapter.id,
+      `${this.describe(series, chapter)} ekledi${chapter.draft ? ' (taslak)' : ''}`
+    )
     session.flash('success', this.savedMessage(chapter, 'Bölüm eklendi'))
     return response.redirect('/admin/bolumler')
   }
@@ -225,10 +242,20 @@ export default class ChapterAdminController {
     })
   }
 
-  async update({ request, params, session, response }: HttpContext) {
-    const { chapter, published } = await this.save(request, await Chapter.findOrFail(params.id))
+  async update({ request, params, session, response, auth }: HttpContext) {
+    const { chapter, series, published, notify } = await this.save(
+      request,
+      await Chapter.findOrFail(params.id)
+    )
     // A draft series stays quiet; its readers hear about the chapter when the series goes live.
-    if (published) await this.announce(chapter)
+    if (published && notify) await this.announce(chapter)
+    await adminLog.record(
+      auth.user,
+      published ? 'publish' : 'update',
+      'chapter',
+      chapter.id,
+      `${this.describe(series, chapter)} ${published ? 'yayınladı' : 'güncelledi'}`
+    )
     session.flash(
       'success',
       published ? 'Bölüm yayınlandı' : this.savedMessage(chapter, 'Bölüm güncellendi')
@@ -236,8 +263,8 @@ export default class ChapterAdminController {
     return response.redirect('/admin/bolumler')
   }
 
-  async destroy({ params, session, response }: HttpContext) {
-    const chapter = await Chapter.findOrFail(params.id)
+  async destroy({ params, session, response, auth }: HttpContext) {
+    const chapter = await Chapter.query().where('id', params.id).preload('series').firstOrFail()
     const videos = localVideoPaths(chapter.content)
     const images = await db
       .from('comments')
@@ -245,6 +272,13 @@ export default class ChapterAdminController {
       .whereNotNull('image')
       .select('image')
     await chapter.delete()
+    await adminLog.record(
+      auth.user,
+      'delete',
+      'chapter',
+      chapter.id,
+      `${this.describe(chapter.series, chapter)} sildi`
+    )
     await removeUnusedVideos(videos)
     await removeContentFiles([...pageImages(chapter.content), ...images.map((row) => row.image)])
     session.flash('success', 'Bölüm silindi')

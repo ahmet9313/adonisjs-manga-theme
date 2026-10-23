@@ -1,0 +1,139 @@
+{{--
+  Admin → Dosya Denetimi (file_check_service). The scan runs only when asked (?tara=1): missing
+  covers, banners, pages and uploaded videos with links to their forms, and the files under the
+  content folder that nothing refers to (report only, nothing is deleted).
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(size = (bytes) => bytes >= 1024 ** 3 ? (bytes / 1024 ** 3).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' GB' : (bytes >= 1024 ** 2 ? (bytes / 1024 ** 2).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB' : Math.round(bytes / 1024).toLocaleString('tr-TR') + ' KB'))
+@let(kindLabels = { cover: 'Kapak', banner: 'Banner', page: 'Sayfa', video: 'Video' })
+@component('components/layout/admin', { title, description: 'Veritabanındaki kapak, banner, sayfa ve video yollarını içerik klasörüyle karşılaştırır; eksik dosyaları ve hiçbir kaydın kullanmadığı dosyaları listeler.' })
+  @slot('main')
+    <section class="panel flex flex-wrap items-center justify-between gap-4" aria-labelledby="scan-title">
+      <div class="min-w-0 flex-1 basis-72">
+        <h2 id="scan-title" class="panel__title">Denetimi çalıştır</h2>
+        <p class="panel__desc">Büyük sitelerde biraz sürebilir; en fazla {{ timeLimit }} saniye çalışır. Rapor yalnız bilgi verir, hiçbir dosya silinmez.</p>
+      </div>
+      <form method="GET" action="/admin/dosya-denetimi" data-submit-once>
+        <input type="hidden" name="tara" value="1">
+        @component('components/ui/button', { type: 'submit', variant: 'primary', icon: report ? 'refresh' : 'search' })
+          {{ report ? 'Yeniden denetle' : 'Denetimi başlat' }}
+        @end
+      </form>
+    </section>
+
+    @if(report)
+    @if(report.partial)
+    @component('components/ui/alert', { tone: 'warning', title: 'Süre doldu; sonuç eksik', class: 'mt-4' })
+      <p>Denetim {{ timeLimit }} saniyede bitmedi. Listelenen eksik dosyalar doğrudur ama tamamı olmayabilir; sahipsiz dosyalar bu yüzden sayılmadı.</p>
+    @end
+    @end
+
+    <div class="admin-stats mt-4">
+      @!component('components/ui/stat', { label: 'Denetlenen yol', value: number(report.checked), icon: 'search', hint: (report.durationMs / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' sn' })
+      @!component('components/ui/stat', { label: 'Eksik dosya', value: number(report.missingTotal), icon: 'exclamation', hint: report.missingTotal ? 'Aşağıda listelendi' : 'Hepsi yerinde' })
+      @!component('components/ui/stat', { label: 'Klasördeki dosya', value: number(report.files), icon: 'archive' })
+      @!component('components/ui/stat', { label: 'Sahipsiz dosya', value: report.orphansComplete ? number(report.orphans.count) : '—', icon: 'document', hint: report.orphansComplete ? size(report.orphans.bytes) : 'Sayılmadı' })
+    </div>
+
+    <section class="panel mt-4" aria-labelledby="missing-title">
+      <div class="panel__head">
+        <div class="min-w-0">
+          <h2 id="missing-title" class="panel__title">Eksik dosyalar</h2>
+          <p class="panel__desc">Kayıt bir dosyayı gösteriyor ama dosya içerik klasöründe yok; sayfa okuyucuda kırık görünür.</p>
+        </div>
+      </div>
+      @if(report.missing.length)
+      @if(report.missingTotal > report.missing.length)
+      <p class="admin-summary">İlk {{ number(report.missing.length) }} kayıt gösteriliyor ({{ number(report.missingTotal) }} eksik dosya).</p>
+      @end
+      <div class="table-wrap">
+        <table class="table table--stack admin-table">
+          <caption class="sr-only">Eksik dosyalar</caption>
+          <thead>
+            <tr>
+              <th scope="col">Seri</th>
+              <th scope="col">Bölüm</th>
+              <th scope="col">Tür</th>
+              <th scope="col">Yol</th>
+              <th scope="col"><span class="sr-only">İşlemler</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(item in report.missing)
+            @let(editUrl = item.chapter ? '/admin/bolumler/' + item.chapter.id + '/duzenle' : '/admin/seriler/' + item.series.id + '/duzenle')
+            <tr>
+              <td class="cell-main">
+                <a href="/admin/seriler/{{ item.series.id }}/duzenle" class="admin-title line-clamp-1">{{ item.series.title }}</a>
+              </td>
+              <td data-label="Bölüm" class="whitespace-nowrap">{{ item.chapter ? 'Bölüm ' + item.chapter.number : '—' }}</td>
+              <td data-label="Tür">
+                @!component('components/ui/badge', { kind: item.kind === 'page' || item.kind === 'video' ? 'neutral' : 'info', text: kindLabels[item.kind], size: 'sm' })
+              </td>
+              <td data-label="Yol" class="min-w-0">
+                <span class="admin-mono file-path" title="{{ item.path }}">{{ item.path }}</span>
+              </td>
+              <td class="actions">
+                <div class="admin-actions">
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: editUrl, label: 'Düzenle: ' + item.series.title + (item.chapter ? ' · Bölüm ' + item.chapter.number : ''), title: 'Düzenle' })
+                </div>
+              </td>
+            </tr>
+            @end
+          </tbody>
+        </table>
+      </div>
+      @else
+      @!component('components/ui/empty_state', { icon: 'check-circle', title: 'Eksik dosya yok', description: report.partial ? 'Süre dolmadan denetlenen kayıtların dosyaları yerinde.' : 'Bütün kapak, banner, sayfa ve video dosyaları yerinde.' })
+      @end
+    </section>
+
+    <section class="panel mt-4" aria-labelledby="orphan-title">
+      <div class="panel__head">
+        <div class="min-w-0">
+          <h2 id="orphan-title" class="panel__title">Sahipsiz dosyalar</h2>
+          <p class="panel__desc">İçerik klasöründe olup hiçbir seri, bölüm, profil, yorum, kozmetik, kart ya da tema ayarının kullanmadığı dosyalar. Yalnız rapor: silmeden önce yedek alın.</p>
+        </div>
+      </div>
+      @if(!report.orphansComplete)
+      <p class="text-sm text-muted">Denetim tamamlanmadığı için sayılmadı.</p>
+      @elseif(report.orphans.count)
+      <div class="table-wrap">
+        <table class="table admin-table">
+          <caption class="sr-only">Klasörlere göre sahipsiz dosyalar</caption>
+          <thead>
+            <tr>
+              <th scope="col">Klasör</th>
+              <th scope="col">Dosya</th>
+              <th scope="col">Boyut</th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(folder in report.orphans.folders)
+            <tr>
+              <td><span class="admin-mono">{{ folder.name }}</span></td>
+              <td class="t-num">{{ number(folder.count) }}</td>
+              <td class="t-num">{{ size(folder.bytes) }}</td>
+            </tr>
+            @end
+          </tbody>
+        </table>
+      </div>
+      <details class="bulk-help mt-4">
+        <summary>Örnek dosyalar ({{ number(report.orphans.samples.length) }})</summary>
+        <ul class="file-samples">
+          @each(sample in report.orphans.samples)
+          <li><span class="admin-mono file-path">{{ sample.path }}</span> <span class="text-muted">· {{ size(sample.size) }}</span></li>
+          @end
+        </ul>
+      </details>
+      @else
+      @!component('components/ui/empty_state', { icon: 'check-circle', title: 'Sahipsiz dosya yok', description: 'İçerik klasöründeki her dosya bir kayıt tarafından kullanılıyor.' })
+      @end
+    </section>
+    @else
+    <div class="mt-4">
+      @!component('components/ui/empty_state', { icon: 'search', title: 'Henüz denetlenmedi', description: 'Denetim sayfa açılınca değil, düğmeye basınca çalışır.' })
+    </div>
+    @end
+  @end
+@end

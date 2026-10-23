@@ -1,0 +1,104 @@
+{{--
+  Admin → Etkinlik Kaydı (admin_logs): who changed what in the panel, newest first. GET filters
+  (person, action, target type, text), 50 rows a page; rows older than retentionDays are pruned.
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(userOptions = [{ value: '', label: 'Herkes' }].concat(people.map((person) => ({ value: person.id, label: '@' + person.username }))))
+@let(actionOptions = [{ value: '', label: 'Tüm işlemler' }].concat(Object.entries(logActions).map(([value, entry]) => ({ value, label: entry.label }))))
+@let(targetOptions = [{ value: '', label: 'Tüm kayıtlar' }].concat(Object.entries(logTargets).map(([value, label]) => ({ value, label }))))
+@let(targetUrl = (log) => log.targetId ? ({ series: '/admin/seriler/' + log.targetId + '/duzenle', chapter: '/admin/bolumler/' + log.targetId + '/duzenle', user: '/admin/kullanicilar/' + log.targetId + '/duzenle' })[log.targetType] || '' : (log.targetType === 'theme' ? '/admin/tema/genel' : (log.targetType === 'role' ? '/admin/roller' : '')))
+@component('components/layout/admin', { title, description: 'Yönetim panelinde yapılan değişiklikler: seriler, bölümler, toplu yüklemeler, roller ve tema. Kayıtlar ' + retentionDays + ' gün saklanır.' })
+  @slot('main')
+    <form method="GET" action="/admin/etkinlik" class="panel panel--tight admin-filters activity-filters" role="search" aria-label="Etkinlikleri filtrele" x-data>
+      @!component('components/ui/field', { name: 'q', label: 'Ara', type: 'search', value: filters.q, placeholder: 'Seri adı, kullanıcı adı …', autocomplete: 'off' })
+      @!component('components/ui/field', { name: 'user', label: 'Kişi', type: 'select', value: filters.user, options: userOptions, '@change': '$el.form.requestSubmit()' })
+      @!component('components/ui/field', { name: 'action', label: 'İşlem', type: 'select', value: filters.action, options: actionOptions, '@change': '$el.form.requestSubmit()' })
+      @!component('components/ui/field', { name: 'target', label: 'Kayıt', type: 'select', value: filters.target, options: targetOptions, '@change': '$el.form.requestSubmit()' })
+      <div class="admin-filters__actions">
+        @component('components/ui/button', { type: 'submit', icon: 'filter' })
+          Filtrele
+        @end
+        @if(filtered)
+        @component('components/ui/button', { variant: 'ghost', href: '/admin/etkinlik', icon: 'x' })
+          Temizle
+        @end
+        @end
+      </div>
+    </form>
+
+    @if(logs.length)
+    <p class="admin-summary" aria-live="polite">
+      <span><strong>{{ number(logs.total) }}</strong> {{ filtered ? 'sonuç' : 'kayıt' }}</span>
+      <span aria-hidden="true">·</span>
+      <span>en yeni önce</span>
+    </p>
+    <div class="table-wrap">
+      <table class="table table--stack admin-table">
+        <caption class="sr-only">Etkinlik kaydı</caption>
+        <thead>
+          <tr>
+            <th scope="col">Ne oldu</th>
+            <th scope="col">Kim</th>
+            <th scope="col">İşlem</th>
+            <th scope="col">Zaman</th>
+            <th scope="col"><span class="sr-only">Bağlantı</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @each(log in logs)
+          @let(action = logActions[log.action] || { label: log.action, tone: 'neutral' })
+          @let(link = targetUrl(log))
+          <tr>
+            <td class="cell-main">
+              <div class="admin-cell__body">
+                <p class="activity-summary">{{ log.summary }}</p>
+                <p class="admin-cell__meta md:hidden">{{ log.user ? '@' + log.user.username : 'Silinmiş hesap' }} · {{ agoOf(log.createdAt) }}</p>
+              </div>
+            </td>
+            <td data-label="Kim" class="whitespace-nowrap max-md:hidden">
+              @if(log.user)
+              <a href="/uye/{{ log.user.username }}" class="admin-quiet">{{ '@' + log.user.username }}</a>
+              @else
+              <span class="text-muted">Silinmiş hesap</span>
+              @end
+            </td>
+            <td data-label="İşlem">
+              <span class="flex flex-wrap gap-1">
+                @!component('components/ui/badge', { kind: action.tone, text: action.label, size: 'sm' })
+                @!component('components/ui/badge', { kind: 'neutral', text: logTargets[log.targetType] || log.targetType, size: 'sm' })
+              </span>
+            </td>
+            <td data-label="Zaman" class="whitespace-nowrap text-muted max-md:hidden">
+              <time datetime="{{ log.createdAt }}" title="{{ dateOf(log.createdAt) }}">{{ agoOf(log.createdAt) }}</time>
+            </td>
+            <td class="actions">
+              @if(link)
+              <div class="admin-actions">
+                @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'arrow-right', href: link, label: 'Kayda git: ' + log.summary, title: 'Kayda git' })
+              </div>
+              @end
+            </td>
+          </tr>
+          @end
+        </tbody>
+      </table>
+    </div>
+    <div class="admin-listfoot">
+      <p class="admin-listfoot__info">{{ number((logs.currentPage - 1) * logs.perPage + 1) }}–{{ number(Math.min(logs.currentPage * logs.perPage, logs.total)) }} / {{ number(logs.total) }}</p>
+      @!component('components/ui/pagination', { current: logs.currentPage, total: logs.lastPage, label: 'Etkinlik sayfaları' })
+    </div>
+    @elseif(filtered)
+    <div class="mt-4">
+      @component('components/ui/empty_state', { icon: 'filter', title: 'Bu filtrelerle kayıt yok', description: 'Filtreleri değiştirin ya da temizleyin.' })
+        @component('components/ui/button', { href: '/admin/etkinlik', icon: 'x' })
+          Filtreleri temizle
+        @end
+      @end
+    </div>
+    @else
+    <div class="mt-4">
+      @!component('components/ui/empty_state', { icon: 'clock', title: 'Henüz etkinlik yok', description: 'Seri, bölüm, rol veya tema değiştiğinde burada görünür.' })
+    </div>
+    @end
+  @end
+@end

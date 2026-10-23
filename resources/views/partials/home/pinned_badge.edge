@@ -1,0 +1,12 @@
+{{--
+  "Sabit" label of a series pinned to the top of "Son Güncellenenler" (admin series form →
+  Son Güncellenenler'de sabitle). `lock-badge` is the icon + text badge layout (gate.css).
+--}}
+@if(item.pinned)
+<p class="mt-1.5">
+  <span class="badge badge--sm lock-badge" data-tone="accent" title="Yönetim bu seriyi listenin başına sabitledi">
+    @!component('components/icon', { name: 'pin', stroke: 2 })
+    Sabitlendi
+  </span>
+</p>
+@end
