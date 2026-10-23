@@ -33,6 +33,10 @@ export default class Chapter extends BaseModel {
   @column({ consume: (value) => Boolean(value) })
   declare draft: boolean
 
+  /** Draft published by the scheduler at this UTC time (publishing_service.publishDue). */
+  @column()
+  declare publishAt: string | null
+
   /** Stricter of this and the series' access counts; `public` means "same as the series". */
   @column()
   declare access: AccessLevel

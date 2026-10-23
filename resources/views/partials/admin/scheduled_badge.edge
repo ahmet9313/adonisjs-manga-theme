@@ -1,0 +1,7 @@
+{{--
+  "Planlı · 25 Eki 14:00" next to the Taslak badge of admin lists (series and chapters) when the
+  draft has a planned publication time. Props: at (publishAt).
+--}}
+@if(at)
+@!component('components/ui/badge', { kind: 'info', text: 'Planlı · ' + schedule.label(at), size: 'sm', title: 'Bu zamanda kendiliğinden yayınlanır (site saati)' })
+@end

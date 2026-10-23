@@ -53,6 +53,9 @@ vine.messagesProvider = new SimpleMessagesProvider(
     text_content: 'Bölüm metni',
     page_order: 'Sayfa sırası',
     pages: 'Sayfalar',
+    publish_at: 'Planlı yayın zamanı',
+    release_days: 'Yayın günleri',
+    release_note: 'Yayın notu',
     // Dictionaries, cosmetics, cards, roles and theme settings
     name: 'Ad',
     kind: 'Tür',

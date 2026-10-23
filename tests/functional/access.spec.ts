@@ -9,6 +9,7 @@ import User from '#models/user'
 import content from '#config/content'
 import settings from '#services/settings_service'
 import { now } from '#services/input_service'
+import { localDay } from '#services/level'
 import { clearAttempts } from '#services/throttle'
 
 const base = 'http://127.0.0.1:3334'
@@ -335,7 +336,7 @@ test.group('Drafts, members / VIP content and age gates', (group) => {
     assert.isFalse(saved.draft)
     assert.equal(saved.access, 'public')
     assert.equal(saved.warning, 'Spoiler içerir')
-    assert.equal(saved.publishedAt, now().slice(0, 10))
+    assert.equal(saved.publishedAt, localDay())
     assert.equal(await notices(), 1)
     await db.from('bookmarks').where({ user_id: reader.id }).delete()
     await db.from('notifications').where({ user_id: reader.id }).delete()

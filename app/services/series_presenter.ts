@@ -38,6 +38,9 @@ export interface SeriesInfo {
   /** Only staff ever receive drafts (previews); lists leave them out. */
   draft: boolean
   access: AccessLevel
+  /** Weekday keys of new chapters ("cum,cmt") and a free-text note (series page, /takvim). */
+  releaseDays?: string | null
+  releaseNote?: string | null
   /** Average of 1–10 ratings (0 when nobody rated yet). */
   ratingAverage: number
   ratingCount: number
@@ -106,6 +109,8 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
     featuredDescription: s.featuredDescription,
     draft: Boolean(s.draft),
     access: s.access || 'public',
+    releaseDays: s.releaseDays ?? null,
+    releaseNote: s.releaseNote ?? null,
     ratingAverage: Number(s.ratingAvg) || 0,
     ratingCount: s.ratingCount || 0,
     reviewCount: s.reviewCount || 0,

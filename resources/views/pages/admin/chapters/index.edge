@@ -96,6 +96,7 @@
                 <span class="flex flex-wrap gap-1">
                   @if(chapter.draft)
                   @!component('components/ui/badge', { kind: 'draft', tone: 'warning', text: 'Taslak', size: 'sm', title: 'Yayında değil; yalnız yönetim görür' })
+                  @!component('partials/admin/scheduled_badge', { at: chapter.publishAt })
                   @end
                   @if(chapter.access !== 'public')
                   @!component('components/ui/badge', { kind: 'access', tone: chapter.access === 'vip' ? 'accent' : 'neutral', text: site.accessLevels[chapter.access].label, size: 'sm' })

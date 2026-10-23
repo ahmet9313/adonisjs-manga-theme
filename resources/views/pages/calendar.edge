@@ -1,0 +1,163 @@
+{{--
+  "Yayın Takvimi" (/takvim, CalendarController): planned chapters of published series in the
+  coming 7 days (or 30 with ?gorunum=ay) by day with their time, the series that usually release
+  on each weekday ("Bu gün çıkanlar", week view) and the chapters released in the last 7 days.
+  Planned chapters are drafts until their time: they show number and time only, never a link.
+  Draft series never appear (calendar_service).
+--}}
+@component('components/layout/main', { title, description })
+
+@slot('main')
+  @let(dayName = (day) => day === today ? 'Bugün' : (day === tomorrow ? 'Yarın' : (day === yesterday ? 'Dün' : '')))
+  @let(dateText = (day) => dateOf(day + ' 12:00:00', false))
+  @let(seriesUrl = (item) => '/series/' + item.type + '/' + item.slug)
+
+  @component('components/ui/page_header', {
+    title: 'Yayın Takvimi',
+    description: 'Planlanan bölümler, serilerin yayın günleri ve son 7 günde çıkan bölümler.',
+  })
+    @slot('actions')
+      @!component('components/ui/pill_group', {
+        label: 'Takvim görünümü',
+        items: [
+          { label: 'Bu hafta', href: '/takvim', active: mode === 'week' },
+          { label: '30 gün', href: '/takvim?gorunum=ay', active: mode === 'month' },
+        ],
+      })
+    @end
+  @end
+
+  <div class="calendar-layout">
+    <section class="calendar-upcoming" aria-labelledby="calendar-upcoming-title">
+      @!component('components/ui/section_head', {
+        title: mode === 'month' ? 'Önümüzdeki 30 gün' : 'Bu hafta',
+        id: 'calendar-upcoming-title',
+        icon: 'calendar',
+        description: mode === 'month' ? 'Planlanan bölümleri olan günler.' : 'Planlanan bölümler ve o gün yeni bölüm gelen seriler.',
+      })
+
+      @if(days.length)
+      <ol class="calendar-days">
+        @each(item in days)
+        @let(label = dayName(item.day))
+        <li class="calendar-day" {{ item.day === today ? 'data-today' : '' }}>
+          <div class="calendar-day__head">
+            <h3 id="calendar-day-{{ item.day }}" class="calendar-day__title">
+              {{ label ? label + ' · ' : '' }}{{ weekdays[item.weekday] }}
+            </h3>
+            <time class="calendar-day__date" datetime="{{ item.day }}">{{ dateText(item.day) }}</time>
+          </div>
+
+          @if(item.planned.length)
+          <ul class="calendar-list" aria-label="Planlanan bölümler">
+            @each(series in item.planned)
+            <li class="calendar-row">
+              <a href="{{ seriesUrl(series) }}" class="calendar-row__cover" tabindex="-1" aria-hidden="true">
+                <img src="{{ thumbOf(series.coverImage, 160) }}" srcset="{{ srcsetOf(series.coverImage, [160, 320]) || null }}" sizes="48px" alt="" width="48" height="64" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
+                  @if(series.coverVeil)
+                  data-veil="{{ series.coverVeil }}"
+                  @end
+                  >
+                @!component('components/series/veil', { series })
+              </a>
+              <div class="calendar-row__body">
+                <a href="{{ seriesUrl(series) }}" class="calendar-row__title">{{ series.title }}</a>
+                <ul class="calendar-chapters">
+                  @each(chapter in series.chapters)
+                  <li class="calendar-chapter" data-planned>
+                    @!component('components/icon', { name: 'clock', class: 'h-3.5 w-3.5' })
+                    <span>Bölüm {{ chapter.number }}</span>
+                    <span aria-hidden="true">·</span>
+                    <span class="t-num">{{ chapter.time }}</span>
+                  </li>
+                  @end
+                </ul>
+              </div>
+            </li>
+            @end
+          </ul>
+          @end
+
+          @if(item.regular.length)
+          <div class="calendar-regular">
+            <p class="calendar-regular__label">Bu gün çıkanlar</p>
+            <ul class="calendar-regular__list">
+              @each(series in item.regular)
+              <li><a href="{{ seriesUrl(series) }}" class="chip">{{ series.title }}</a></li>
+              @end
+            </ul>
+          </div>
+          @end
+
+          @if(!item.planned.length && !item.regular.length)
+          <p class="calendar-day__empty">Bu gün için planlanmış bölüm yok.</p>
+          @end
+        </li>
+        @end
+      </ol>
+      @else
+      @!component('components/ui/empty_state', { icon: 'calendar', title: 'Planlanmış bölüm yok', description: 'Önümüzdeki 30 günde planlanan bir bölüm bulunmuyor. Yeni bölümler çıktıkça Son Güncellenenler’de görünür.' })
+      @end
+    </section>
+
+    <section class="calendar-recent" aria-labelledby="calendar-recent-title">
+      @!component('components/ui/section_head', {
+        title: 'Son 7 gün',
+        id: 'calendar-recent-title',
+        icon: 'clock',
+        description: 'Yayınlanan bölümler, güne göre.',
+        href: '/',
+        linkLabel: 'Son Güncellenenler',
+      })
+
+      @if(recent.length)
+      <div class="calendar-recent__days">
+        @each(group in recent)
+        @let(label = dayName(group.day))
+        <section class="calendar-recent__day" aria-labelledby="calendar-recent-{{ group.day }}">
+          <h3 id="calendar-recent-{{ group.day }}" class="calendar-recent__title">
+            {{ label ? label + ' · ' : '' }}{{ weekdays[group.weekday] }}
+            <time class="calendar-day__date" datetime="{{ group.day }}">{{ dateText(group.day) }}</time>
+          </h3>
+          <ul class="calendar-list">
+            @each(series in group.series)
+            <li class="calendar-row">
+              <a href="{{ seriesUrl(series) }}" class="calendar-row__cover" tabindex="-1" aria-hidden="true">
+                <img src="{{ thumbOf(series.coverImage, 160) }}" srcset="{{ srcsetOf(series.coverImage, [160, 320]) || null }}" sizes="48px" alt="" width="48" height="64" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
+                  @if(series.coverVeil)
+                  data-veil="{{ series.coverVeil }}"
+                  @end
+                  >
+                @!component('components/series/veil', { series })
+              </a>
+              <div class="calendar-row__body">
+                <a href="{{ seriesUrl(series) }}" class="calendar-row__title">{{ series.title }}</a>
+                <ul class="calendar-chapters">
+                  @each(chapter in series.chapters)
+                  @let(locked = series.access !== 'public' || chapter.access !== 'public')
+                  <li>
+                    <a href="{{ seriesUrl(series) }}/{{ chapter.number }}" class="calendar-chapter calendar-chapter--link" title="{{ chapter.title || '' }}">
+                      @if(locked)
+                      @!component('components/icon', { name: 'lock', class: 'h-3.5 w-3.5' })
+                      <span class="sr-only">Kilitli:</span>
+                      @end
+                      Bölüm {{ chapter.number }}
+                    </a>
+                  </li>
+                  @end
+                </ul>
+              </div>
+            </li>
+            @end
+          </ul>
+        </section>
+        @end
+      </div>
+      @else
+      <p class="calendar-day__empty">Son 7 günde yeni bölüm yayınlanmadı.</p>
+      @end
+    </section>
+  </div>
+@end
+
+@end

@@ -6,6 +6,7 @@ import Genre from '#models/genre'
 import Author from '#models/author'
 import Artist from '#models/artist'
 import ContentType from '#models/content_type'
+import publishing from '#services/publishing_service'
 
 const totalOf = (row: unknown) => Number((row as any)?.$extras?.total || 0)
 
@@ -61,6 +62,7 @@ export default class DashboardController {
       },
       recentSeries,
       recentChapters,
+      scheduled: await publishing.upcoming(5),
     })
   }
 }

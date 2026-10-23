@@ -79,6 +79,7 @@
               @!component('components/ui/field', { name: 'status', label: 'Yayın durumu', type: 'select', required: true, value: isEdit ? series.status : site.statuses[0], options: site.statuses.map((value) => ({ value, label: value })) })
               @!component('components/ui/field', { name: 'translation_status', label: 'Çeviri durumu', type: 'select', required: true, value: isEdit ? series.translationStatus : site.translationStatuses[0], options: site.translationStatuses.map((value) => ({ value, label: value })) })
             </div>
+            @!component('partials/admin/release_days', { series: isEdit ? series : null })
           @end
 
           @component('components/ui/panel', { title: 'Arama ve keşif', id: 'discovery', description: 'Okurların seriyi farklı adlarla ve konularla bulmasını sağlar.' })
@@ -109,6 +110,7 @@
           @component('components/ui/panel', { title: 'Yayın ve erişim', id: 'access', description: 'Taslaklar yalnız yönetimde görünür. Erişim, bölümleri kimin açabileceğini belirler; yaş uyarısı Yaş sınırı ve Tema → Yaş ve Erişim ayarından gelir.' })
             <div class="admin-fields">
               @!component('components/ui/field', { name: 'draft', label: 'Taslak (yayınlama)', type: 'toggle', value: failed ? flashMessages.has('draft') : (isEdit && series.draft), hint: 'Açıkken seri katalogda, aramada ve ana sayfada görünmez; adresi yalnız yönetici ve editörler açabilir.' })
+              @!component('partials/admin/publish_at', { stored: isEdit ? series.publishAt : null, draft: failed ? flashMessages.has('draft') : (isEdit && series.draft), subject: 'Seri' })
               @!component('components/ui/field', { name: 'cover_mode', label: 'Kapak görünümü', type: 'select', value: isEdit ? (series.coverMode || 'auto') : 'auto', options: [{ value: 'auto', label: 'Yaş sınırına göre (Tema → Yaş ve Erişim)' }].concat(Object.entries(site.coverModes).map(([value, mode]) => ({ value, label: mode.label }))), hint: 'Hassas kapaklar listelerde, aramada ve seri sayfasında bulanık ya da varsayılan görselle gösterilir. Asıl kapağı kimlerin göreceği Tema → Yaş ve Erişim → “Gizli kapakları kimler açık görsün?” ayarından gelir.' })
               @!component('components/ui/field', { name: 'access', label: 'Erişim', type: 'select', value: isEdit ? series.access : 'public', options: Object.entries(site.accessLevels).map(([value, level]) => ({ value, label: level.label })), hint: 'Seri sayfası herkese görünür; kilitli bölümler kilit simgesiyle listelenir ve açılırken giriş ya da VIP rolü istenir.' })
             </div>
