@@ -5,6 +5,7 @@ import seoConfig from '#config/seo'
 import settings from '#services/settings_service'
 import { localDay, parseTimestamp } from '#services/level'
 import seo, { clip, escapeXml } from '#services/seo_service'
+import { now } from '#services/input_service'
 
 /**
  * Sitemap and RSS rows (seo_controller). Only what anyone may open without a gate is listed:
@@ -124,6 +125,18 @@ class FeedService {
         .orderBy('chapters.series_id')
         .orderBy('chapters.number')
 
+      // Teams, published static pages and announcements (already-public dates only).
+      const [teams, pages, posts] = await Promise.all([
+        db.from('teams').select('slug', 'updated_at').orderBy('id'),
+        db.from('pages').where('published', true).select('slug', 'updated_at').orderBy('id'),
+        db
+          .from('posts')
+          .whereNotNull('published_at')
+          .where('published_at', '<=', now())
+          .select('slug', 'updated_at')
+          .orderBy('id'),
+      ])
+
       const newest = series
         .map((row) => isoOf(row.updated_at))
         .filter(Boolean)
@@ -132,6 +145,13 @@ class FeedService {
       return [
         { path: '/', lastmod: newest ?? null },
         { path: '/seriler', lastmod: newest ?? null },
+        ...['/seriler/a-z', '/takvim', '/ekipler', '/ekibe-katil', '/duyurular'].map((path) => ({
+          path,
+          lastmod: null,
+        })),
+        ...teams.map((row) => ({ path: `/ekip/${row.slug}`, lastmod: isoOf(row.updated_at) })),
+        ...pages.map((row) => ({ path: `/sayfa/${row.slug}`, lastmod: isoOf(row.updated_at) })),
+        ...posts.map((row) => ({ path: `/duyuru/${row.slug}`, lastmod: isoOf(row.updated_at) })),
         ...series.map((row) => ({
           path: pathOf(row.type, row.slug),
           lastmod: isoOf(row.updated_at),

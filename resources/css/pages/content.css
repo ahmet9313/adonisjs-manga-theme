@@ -248,10 +248,11 @@
     }
   }
 
+  /* Above the phone tab bar when it is shown (engagement.css sets --bottom-nav-h). */
   .cookie-notice {
     position: fixed;
     right: 0.75rem;
-    bottom: 0.75rem;
+    bottom: calc(var(--bottom-nav-h, 0px) + 0.75rem);
     left: 0.75rem;
     z-index: var(--z-sticky);
     display: flex;

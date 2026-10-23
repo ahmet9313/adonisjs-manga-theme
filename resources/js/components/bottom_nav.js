@@ -2,7 +2,8 @@
  * Phone tab bar (partials/bottom_nav.edge). "Menü" toggles the header's mobile panel through
  * the `toggle-mobile-menu` window event and mirrors its state in aria-expanded. In the chapter
  * reader the bar slides away while reading downwards and comes back when scrolling up or at the
- * end of the page, like the reader toolbar. While a text field has focus (the on-screen
+ * end of the page, like the reader toolbar, and stays away during immersive reading (the reader's
+ * `reader-immersive` event). While a text field has focus (the on-screen
  * keyboard is open) the bar steps aside everywhere, so it never covers the composer.
  */
 const typingTarget = (el) =>
@@ -16,6 +17,7 @@ function bottomNav() {
   return {
     hidden: false,
     typing: false,
+    immersive: false,
     menuOpen: false,
 
     init() {
@@ -48,6 +50,11 @@ function bottomNav() {
         })
       }
       window.addEventListener('scroll', this.onScroll, { passive: true })
+      this.onImmersive = (event) => {
+        this.immersive = Boolean(event.detail?.on)
+        this.update(0)
+      }
+      window.addEventListener('reader-immersive', this.onImmersive)
     },
 
     destroy() {
@@ -55,12 +62,14 @@ function bottomNav() {
       document.removeEventListener('focusin', this.onFocus)
       document.removeEventListener('focusout', this.onFocus)
       if (this.onScroll) window.removeEventListener('scroll', this.onScroll)
+      if (this.onImmersive) window.removeEventListener('reader-immersive', this.onImmersive)
     },
 
     update(delta) {
       const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80
       const busy = this.$el.contains(document.activeElement) || this.menuOpen
-      if (busy || atEnd || window.scrollY < 160) this.hidden = false
+      if (this.immersive && !busy) this.hidden = true
+      else if (busy || atEnd || window.scrollY < 160) this.hidden = false
       else if (delta > 6) this.hidden = true
       else if (delta < -6) this.hidden = false
       this.$el.inert = this.hidden || this.typing
