@@ -24,12 +24,12 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   @end
   <title>{{ title || 'Panel' }} — {{ site.name }} Yönetim</title>
-  @vite(['resources/css/app.css', 'resources/js/app.js'])
+  @vite(['resources/css/app.css', 'resources/css/admin.css', 'resources/js/app.js'])
   @if(themed && themeCss())
   <style>{{{ themeCss() }}}</style>
   @end
 </head>
-<body class="site-bg min-h-screen" data-account="1" data-unread="0" data-name="{{ me.fullName }}"
+<body class="site-bg min-h-screen" data-area="admin" data-account="1" data-unread="0" data-name="{{ me.fullName }}"
       x-data="adminShell" @keydown.escape.window="closeNav()">
   <a href="#main" class="skip-link">İçeriğe atla</a>
 
@@ -64,13 +64,16 @@
             @end
             <ul id="nav-{{ group.key }}" class="mt-1 space-y-0.5 pl-3" x-show="isGroupOpen('{{ group.key }}')">
               @each(item in group.items)
+                @if(!item.roles || item.roles.includes(me.role))
                 @let(active = item.exact ? request.url() === item.href : request.url().startsWith(item.href))
                 <li>
                   <a href="{{ item.href }}" {{ active ? 'aria-current=page' : '' }} class="admin-link">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false"><path stroke-linecap="round" stroke-linejoin="round" d="{{ item.icon }}"/></svg>
                     {{ item.label }}
+                    @include('partials/admin/nav_badge')
                   </a>
                 </li>
+                @end
               @end
             </ul>
           </div>

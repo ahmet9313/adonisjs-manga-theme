@@ -1,6 +1,6 @@
 {{--
   End of the chapter: what comes next and the main ways on (next chapter, the series page,
-  rating the series).
+  rating the series) and the share buttons.
 --}}
 <section class="reader-end" aria-labelledby="reader-end-title">
   <span class="reader-end__icon" aria-hidden="true">
@@ -31,5 +31,10 @@
       <span>Seriyi puanla</span>
     </a>
     @end
+    @!component('components/report_button', { chapter, series, size: 'lg' })
   </div>
+  @if(ui('share_buttons'))
+  @!component('partials/share/row', { url: siteUrl(request, chapterUrl(chapter.number)), title: series.title + ' — Bölüm ' + chapter.number, label: 'Bu bölümü paylaş' })
+  @end
+  @include('partials/reader/reactions')
 </section>

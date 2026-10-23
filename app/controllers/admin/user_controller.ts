@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import adminLog from '#services/admin_log_service'
 import db from '@adonisjs/lucid/services/db'
 import vine from '@vinejs/vine'
 import User from '#models/user'
@@ -6,6 +7,8 @@ import { roleNames, isRole } from '#config/roles'
 import { now, pageNumber, pageSize, searchText } from '#services/input_service'
 import settings from '#services/settings_service'
 import { invalidField } from '#services/upload_service'
+import moderation from '#services/moderation_service'
+import { muteDurations } from '#config/moderation'
 
 const userValidator = vine.compile(
   vine.object({
@@ -62,6 +65,7 @@ export default class UserController {
       member,
       roleList: settings.allRoles(),
       roleLabels: Object.fromEntries(settings.allRoles().map((role) => [role.key, role.label])),
+      mute: { durations: muteDurations, until: moderation.untilLabel(member.mutedUntil) },
     })
   }
 
@@ -70,10 +74,27 @@ export default class UserController {
     const data = await request.validateUsing(userValidator)
     if (member.id === auth.user!.id)
       invalidField('role', 'Kendi rolünüzü veya durumunuzu değiştiremezsiniz.')
+    const before = { role: member.role, banned: Boolean(member.bannedAt) }
     member.role = data.role
     member.bannedAt = data.banned ? member.bannedAt || now() : null
     member.updatedAt = now()
     await member.save()
+    const changes = [
+      before.role !== member.role ? `rolünü ${before.role} → ${member.role} yaptı` : '',
+      before.banned !== Boolean(member.bannedAt)
+        ? member.bannedAt
+          ? 'hesabını askıya aldı'
+          : 'hesabını askıdan çıkardı'
+        : '',
+    ].filter(Boolean)
+    if (changes.length)
+      await adminLog.record(
+        auth.user,
+        'role',
+        'user',
+        member.id,
+        `@${member.username} ${changes.join(', ')}`
+      )
     if (member.bannedAt)
       await db.from('remember_me_tokens').where('tokenable_id', member.id).delete()
     session.flash('success', 'Kullanıcı güncellendi')

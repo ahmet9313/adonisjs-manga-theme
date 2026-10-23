@@ -1,0 +1,66 @@
+{{--
+  Markdown body field of the page and announcement forms with a small toolbar and a live preview
+  (Alpine `markdownEditor`, resources/js/components/markdown_editor.js). The preview is rendered
+  by the server (POST /admin/icerik/onizleme, the renderer the site uses), so it shows exactly
+  what will be published.
+  Props: name ('body'), value, limit (characters), html (server-rendered value for the first
+  paint), label ('İçerik'), rows (16), hint.
+--}}
+@let(name = $props.get('name', 'body'))
+@let(id = 'f-' + name)
+@let(limit = $props.get('limit', 10000))
+@let(value = flashMessages.has(name) ? flashMessages.get(name) : $props.get('value', ''))
+@let(error = flashMessages.has('inputErrorsBag.' + name) ? flashMessages.get('inputErrorsBag.' + name)[0] : '')
+@let(tools = [
+  { action: 'heading', icon: 'H', label: 'Ara başlık', sample: 'Ara başlık' },
+  { action: 'bold', icon: 'K', label: 'Kalın', sample: 'kalın metin' },
+  { action: 'italic', icon: 'İ', label: 'İtalik', sample: 'italik metin' },
+  { action: 'link', icon: 'link', label: 'Bağlantı', sample: 'bağlantı metni' },
+  { action: 'list', icon: 'list', label: 'Madde listesi', sample: 'madde' },
+  { action: 'ordered', icon: '1.', label: 'Numaralı liste', sample: 'madde' },
+  { action: 'quote', icon: '❝', label: 'Alıntı / not', sample: 'not' },
+])
+<div class="md-editor field {{ error ? 'field--invalid' : '' }}" x-data="markdownEditor" data-preview-url="/admin/icerik/onizleme" data-limit="{{ limit }}">
+  <div class="md-editor__head">
+    <label for="{{ id }}" class="field__label">
+      {{ $props.get('label', 'İçerik') }}
+      <span class="field__req" aria-hidden="true">*</span>
+    </label>
+    <div class="md-editor__tools" role="toolbar" aria-label="Biçimlendirme" aria-controls="{{ id }}">
+      @each(tool in tools)
+      <button type="button" class="btn btn--ghost btn--sm md-editor__tool" title="{{ tool.label }}" aria-label="{{ tool.label }}"
+              data-action="{{ tool.action }}" data-sample="{{ tool.sample }}" @click="apply($event.currentTarget.dataset)">
+        @if(tool.icon === 'link' || tool.icon === 'list')
+        @!component('components/icon', { name: tool.icon, class: 'h-4 w-4' })
+        @else
+        <span aria-hidden="true" class="md-editor__glyph md-editor__glyph--{{ tool.action }}">{{ tool.icon }}</span>
+        @end
+      </button>
+      @end
+    </div>
+  </div>
+  <div class="md-editor__panes">
+    <textarea id="{{ id }}" name="{{ name }}" rows="{{ $props.get('rows', 16) }}" class="control md-editor__input" required maxlength="{{ limit }}"
+              spellcheck="true" x-ref="input" @input="changed()" aria-describedby="{{ id }}-hint{{ error ? ' ' + id + '-error' : '' }}"
+      @if(error)
+      aria-invalid="true"
+      @end
+      >{{ value }}</textarea>
+    <section class="md-editor__preview" aria-labelledby="{{ id }}-preview-title">
+      <p id="{{ id }}-preview-title" class="md-editor__label">
+        Önizleme
+        <span class="md-editor__state" x-show="state === 'loading'" x-cloak>güncelleniyor…</span>
+        <span class="md-editor__state text-(--t-danger)" x-show="state === 'error'" x-cloak role="status">önizleme alınamadı</span>
+      </p>
+      <div class="md-body" x-ref="preview">{{{ $props.get('html', '') }}}</div>
+      <p class="md-editor__empty" x-show="empty" x-cloak>Yazdıklarınız burada sitedeki gibi görünür.</p>
+    </section>
+  </div>
+  <div class="md-editor__foot">
+    <p id="{{ id }}-hint" class="field__hint">{{ $props.get('hint', '') }} <strong>**kalın**</strong>, <em>*italik*</em>, <code># Başlık</code>, <code>- madde</code>, <code>1. madde</code>, <code>&gt; not</code>, <code>[metin](https://…)</code>. HTML kullanılamaz; bağlantılar yalnız https:// veya /sayfa gibi site içi adresler olabilir.</p>
+    <span class="md-editor__count" aria-hidden="true"><span x-text="length">{{ value.length }}</span> / {{ limit }}</span>
+  </div>
+  @if(error)
+  <p id="{{ id }}-error" class="field__error" role="alert">{{ error }}</p>
+  @end
+</div>

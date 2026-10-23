@@ -1,6 +1,9 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import cards from '#services/card_service'
 import { isRarity, rarities, rarityRules } from '#config/rewards'
+import { takeAttempt } from '#services/throttle'
+
+const tooFast = { error: 'Çok hızlı işlem yapıyorsun. Biraz bekle.' }
 
 export default class CardController {
   async index({ view, auth }: HttpContext) {
@@ -13,6 +16,8 @@ export default class CardController {
   }
 
   async disassemble({ params, auth, response }: HttpContext) {
+    if (!takeAttempt(`cards:${auth.user!.id}`, 30, 60 * 1000))
+      return response.tooManyRequests(tooFast)
     const result = await cards.disassemble(auth.user!.id, Number(params.id))
     if (!result) return response.unprocessableEntity({ error: 'Parçalanacak kopya yok.' })
     return { ...result, shards: await cards.shards(auth.user!.id) }
@@ -21,6 +26,8 @@ export default class CardController {
   async craft({ request, auth, response }: HttpContext) {
     const rarity = request.input('rarity')
     if (!isRarity(rarity)) return response.unprocessableEntity({ error: 'Geçersiz nadirlik.' })
+    if (!takeAttempt(`cards:${auth.user!.id}`, 30, 60 * 1000))
+      return response.tooManyRequests(tooFast)
     const result = await cards.craft(auth.user!.id, rarity)
     if ('error' in result) return response.unprocessableEntity(result)
     return { ...result, shards: await cards.shards(auth.user!.id) }

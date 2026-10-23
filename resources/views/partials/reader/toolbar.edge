@@ -2,9 +2,11 @@
   Sticky reader toolbar (banner slot of the reader; Admin → Tema → Göster/Gizle → reader_toolbar):
   back to the series, "Seri · Bölüm N", chapter picker, previous/next, reading settings and a 2px
   reading-progress bar. readerToolbar (reader.js) navigates, saves the settings (localStorage
-  "reader-prefs") and slides the bar away while reading downwards.
+  "reader-prefs", the `reader` cookie and, for accounts, POST /okuyucu/tercihler) and slides the
+  bar away while reading downwards or immersively (tap in the middle, F). Paged mode adds the
+  reading direction and "Bölüm bitince sonrakine geç".
 --}}
-<div class="reader-bar" x-data="readerToolbar" data-base="{{ seriesUrl }}/"
+<div class="reader-bar" x-data="readerToolbar" data-base="{{ seriesUrl }}/" data-images="{{ pageCount ? '1' : '' }}"
   data-offset="{{ ui('header') && ui('header_sticky') ? 'header' : 'top' }}"
   data-hidden="false" :data-hidden="hidden.toString()">
   <nav class="reader-bar__inner" aria-label="Okuyucu">
@@ -18,7 +20,7 @@
 
     <div class="reader-bar__nav">
       @if(prevChapter)
-      <a href="{{ chapterUrl(prevChapter.number) }}" rel="prev" class="btn btn--secondary btn--md btn--icon" aria-label="Önceki bölüm: Bölüm {{ prevChapter.number }}" title="Önceki bölüm (←)">
+      <a href="{{ chapterUrl(prevChapter.number) }}" rel="prev" class="btn btn--secondary btn--md btn--icon" aria-label="Önceki bölüm: Bölüm {{ prevChapter.number }}" title="Önceki bölüm (,)">
         @!component('components/icon', { name: 'chevron-left', class: 'btn__icon' })
       </a>
       @else
@@ -35,7 +37,7 @@
       </select>
 
       @if(nextChapter)
-      <a href="{{ chapterUrl(nextChapter.number) }}" rel="next" class="btn btn--secondary btn--md btn--icon" aria-label="Sonraki bölüm: Bölüm {{ nextChapter.number }}" title="Sonraki bölüm (→)">
+      <a href="{{ chapterUrl(nextChapter.number) }}" rel="next" class="btn btn--secondary btn--md btn--icon" aria-label="Sonraki bölüm: Bölüm {{ nextChapter.number }}" title="Sonraki bölüm (.)">
         @!component('components/icon', { name: 'chevron-right', class: 'btn__icon' })
       </a>
       @else
@@ -62,19 +64,57 @@
       </div>
       @else
       <div class="reader-setting">
-        <span id="reader-fit-label" class="reader-setting__label">Sayfa genişliği</span>
-        <div class="segmented reader-setting__choice" role="group" aria-labelledby="reader-fit-label">
-          <button type="button" @click="setFit('width')" aria-pressed="true" :aria-pressed="(prefs.fit === 'width').toString()">Ekrana sığdır</button>
-          <button type="button" @click="setFit('original')" aria-pressed="false" :aria-pressed="(prefs.fit === 'original').toString()">Orijinal boyut</button>
+        <span id="reader-mode-label" class="reader-setting__label">Okuma modu</span>
+        <div class="segmented reader-setting__choice" role="group" aria-labelledby="reader-mode-label">
+          <button type="button" @click="setMode('webtoon')" aria-pressed="true" :aria-pressed="(prefs.mode === 'webtoon').toString()">Webtoon</button>
+          <button type="button" @click="setMode('paged')" aria-pressed="false" :aria-pressed="(prefs.mode === 'paged').toString()">Sayfa sayfa</button>
         </div>
       </div>
+      <div class="reader-setting">
+        <span id="reader-zoom-label" class="reader-setting__label">Boyut</span>
+        <div class="reader-stepper" role="group" aria-labelledby="reader-zoom-label">
+          <button type="button" class="btn btn--secondary btn--sm btn--icon" @click="zoomBy(-1)" :disabled="prefs.zoom <= zoomMin" aria-label="Sayfaları küçült">
+            @!component('components/icon', { name: 'minus', class: 'btn__icon' })
+          </button>
+          <output class="reader-stepper__value t-num" aria-live="polite" x-text="zoomLabel()">100%</output>
+          <button type="button" class="btn btn--secondary btn--sm btn--icon" @click="zoomBy(1)" :disabled="prefs.zoom >= zoomMax" aria-label="Sayfaları büyüt">
+            @!component('components/icon', { name: 'plus', class: 'btn__icon' })
+          </button>
+        </div>
+      </div>
+      <div class="reader-setting" x-show="prefs.mode === 'paged'" x-cloak>
+        <span id="reader-dir-label" class="reader-setting__label">Okuma yönü</span>
+        <div class="segmented reader-setting__choice" role="group" aria-labelledby="reader-dir-label">
+          <button type="button" @click="setDir('ltr')" aria-pressed="true" :aria-pressed="(prefs.dir !== 'rtl').toString()">Soldan sağa</button>
+          <button type="button" @click="setDir('rtl')" aria-pressed="false" :aria-pressed="(prefs.dir === 'rtl').toString()">Sağdan sola</button>
+        </div>
+      </div>
+      <label class="check reader-setting__switch" x-show="prefs.mode === 'paged'" x-cloak>
+        <input type="checkbox" role="switch" class="switch" :checked="prefs.auto" @change="setAuto($event.target.checked)">
+        <span>Bölüm bitince sonrakine geç</span>
+      </label>
       @end
       <div class="menu__sep"></div>
-      <p class="reader-setting__hint">
-        <kbd class="kbd">←</kbd>
-        <kbd class="kbd">→</kbd>
-        <span>önceki / sonraki bölüm</span>
-      </p>
+      <ul class="reader-keys" aria-label="Klavye kısayolları">
+        <li>
+          <span class="reader-keys__keys"><kbd class="kbd">←</kbd><kbd class="kbd">→</kbd><kbd class="kbd">A</kbd><kbd class="kbd">D</kbd></span>
+          <span x-text="images && prefs.mode === 'paged' ? 'Önceki / sonraki sayfa' : 'Önceki / sonraki bölüm'">Önceki / sonraki bölüm</span>
+        </li>
+        <li x-show="images && prefs.mode === 'paged'" x-cloak>
+          <span class="reader-keys__keys"><kbd class="kbd">,</kbd><kbd class="kbd">.</kbd></span>
+          <span>Önceki / sonraki bölüm</span>
+        </li>
+        <li x-show="images && prefs.mode === 'paged'" x-cloak>
+          <span class="reader-keys__keys"><kbd class="kbd">Home</kbd><kbd class="kbd">End</kbd></span>
+          <span>İlk / son sayfa</span>
+        </li>
+        <li>
+          <span class="reader-keys__keys"><kbd class="kbd">F</kbd></span>
+          <span>Araç çubuğunu gizle / göster</span>
+        </li>
+      </ul>
+      <div class="menu__sep"></div>
+      @!component('components/report_button', { chapter, series, menu: true })
     @end
   </nav>
   <div class="reader-progress" role="progressbar" aria-label="Okuma ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" :aria-valuenow="percent">

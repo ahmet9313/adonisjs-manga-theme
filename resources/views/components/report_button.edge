@@ -1,0 +1,20 @@
+{{--
+  "Hata bildir" for a chapter or episode: opens the report dialog (partials/report/dialog.edge)
+  with the reasons of the chapter's format. Guests may report too.
+  Props: chapter (reader data: id, number, video?, textContent?), series (title),
+         menu (true: a .menu__item inside a dropdown, which it closes), size (md), class.
+--}}
+@let(chapter = $props.get('chapter'))
+@let(format = chapter.video ? 'video' : chapter.textContent ? 'text' : 'image')
+@let(report = JSON.stringify({ type: 'chapter', id: chapter.id, set: format, label: $props.get('series').title + ' · Bölüm ' + chapter.number }))
+@if($props.get('menu'))
+<button type="button" class="menu__item" x-data="reportTrigger" data-report="{{ report }}" @click="close(true); openReport()">
+  @!component('components/icon', { name: 'flag' })
+  Hata bildir
+</button>
+@else
+<button type="button" class="btn btn--ghost btn--{{ $props.get('size', 'md') }} {{ $props.get('class', '') }}" x-data="reportTrigger" data-report="{{ report }}" @click="openReport()">
+  @!component('components/icon', { name: 'flag', class: 'btn__icon' })
+  <span>Hata bildir</span>
+</button>
+@end

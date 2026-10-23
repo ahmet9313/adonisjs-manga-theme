@@ -235,6 +235,10 @@
                   <span>Sil</span>
                 </button>
               </form>
+              <button type="button" class="btn btn--ghost btn--sm btn--icon" :class="!item.canDelete && 'ml-auto'" x-show="me && !item.own" @click="report(item)"
+                      aria-label="İncelemeyi şikâyet et" title="Şikâyet et">
+                @!component('components/icon', { name: 'flag', class: 'btn__icon' })
+              </button>
             </div>
           </div>
         </article>

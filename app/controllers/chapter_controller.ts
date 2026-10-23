@@ -4,6 +4,11 @@ import library from '#services/library_service'
 import progress from '#services/progress_service'
 import watch from '#config/watch'
 import access, { AGE_COOKIE } from '#services/access_service'
+import views from '#services/view_service'
+import teamService from '#services/team_service'
+import seo from '#services/seo_service'
+import readerService from '#services/reader_service'
+import reactions from '#services/reaction_service'
 
 export default class ChapterController {
   async show({ view, params, request, response, auth }: HttpContext) {
@@ -15,10 +20,10 @@ export default class ChapterController {
     if (!Number.isSafeInteger(Number(chapterNum)) || Number(chapterNum) < 0)
       return missing('chapter')
     const drafts = access.canSeeDrafts(auth.user)
-    const series = await seriesService.getSeriesBySlug(type, slug, { drafts })
+    const series = await seriesService.getSeriesBySlug(type, slug, { drafts, people: false })
     if (!series) return missing('series')
 
-    const chapter = await seriesService.getChapter(type, slug, Number(chapterNum), { drafts })
+    const chapter = await seriesService.getChapterOf(series.id, Number(chapterNum), { drafts })
     if (!chapter) return missing('chapter')
 
     // Nothing is recorded or rewarded until the visitor passes every gate.
@@ -30,6 +35,7 @@ export default class ChapterController {
         warningConfirmed: request.input('onay') === '1',
       }
     )
+    view.share({ seo: seo.chapterPage(series, chapter, { gated: Boolean(gate) }) })
     if (gate) {
       if (gate.kind === 'login' || gate.kind === 'vip') response.status(403)
       return view.render('pages/content_gate', {
@@ -41,6 +47,16 @@ export default class ChapterController {
       })
     }
 
+    // One view per browser, chapter and day; staff previews of drafts are not counted.
+    views.track(
+      { request, response },
+      {
+        seriesId: series.id,
+        chapterId: chapter.id,
+        preview: Boolean(series.draft || chapter.draft),
+      }
+    )
+
     let reward = null
     if (auth.user) {
       const isNew = await library.recordRead(auth.user.id, series.id, chapter.id)
@@ -49,7 +65,20 @@ export default class ChapterController {
       if (reward) view.share({ account: await progress.summary(auth.user) })
     }
 
-    const allChapters = await seriesService.getChapters(type, slug, { drafts })
+    const allChapters = await seriesService.getChaptersOf(series.id, { drafts })
+    // Layout of the first paint: the account's settings, else the plain `reader` cookie.
+    const accountPrefs = readerService.prefsOf(auth.user)
+    let readerCookie: unknown = null
+    if (!accountPrefs) {
+      try {
+        readerCookie = request.plainCookie('reader', { encoded: false })
+      } catch {
+        readerCookie = null
+      }
+    }
+    const pageCount = chapter.pages?.length ?? 0
+    const resumePage =
+      auth.user && pageCount ? await readerService.positionOf(auth.user.id, chapter.id) : null
     const currentIndex = allChapters.findIndex((c) => c.number === Number(chapterNum))
     const prevChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null
     const nextChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null
@@ -63,6 +92,12 @@ export default class ChapterController {
       prevChapter,
       nextChapter,
       commentThread: { seriesId: series.id, chapterId: chapter.id },
+      teamCredit: await teamService.chapterCredit(series.id, chapter.id),
+      readerView: accountPrefs ?? readerService.viewOfCookie(readerCookie),
+      readerAccount: accountPrefs,
+      // "Kaldığın yer" only between the first and the last page.
+      resumePage: resumePage && resumePage > 1 && resumePage < pageCount ? resumePage : null,
+      reactions: await reactions.summary(chapter.id, auth.user?.id ?? null),
       reward: reward
         ? {
             exp: reward.exp,

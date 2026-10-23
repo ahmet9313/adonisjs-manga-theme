@@ -1,6 +1,6 @@
 {{--
-  Under the player: what comes next (next episode, back to the series, rate the series).
-  Needs: nextChapter, chapterUrl, seriesUrl.
+  Under the player: what comes next (next episode, back to the series, rate the series) and the
+  share buttons. Needs: series, chapter, nextChapter, chapterUrl, seriesUrl.
 --}}
 <div class="watch-after">
   <p class="watch-after__text">
@@ -27,5 +27,9 @@
       <span>Seriyi puanla</span>
     </a>
     @end
+    @!component('components/report_button', { chapter, series })
   </div>
+  @if(ui('share_buttons'))
+  @!component('partials/share/row', { url: siteUrl(request, chapterUrl(chapter.number)), title: series.title + ' — Bölüm ' + chapter.number, label: 'Bu bölümü paylaş' })
+  @end
 </div>

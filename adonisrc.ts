@@ -37,6 +37,7 @@ export default defineConfig({
     () => import('@adonisjs/static/static_provider'),
     () => import('@adonisjs/lucid/database_provider'),
     () => import('@adonisjs/auth/auth_provider'),
+    () => import('@adonisjs/mail/mail_provider'),
   ],
 
   /*
@@ -52,6 +53,8 @@ export default defineConfig({
     () => import('#start/kernel'),
     () => import('#start/view'),
     () => import('#start/validator'),
+    { file: () => import('#start/scheduler'), environment: ['web'] },
+    { file: () => import('#start/install'), environment: ['web'] },
   ],
 
   /*
@@ -86,6 +89,11 @@ export default defineConfig({
     },
     {
       pattern: 'public/images/**',
+      reloadServer: false,
+    },
+    // The default tab icon (layouts fall back to it when Tema → Genel has none).
+    {
+      pattern: 'public/favicon.svg',
       reloadServer: false,
     },
     {

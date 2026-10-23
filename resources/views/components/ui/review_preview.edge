@@ -5,8 +5,15 @@
 --}}
 @let(link = '/series/' + item.series.contentType.slug + '/' + item.series.slug + '#incelemeler')
 @let(when = $props.get('time', 'ago') === 'date' ? dateOf(item.createdAt) : agoOf(item.createdAt))
+@let(cover = coverOf(item.series))
 <article class="card group relative flex gap-3 p-4 transition-colors hover:border-(--t-border-strong) {{ $props.get('class', '') }}">
-  <img src="{{ item.series.coverImage }}" alt="" width="64" height="88" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg" class="h-[5.5rem] w-16 shrink-0 rounded-lg object-cover">
+  <span class="relative h-[5.5rem] w-16 shrink-0 overflow-hidden rounded-lg">
+    <img src="{{ thumbOf(cover.coverImage, 160) }}" alt="" width="64" height="88" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg" class="h-[5.5rem] w-16 object-cover"
+      @if(cover.coverVeil)
+      data-veil="{{ cover.coverVeil }}"
+      @end
+      >
+  </span>
   <div class="min-w-0 flex-1">
     <div class="flex flex-wrap items-center gap-2">
       <a href="{{ link }}" class="font-bold text-(--t-heading) after:absolute after:inset-0 group-hover:underline">{{ item.series.title }}</a>

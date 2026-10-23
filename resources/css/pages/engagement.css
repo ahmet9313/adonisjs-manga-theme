@@ -1,0 +1,345 @@
+/*
+ * Reader engagement: "Bölüm nasıldı?" reactions at the end of a chapter or episode, comment
+ * edits and @mentions (shared comment thread), and the phone tab bar below 1024 px.
+ * Colours come from tokens (var(--t-*)) only.
+ */
+
+@layer components {
+  /* ---- Chapter reactions ------------------------------------------------------------------- */
+  .reactions {
+    width: 100%;
+    margin-top: 1.75rem;
+    border-top: 1px solid var(--t-border);
+    padding-top: 1.5rem;
+  }
+
+  /* On the episode page the block stands on its own under the player. */
+  .watch > .reactions {
+    margin-top: 1.5rem;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-panel);
+    background: var(--t-surface);
+    padding: 1.25rem;
+  }
+
+  .reactions__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem 0.75rem;
+  }
+
+  .watch > .reactions .reactions__head {
+    justify-content: space-between;
+  }
+
+  .watch > .reactions .reactions__list {
+    max-width: 36rem;
+  }
+
+  .reactions__title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--t-heading);
+  }
+
+  .reactions__total {
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  .reactions__list {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .reaction {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-card);
+    background: var(--t-surface);
+    padding: 0.625rem 0.25rem 0.5rem;
+    text-align: center;
+    color: var(--t-text-2);
+    transition:
+      border-color var(--dur-1),
+      background-color var(--dur-1),
+      transform var(--dur-1) var(--ease-out);
+  }
+
+  .reaction:hover {
+    border-color: var(--t-border-strong);
+    background: var(--t-hover);
+  }
+
+  .reaction:active {
+    transform: scale(0.96);
+  }
+
+  .reaction[aria-pressed='true'] {
+    border-color: var(--t-accent-line);
+    background: var(--t-accent-soft);
+    color: var(--t-accent-text);
+  }
+
+  .reaction[aria-busy='true'] {
+    cursor: progress;
+  }
+
+  .reaction__emoji {
+    font-size: 1.625rem;
+    line-height: 1.1;
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  .reaction[aria-pressed='true'] .reaction__emoji {
+    transform: scale(1.12);
+  }
+
+  /* Two short lines on narrow phones ("Çok / komik") rather than a cut-off label. */
+  .reaction__label {
+    display: flex;
+    max-width: 100%;
+    flex: 1;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .reaction__count {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    color: var(--t-heading);
+  }
+
+  .reaction[aria-pressed='true'] .reaction__count {
+    color: var(--t-accent-text);
+  }
+
+  .reactions__hint {
+    margin-top: 0.75rem;
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  @media (width < 420px) {
+    .reactions__list {
+      gap: 0.25rem;
+    }
+
+    .reaction {
+      padding-inline: 0.125rem;
+    }
+
+    .reaction__label {
+      font-size: 0.6875rem;
+    }
+  }
+
+  @media (width < 380px) {
+    .reaction__label {
+      font-size: 0.625rem;
+    }
+  }
+
+  /* ---- Comment edits and mentions ------------------------------------------------------- */
+  .comment-edited {
+    cursor: help;
+    font-style: italic;
+  }
+
+  .comment-edit {
+    margin-top: 0.625rem;
+    border: 1px solid var(--t-accent-line);
+    border-radius: var(--radius-card);
+    background: var(--t-field);
+  }
+
+  .comment-edit:focus-within {
+    box-shadow: 0 0 0 3px var(--t-ring);
+  }
+
+  .thread-card__text .mention {
+    border-radius: var(--radius-xs);
+    font-weight: 700;
+    color: var(--t-accent-text);
+  }
+
+  .thread-card__text .mention:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .mention-menu {
+    position: absolute;
+    top: calc(100% - 0.25rem);
+    left: 0.5rem;
+    z-index: var(--z-dropdown);
+    width: min(18rem, calc(100% - 1rem));
+  }
+
+  .mention-menu__item {
+    cursor: pointer;
+  }
+
+  .mention-menu__item[aria-selected='true'] {
+    background: var(--t-hover);
+    color: var(--t-heading);
+  }
+
+  .mention-menu__avatar {
+    display: inline-flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: var(--t-surface-2);
+  }
+
+  .mention-menu__avatar > * {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  .mention-menu__name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .mention-menu__user {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  /* ---- Phone tab bar ---------------------------------------------------------------------- */
+  .bottom-nav {
+    display: none;
+  }
+
+  @media (width < 1024px) {
+    body:has(> .bottom-nav) {
+      --bottom-nav-h: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+      padding-bottom: var(--bottom-nav-h);
+    }
+
+    .bottom-nav {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: var(--z-nav);
+      display: grid;
+      grid-auto-columns: minmax(0, 1fr);
+      grid-auto-flow: column;
+      border-top: 1px solid var(--t-border);
+      background: var(--t-header-bg);
+      padding: 0 max(0.25rem, env(safe-area-inset-right, 0px))
+        env(safe-area-inset-bottom, 0px) max(0.25rem, env(safe-area-inset-left, 0px));
+      backdrop-filter: saturate(1.2) blur(var(--t-blur));
+      transition: transform var(--dur-2) var(--ease-out);
+    }
+
+    .bottom-nav[data-hidden='true'] {
+      transform: translateY(100%);
+    }
+
+    /* The page keeps its room under the bar, toasts and the open mobile menu stay above it. */
+    body:has(> .bottom-nav) .toast-stack {
+      bottom: calc(var(--bottom-nav-h) + 0.75rem);
+    }
+  }
+
+  .bottom-nav__item {
+    position: relative;
+    display: flex;
+    height: 3.75rem;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--t-header-text);
+    transition: color var(--dur-1);
+  }
+
+  .bottom-nav__item > span:last-child {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bottom-nav__item:hover,
+  .bottom-nav__item[aria-current='page'],
+  .bottom-nav__item[aria-expanded='true'] {
+    color: var(--t-header-hover);
+  }
+
+  .bottom-nav__item[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 30%;
+    right: 30%;
+    height: 2px;
+    border-radius: 0 0 2px 2px;
+    background: var(--t-accent);
+  }
+
+  .bottom-nav__item[aria-current='page'] .bottom-nav__icon {
+    color: var(--t-accent);
+  }
+
+  .bottom-nav__item:focus-visible {
+    outline-offset: -3px;
+  }
+
+  .bottom-nav__icon {
+    height: 1.375rem;
+    width: 1.375rem;
+  }
+
+  .bottom-nav__count {
+    position: absolute;
+    top: -0.375rem;
+    right: -0.625rem;
+    box-shadow: 0 0 0 2px var(--t-header-bg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bottom-nav,
+    .reaction,
+    .reaction__emoji {
+      transition: none;
+    }
+  }
+}
+
+/* Outside the layers: it has to beat the panel's max-height utility. */
+@media (width < 1024px) {
+  body:has(> .bottom-nav) #mobile-navigation {
+    max-height: calc(100dvh - 4rem - var(--bottom-nav-h));
+  }
+}

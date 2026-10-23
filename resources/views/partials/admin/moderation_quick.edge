@@ -1,0 +1,18 @@
+{{-- Dashboard card for Admin → Moderasyon: open chapter reports and complaints. Needs `reportCounts`. --}}
+@let(reportNumber = (value) => Number(value || 0).toLocaleString('tr-TR'))
+<a href="{{ reportCounts.chapter || !reportCounts.content ? '/admin/moderasyon' : '/admin/moderasyon?tab=icerik' }}" class="admin-quick__item">
+  <span class="admin-quick__icon {{ reportCounts.total ? 'mod-quick__icon--pending' : '' }}">
+    @!component('components/icon', { name: 'flag' })
+  </span>
+  <span class="min-w-0">
+    <span class="admin-quick__title block">Moderasyon</span>
+    <span class="admin-quick__desc block">
+      @if(reportCounts.total)
+      {{ reportNumber(reportCounts.chapter) }} bölüm hatası · {{ reportNumber(reportCounts.content) }} şikâyet bekliyor
+      @else
+      Bekleyen bildirim yok
+      @end
+    </span>
+  </span>
+  @!component('components/icon', { name: 'arrow-right', class: 'admin-quick__arrow' })
+</a>

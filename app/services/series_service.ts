@@ -6,15 +6,20 @@ import Chapter from '#models/chapter'
 import { serializeSeries, serializeChapter, calculateTimeAgo } from '#services/series_presenter'
 import type { SeriesInfo, ChapterInfo, ChapterWithPages } from '#services/series_presenter'
 import { episodeVideo } from '#services/video_service'
+import views from '#services/view_service'
+import { applyDiscoveryFilters, orderByMatch, whereMatches } from '#services/discovery_service'
+import type { DiscoveryFilters } from '#services/discovery_service'
 
-/** Published series with their relations; `drafts` (staff previews) also finds drafts. */
-function baseSeriesQuery({ drafts = false } = {}) {
+/**
+ * Published series with their relations; `drafts` (staff previews) also finds drafts. Authors
+ * and artists are only shown on the series page, so lists skip them (`people`).
+ */
+function baseSeriesQuery({ drafts = false, people = false } = {}) {
   return SeriesModel.query()
     .if(!drafts, (query) => query.where('draft', false))
     .preload('contentType')
     .preload('genres')
-    .preload('authors')
-    .preload('artists')
+    .if(people, (query) => query.preload('authors').preload('artists'))
 }
 
 /** Staff previews see drafts; everyone else gets published series and chapters only. */
@@ -28,15 +33,16 @@ class SeriesService {
     return ct?.id ?? null
   }
 
+  /** `people: false` skips authors and artists (the reader does not show them). */
   async getSeriesBySlug(
     type: string,
     slug: string,
-    { drafts = false }: Visibility = {}
+    { drafts = false, people = true }: Visibility & { people?: boolean } = {}
   ): Promise<SeriesInfo | null> {
     const ctId = await this.getContentTypeId(type)
     if (!ctId) return null
 
-    const series = await baseSeriesQuery({ drafts })
+    const series = await baseSeriesQuery({ drafts, people })
       .where('contentTypeId', ctId)
       .where('slug', slug)
       .first()
@@ -45,50 +51,28 @@ class SeriesService {
     return serializeSeries(series)
   }
 
-  async getChapters(
-    type: string,
-    slug: string,
+  /** Chapter list (newest first) of a series already looked up by the caller. */
+  async getChaptersOf(
+    seriesId: number,
     { drafts = false }: Visibility = {}
   ): Promise<ChapterInfo[]> {
-    const ctId = await this.getContentTypeId(type)
-    if (!ctId) return []
-
-    const series = await SeriesModel.query()
-      .where('contentTypeId', ctId)
-      .where('slug', slug)
-      .if(!drafts, (query) => query.where('draft', false))
-      .first()
-
-    if (!series) return []
-
     const chapters = await Chapter.query()
-      .select('id', 'seriesId', 'number', 'title', 'publishedAt', 'access', 'draft')
-      .where('seriesId', series.id)
+      .select('id', 'seriesId', 'number', 'title', 'publishedAt', 'access', 'draft', 'viewCount')
+      .where('seriesId', seriesId)
       .if(!drafts, (query) => query.where('draft', false))
       .orderBy('number', 'desc')
 
     return chapters.map(serializeChapter)
   }
 
-  async getChapter(
-    type: string,
-    slug: string,
+  /** One chapter with its pages, text or video sources, of a series the caller already has. */
+  async getChapterOf(
+    seriesId: number,
     chapterNum: number,
     { drafts = false }: Visibility = {}
   ): Promise<ChapterWithPages | null> {
-    const ctId = await this.getContentTypeId(type)
-    if (!ctId) return null
-
-    const series = await SeriesModel.query()
-      .where('contentTypeId', ctId)
-      .where('slug', slug)
-      .if(!drafts, (query) => query.where('draft', false))
-      .first()
-
-    if (!series) return null
-
     const chapter = await Chapter.query()
-      .where('seriesId', series.id)
+      .where('seriesId', seriesId)
       .where('number', chapterNum)
       .if(!drafts, (query) => query.where('draft', false))
       .first()
@@ -137,12 +121,15 @@ class SeriesService {
           .groupOrderBy('number', 'desc')
           .groupLimit(3)
       )
+      // Pinned series (admin series form) stay on top of the list.
+      .orderBy('pinned', 'desc')
       .orderBy('updatedAt', 'desc')
       .orderBy('id', 'desc')
       .paginate(page, perPage)
     return {
       items: results.all().map((series) => ({
         ...serializeSeries(series),
+        pinned: Boolean(series.pinned),
         latestChapters: series.chapters.map(serializeChapter),
       })),
       hasNextPage: results.hasMorePages,
@@ -151,7 +138,7 @@ class SeriesService {
   }
 
   async filterSeries(
-    filters: {
+    filters: Partial<DiscoveryFilters> & {
       genres?: string[]
       statuses?: string[]
       types?: string[]
@@ -165,9 +152,8 @@ class SeriesService {
   ) {
     const query = baseSeriesQuery()
 
-    if (filters.genres && filters.genres.length > 0) {
-      query.whereHas('genres', (genres) => genres.whereIn('name', filters.genres!))
-    }
+    // Genres (include/exclude, VE/VEYA), years, minimum chapters and the text search.
+    applyDiscoveryFilters(query, filters)
     if (filters.statuses && filters.statuses.length > 0) {
       query.whereIn('status', filters.statuses)
     }
@@ -184,13 +170,6 @@ class SeriesService {
     if (filters.artists && filters.artists.length > 0) {
       query.whereHas('artists', (artists) => artists.whereIn('slug', filters.artists!))
     }
-    if (filters.search) {
-      const q = `%${filters.search}%`
-      query.where((builder) => {
-        builder.whereILike('title', q).orWhereILike('alternativeTitles', q)
-      })
-    }
-
     if (filters.orderBy === 'title') {
       query.orderBy('title', 'asc')
     } else if (filters.orderBy === 'title-desc') {
@@ -202,6 +181,10 @@ class SeriesService {
       query.orderByRaw('((rating_avg * rating_count) + 35.0) / (rating_count + 5) desc')
     } else if (filters.orderBy === 'votes') {
       query.orderBy('ratingCount', 'desc')
+    } else if (filters.orderBy === 'views') {
+      query.orderBy('viewCount', 'desc')
+    } else if (filters.orderBy === 'trending') {
+      views.orderByTrend(query)
     } else {
       query.orderBy('updatedAt', 'desc')
     }
@@ -227,12 +210,7 @@ class SeriesService {
 
   async searchSeries(query: string): Promise<SeriesInfo[]> {
     if (!query || query.length < 2) return []
-    const q = `%${query}%`
-    const results = await baseSeriesQuery()
-      .where((builder) => {
-        builder.whereILike('title', q).orWhereILike('slug', q).orWhereILike('alternativeTitles', q)
-      })
-      .limit(10)
+    const results = await orderByMatch(whereMatches(baseSeriesQuery(), query), query).limit(10)
 
     return results.map(serializeSeries)
   }

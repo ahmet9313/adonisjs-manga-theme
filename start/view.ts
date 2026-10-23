@@ -7,8 +7,17 @@ import cosmetics from '#services/cosmetic_service'
 import { levelFor, parseTimestamp } from '#services/level'
 import { excerptOf } from '#services/comment_service'
 import { buildPaginationPages } from '#services/input_service'
+import { schedule } from '#services/publishing_service'
 import type User from '#models/user'
 import type { Scheme } from '#config/theme'
+import { coverView, type CoverSource } from '#services/cover_policy_service'
+import { variantSrcset, variantUrl } from '#services/media_service'
+import { countOf } from '#services/view_service'
+import seo, { type HeadProps, type RequestLike } from '#services/seo_service'
+import { reportNoteMax, reportReasons } from '#config/moderation'
+import moderation from '#services/moderation_service'
+import siteContent, { COOKIE_NOTICE_COOKIE } from '#services/site_content_service'
+import posts from '#services/post_service'
 
 edge.global('site', site)
 edge.global('adminNav', adminNav)
@@ -52,6 +61,28 @@ edge.global('lookOf', (user: User | null) => cosmetics.look(user))
 edge.global('stickerOf', (id: number | null) => cosmetics.sticker(id))
 /** One-line description of a comment (what a reply answers). */
 edge.global('excerptOf', excerptOf)
+/**
+ * Cover fields of a series model as the current visitor may see them (presenter output already
+ * has them): `coverOf(review.series).coverImage`, `.coverVeil`.
+ */
+/**
+ * Smaller WebP copies of stored images (media_service, `/content/<path>?w=`):
+ * `thumbOf(series.coverImage, 320)` for `src`, `srcsetOf(src, [160, 320, 640])` for `srcset`
+ * (empty for images that are not stored rasters, e.g. SVG placeholders: leave srcset out then).
+ */
+edge.global('thumbOf', variantUrl)
+edge.global('srcsetOf', variantSrcset)
+
+edge.global('coverOf', (series: CoverSource) => coverView(series))
+/**
+ * Search engine and link preview tags of a public page (seo_service; layout/main):
+ * `seoHead(request, { title, description, noindex, seo })`, `seo` being what the controller
+ * shared. `siteUrl(request, path)` is the absolute address (Tema → Genel → Site adresi, APP_URL
+ * or the request) and `shareLinksOf(url, title)` the share targets of partials/share/*.
+ */
+edge.global('seoHead', (request: RequestLike, props: HeadProps) => seo.head(request, props))
+edge.global('siteUrl', (request: RequestLike, path: string) => seo.url(request, path))
+edge.global('shareLinksOf', (url: string, title: string) => seo.shareLinks(url, title))
 /** "5 dk önce", "3 sa önce", "2 gün önce" for a database timestamp. */
 edge.global('agoOf', (value: string) => {
   const seconds = Math.max(0, (Date.now() - parseTimestamp(value)) / 1000)
@@ -62,6 +93,8 @@ edge.global('agoOf', (value: string) => {
   if (seconds < 7 * 86400) return `${Math.floor(seconds / 86400)} gün önce`
   return `${Math.floor(seconds / (7 * 86400))} hafta önce`
 })
+/** Short Turkish view count: "950", "12,4 B", "2,7 Mn" (view_service). */
+edge.global('countOf', countOf)
 edge.global('levelOf', (user: User | null) => levelFor(user?.exp || 0))
 /**
  * Extra attributes forwarded by design-system components (`{{{ attrs(rest.all()) }}}`):
@@ -101,6 +134,8 @@ edge.global('dateOf', (value: string, withYear = true) => {
     timeZone: site.timezone,
   })
 })
+/** Planned publication times and release days ("25 Eki 14:00", "Cuma, Cumartesi"). */
+edge.global('schedule', schedule)
 /** Page numbers with gaps ('...') for `ui/pagination`. */
 edge.global('pagesOf', (current: number, total: number) => buildPaginationPages(current, total))
 /**
@@ -133,4 +168,27 @@ edge.global('visualStyle', (visual: { css?: string; img?: string } | null) => {
   if (!visual) return ''
   if (visual.img) return `background-image: url("${encodeURI(visual.img)}")`
   return visual.css || ''
+})
+/** Reports and moderation: reasons for the report dialog and admin nav counters. */
+edge.global('reportConfig', { reasons: reportReasons, noteMax: reportNoteMax })
+edge.global('navBadge', (key: string) => moderation.navBadge(key))
+
+/**
+ * Footer pages, disclaimer, social accounts, the cookie notice and the home "Duyurular" block
+ * (app/services/site_content_service.ts, post_service.ts). The async ones are awaited in views:
+ * `@let(links = await footerPages())`.
+ */
+edge.global('footerPages', () => siteContent.footerPages())
+edge.global('pageUrl', (slug: string) => siteContent.pageUrl(slug))
+edge.global('disclaimer', () => siteContent.disclaimer())
+edge.global('socialLinks', () => siteContent.socialLinks())
+edge.global('discordUrl', () => siteContent.discordUrl())
+edge.global('latestPosts', (limit = 3) => posts.latest(limit))
+/** True until the visitor dismissed the cookie notice (`cookie_ok`, plain and unsigned). */
+edge.global('cookieNoticeOpen', (request?: { plainCookie?: (...args: unknown[]) => unknown }) => {
+  try {
+    return request?.plainCookie?.(COOKIE_NOTICE_COOKIE, { encoded: false }) !== '1'
+  } catch {
+    return true
+  }
 })

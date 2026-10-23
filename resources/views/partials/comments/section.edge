@@ -3,7 +3,9 @@
   { seriesId, chapterId } in the view state. commentSection (comments.js) loads the thread and
   renders it as a flat list of rows with a depth (--d on .comment-row) because Alpine has no
   recursive templates; replies load per comment. In the reader the thread loads when it comes
-  into view (data-lazy). Ids yorum-<id>, reply-<id> and comment-root are used by the script.
+  into view (data-lazy). Ids yorum-<id>, reply-<id>, edit-<id> and comment-root are used by the
+  script. Bodies arrive as escaped HTML with @mentions linked (bodyHtml, mention_service); the
+  author edits a comment in place (partials/comments/edit) within site.commentEditHours.
 --}}
 @let(viewer = auth && auth.user ? auth.user : null)
 <section id="yorumlar" class="section" aria-labelledby="yorumlar-title"
@@ -98,21 +100,36 @@
                     <p class="user-chip__meta flex flex-wrap items-center gap-x-1.5">
                       <time :datetime="node && node.createdAt" :title="node && stamp(node.createdAt)" x-text="node ? ago(node.createdAt) : ''"></time>
                       <span x-show="node && node.spoiler" class="badge badge--sm" data-tone="warning">Spoiler</span>
+                      <span x-show="node && node.editedAt" x-cloak class="comment-edited" :title="node && node.editedAt ? 'Düzenlendi: ' + stamp(node.editedAt) : ''">(düzenlendi)</span>
                     </p>
                   </div>
 
-                  <template x-if="node && node.canDelete">
+                  <template x-if="node && (node.canDelete || node.canEdit || canReport(node))">
                     <div class="relative -mr-1.5 -mt-1" x-data="dropdown" @keydown="onKeydown($event)" @click.outside="close()">
                       <button type="button" x-ref="button" @click="toggle()" class="btn btn--ghost btn--sm btn--icon" aria-label="Yorum seçenekleri" aria-expanded="false" :aria-expanded="open.toString()">
                         @!component('components/icon', { name: 'dots', class: 'btn__icon' })
                       </button>
                       <div x-ref="panel" x-cloak x-show="open" x-transition.origin.top.right.duration.120ms class="menu absolute right-0 top-full z-10 mt-1 w-48">
-                        <form @submit.prevent="close(); remove(node.id)" data-confirm="Yorum kalıcı olarak silinecek. Yanıtları varsa yerinde “Bu yorum silindi.” yazar." data-confirm-title="Yorum silinsin mi?" data-confirm-label="Sil">
-                          <button type="submit" class="menu__item menu__item--danger">
-                            @!component('components/icon', { name: 'trash' })
-                            Yorumu sil
+                        <template x-if="node.canEdit">
+                          <button type="button" class="menu__item" @click="close(); startEdit(node.id)">
+                            @!component('components/icon', { name: 'pencil' })
+                            Düzenle
                           </button>
-                        </form>
+                        </template>
+                        <template x-if="canReport(node)">
+                          <button type="button" class="menu__item" @click="close(true); report(node)">
+                            @!component('components/icon', { name: 'flag' })
+                            Şikâyet et
+                          </button>
+                        </template>
+                        <template x-if="node.canDelete">
+                          <form @submit.prevent="close(); remove(node.id)" data-confirm="Yorum kalıcı olarak silinecek. Yanıtları varsa yerinde “Bu yorum silindi.” yazar." data-confirm-title="Yorum silinsin mi?" data-confirm-label="Sil">
+                            <button type="submit" class="menu__item menu__item--danger">
+                              @!component('components/icon', { name: 'trash' })
+                              Yorumu sil
+                            </button>
+                          </form>
+                        </template>
                       </div>
                     </div>
                   </template>
@@ -138,10 +155,13 @@
                     Bu yorum silindi.
                   </p>
                 </template>
-                <template x-if="node && !node.deleted">
+                <template x-if="node && !node.deleted && editing === node.id">
+                  @include('partials/comments/edit')
+                </template>
+                <template x-if="node && !node.deleted && editing !== node.id">
                   <div class="spoiler" :class="node.spoiler && !revealed[node.id] && 'is-hidden'">
                     <div class="spoiler__content" :inert="Boolean(node.spoiler && !revealed[node.id])">
-                      <p x-show="node.body" class="thread-card__text" x-text="node.body"></p>
+                      <p x-show="node.body" class="thread-card__text" x-html="node.bodyHtml"></p>
                       <template x-if="node.sticker">
                         <img :src="node.sticker.image" :alt="node.sticker.name + ' çıkartması'" :title="node.sticker.name" loading="lazy" decoding="async" class="thread-card__sticker">
                       </template>

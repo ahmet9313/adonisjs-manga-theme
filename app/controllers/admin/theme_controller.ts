@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import adminLog from '#services/admin_log_service'
 import vine from '@vinejs/vine'
 import {
   colorGroups,
@@ -19,8 +20,9 @@ import theme, {
   CUSTOM_CSS_KEY,
 } from '#services/theme_service'
 import { invalidField, removeContentFile, saveImage } from '#services/upload_service'
-import site, { agePolicyKeys } from '#config/site'
-import { agePolicyKey } from '#services/settings_service'
+import site, { agePolicyKeys, coverModeKeys, coverRevealKeys } from '#config/site'
+import { agePolicyKey, coverPolicyKey } from '#services/settings_service'
+import { DISCLAIMER_KEY, socialKey } from '#services/site_content_service'
 
 /** Public paths or http(s) addresses only; blocks `javascript:` and protocol-relative links. */
 const link = vine
@@ -37,6 +39,12 @@ const genelValidator = vine.compile(
     logo_url: link,
     logo_mobile_url: link,
     favicon_url: link,
+    site_url: vine
+      .string()
+      .trim()
+      .maxLength(200)
+      .regex(/^https?:\/\/[^\s/?#]+\/?$/)
+      .optional(),
   })
 )
 const erisimValidator = vine.compile(
@@ -45,6 +53,32 @@ const erisimValidator = vine.compile(
       site.ageRatings.map((rating) => [agePolicyKey(rating), vine.enum(agePolicyKeys)])
     )
   )
+)
+const coverValidator = vine.compile(
+  vine.object({
+    ...Object.fromEntries(
+      site.ageRatings.map((rating) => [coverPolicyKey(rating), vine.enum(coverModeKeys)])
+    ),
+    cover_reveal: vine.enum(coverRevealKeys),
+    cover_placeholder_url: link,
+  })
+)
+/** Tema → Genel, second form: footer disclaimer and social accounts (http(s) only). */
+const linksValidator = vine.compile(
+  vine.object({
+    footer_disclaimer: vine.string().trim().maxLength(400).optional(),
+    ...Object.fromEntries(
+      site.socialNetworks.map((network) => [
+        socialKey(network.key),
+        vine
+          .string()
+          .trim()
+          .maxLength(300)
+          .regex(/^https?:\/\/[^\s"'<>]+$/)
+          .optional(),
+      ])
+    ),
+  })
 )
 const duyuruValidator = vine.compile(
   vine.object({
@@ -64,9 +98,16 @@ const brandImages = {
   logo_mobile: { size: '5mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
   favicon: { size: '1mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'ico'] },
   background: { size: '10mb', extnames: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
+  cover_placeholder: { size: '5mb', extnames: ['png', 'jpg', 'jpeg', 'webp'] },
 } as const
 type BrandImage = keyof typeof brandImages
-const brandKeys = () => ['logo_url', 'logo_mobile_url', 'favicon_url', lookKey('bg_image')]
+const brandKeys = () => [
+  'logo_url',
+  'logo_mobile_url',
+  'favicon_url',
+  'cover_placeholder_url',
+  lookKey('bg_image'),
+]
 
 /** Deletes uploaded branding files a save replaced, unless another field still uses them. */
 async function removeReplacedBranding(before: string[]) {
@@ -120,11 +161,20 @@ export default class ThemeController {
           'logo_url',
           'logo_mobile_url',
           'favicon_url',
+          'site_url',
           'announcement_enabled',
           'announcement_text',
           'announcement_url',
         ].map((key) => [key, settings.get(key)])
       )
+      data.links = {
+        disclaimer: settings.get(DISCLAIMER_KEY),
+        defaultDisclaimer: site.disclaimer,
+        social: site.socialNetworks.map((network) => ({
+          ...network,
+          value: settings.get(socialKey(network.key)),
+        })),
+      }
     } else if (section === 'renkler') {
       const colors = currentColors()
       data.config = {
@@ -153,6 +203,15 @@ export default class ThemeController {
         value: settings.agePolicy(rating),
       }))
       data.policies = agePolicyKeys.map((key) => ({ key, label: site.agePolicyLabels[key] }))
+      data.coverRatings = [...site.ageRatings].reverse().map((rating) => ({
+        rating,
+        key: coverPolicyKey(rating),
+        value: settings.coverPolicy(rating),
+      }))
+      data.coverModes = coverModeKeys.map((key) => ({ key, ...site.coverModes[key] }))
+      data.coverReveal = settings.get('cover_reveal')
+      data.coverReveals = coverRevealKeys.map((key) => ({ key, ...site.coverReveals[key] }))
+      data.coverPlaceholder = settings.get('cover_placeholder_url')
     } else if (section === 'goster') {
       data.groups = Object.entries(flagGroups).map(([key, label]) => ({
         key,
@@ -167,13 +226,20 @@ export default class ThemeController {
     return view.render(`pages/admin/theme/${section}`, data)
   }
 
-  async update({ request, params, session, response }: HttpContext) {
+  async update({ request, params, session, response, auth }: HttpContext) {
     if (!isSection(params.section)) return response.redirect('/admin/tema/genel')
     const section = params.section as Section
     const body = request.all()
     let entries: Record<string, string> = {}
 
-    if (section === 'genel') {
+    if (section === 'genel' && body.part === 'links') {
+      const data = (await request.validateUsing(linksValidator)) as Record<string, string>
+      entries = Object.fromEntries(
+        [DISCLAIMER_KEY, ...site.socialNetworks.map((network) => socialKey(network.key))].map(
+          (key) => [key, data[key] ?? '']
+        )
+      )
+    } else if (section === 'genel') {
       const data = await request.validateUsing(genelValidator)
       entries = {
         site_name: data.site_name,
@@ -181,6 +247,7 @@ export default class ThemeController {
         logo_url: data.logo_url ?? '',
         logo_mobile_url: data.logo_mobile_url ?? '',
         favicon_url: data.favicon_url ?? '',
+        site_url: (data.site_url ?? '').replace(/\/+$/, ''),
       }
     } else if (section === 'duyuru') {
       const data = await request.validateUsing(duyuruValidator)
@@ -200,6 +267,17 @@ export default class ThemeController {
         body,
         looks.map((l) => l.key).filter((key) => !colorPageLooks.includes(key))
       )
+    } else if (section === 'erisim' && body.part === 'covers') {
+      const {
+        cover_reveal: reveal,
+        cover_placeholder_url: placeholder,
+        ...rules
+      } = await request.validateUsing(coverValidator)
+      entries = {
+        ...(rules as Record<string, string>),
+        cover_reveal: reveal,
+        cover_placeholder_url: placeholder ?? '',
+      }
     } else if (section === 'erisim') {
       entries = (await request.validateUsing(erisimValidator)) as Record<string, string>
     } else if (section === 'goster') {
@@ -211,6 +289,13 @@ export default class ThemeController {
     const before = brandKeys().map((key) => settings.get(key))
     await settings.save(entries)
     await removeReplacedBranding(before)
+    await adminLog.record(
+      auth.user,
+      'theme',
+      'theme',
+      null,
+      `${titles[section].replace('Tema: ', 'Tema → ')} ayarlarını kaydetti`
+    )
     session.flash('success', 'Tema ayarları kaydedildi')
     return response.redirect(`/admin/tema/${section}`)
   }
@@ -253,7 +338,7 @@ export default class ThemeController {
     return JSON.stringify(this.snapshot(), null, 2)
   }
 
-  async import({ request, session, response }: HttpContext) {
+  async import({ request, session, response, auth }: HttpContext) {
     let data: {
       colors?: Record<string, unknown>
       lightColors?: Record<string, unknown>
@@ -288,12 +373,13 @@ export default class ThemeController {
       ...theme.readCss(data.css),
     })
     await removeReplacedBranding(before)
+    await adminLog.record(auth.user, 'theme', 'theme', null, 'Temayı JSON dosyasından içe aktardı')
     session.flash('success', 'Tema içe aktarıldı')
     return response.redirect('/admin/tema/gelismis')
   }
 
   /** Drops every colour, look, switch and custom CSS value; site name and announcement stay. */
-  async reset({ session, response }: HttpContext) {
+  async reset({ session, response, auth }: HttpContext) {
     const entries: Record<string, string> = { [CUSTOM_CSS_KEY]: '' }
     for (const token of colorTokens) {
       entries[colorKey(token.key)] = ''
@@ -304,6 +390,7 @@ export default class ThemeController {
     const before = brandKeys().map((key) => settings.get(key))
     await settings.save(entries)
     await removeReplacedBranding(before)
+    await adminLog.record(auth.user, 'theme', 'theme', null, 'Temayı varsayılan değerlere döndürdü')
     session.flash('success', 'Tema varsayılan değerlere döndürüldü')
     return response.redirect('/admin/tema/gelismis')
   }

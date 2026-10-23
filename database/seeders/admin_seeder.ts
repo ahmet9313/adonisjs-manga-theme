@@ -1,6 +1,7 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import User from '#models/user'
 import env from '#start/env'
+import { now } from '#services/input_service'
 
 export default class AdminSeeder extends BaseSeeder {
   async run() {
@@ -14,6 +15,7 @@ export default class AdminSeeder extends BaseSeeder {
         fullName: 'Admin',
         email: 'admin@admin.com',
         password: 'admin',
+        emailVerifiedAt: now(),
       }
     )
   }

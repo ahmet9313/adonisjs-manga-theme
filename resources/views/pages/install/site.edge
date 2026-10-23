@@ -1,0 +1,40 @@
+{{--
+  Wizard step 2 (/kurulum/site): site name, description, public address and the default colour
+  scheme; saved to the same settings as Yönetim → Tema → Genel / Düzen. Data: values.
+--}}
+@component('components/layout/install', { title, steps, current })
+
+@slot('main')
+  <h1 class="t-h1">Site bilgileri</h1>
+  <p class="install__lead">Sitenin adı tarayıcı sekmesinde, menüde ve paylaşım önizlemelerinde görünür.</p>
+
+  <form action="/kurulum/site" method="POST" class="install__form" data-submit-once>
+    {{ csrfField() }}
+    @!component('components/ui/field', { name: 'site_name', label: 'Site adı', value: values.site_name, required: true, maxlength: 60, 'data-autofocus': true })
+    @!component('components/ui/field', { name: 'site_description', label: 'Kısa açıklama', type: 'textarea', rows: 2, value: values.site_description, maxlength: 200, hint: 'Arama motorlarında ve paylaşımlarda sitenin altında görünür.' })
+    @!component('components/ui/field', { name: 'site_url', label: 'Site adresi (isteğe bağlı)', type: 'url', value: values.site_url, placeholder: 'https://mangasitem.com', maxlength: 200, hint: 'Alan adın belliyse yaz; site haritası, paylaşım ve e-posta bağlantıları bunu kullanır. Boşsa sitenin açıldığı adres kullanılır.' })
+
+    <fieldset class="install__choice">
+      <legend class="field__label">Varsayılan renk şeması</legend>
+      <div class="segmented install__segmented">
+        @each(option in [{ value: 'dark', label: 'Koyu' }, { value: 'light', label: 'Açık' }, { value: 'system', label: 'Cihaza göre' }])
+        <label class="install__radio">
+          <input type="radio" name="default_scheme" value="{{ option.value }}" {{ (flashMessages.get('default_scheme') || values.default_scheme) === option.value ? 'checked' : '' }}>
+          <span>{{ option.label }}</span>
+        </label>
+        @end
+      </div>
+      <p class="field__hint">Ziyaretçiler menüden kendi şemalarını yine seçebilir.</p>
+    </fieldset>
+
+    <div class="install__actions">
+      <a href="/kurulum" class="btn btn--ghost btn--lg">Geri</a>
+      <button type="submit" class="btn btn--primary btn--lg">
+        <span>Kaydet ve devam et</span>
+        @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+      </button>
+    </div>
+  </form>
+@end
+
+@end

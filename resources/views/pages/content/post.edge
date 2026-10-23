@@ -1,0 +1,47 @@
+{{--
+  One announcement (/duyuru/:slug). `html` is the server-rendered Markdown subset; drafts reach
+  staff only (`live` false), with a notice.
+--}}
+@component('components/layout/main', { title: post.title, description })
+  @slot('main')
+    <article class="content-page" aria-labelledby="post-title">
+      @component('components/ui/page_header', {
+        title: post.title,
+        id: 'post-title',
+        breadcrumb: [{ label: 'Duyurular', href: '/duyurular' }, { label: post.title }]
+      })
+        <p class="content-page__byline">
+          @if(post.pinned)
+          <span class="badge badge--sm" data-tone="accent">
+            @!component('components/icon', { name: 'flag', class: 'h-3 w-3' })
+            Sabit
+          </span>
+          @end
+          @if(post.publishedAt)
+          <time datetime="{{ post.publishedAt.replace(' ', 'T') }}">{{ dateOf(post.publishedAt) }}</time>
+          @end
+          @if(post.author)
+          <span aria-hidden="true">·</span>
+          <a href="/uye/{{ post.author.username }}" class="link">{{ post.author.fullName || post.author.username }}</a>
+          @end
+        </p>
+      @end
+      @if(!live)
+      <div class="draft-note">
+        @component('components/ui/alert', { tone: 'warning', title: 'Taslak duyuru' })
+          <p>Bu duyuru yayında değil; yalnız yönetici ve editörler görür. Yayınlamak için <a href="/admin/duyurular/{{ post.id }}/duzenle" class="link">duyuruyu düzenleyip</a> “Yayınla” seçeneğini açın.</p>
+        @end
+      </div>
+      @end
+      <div class="md-body panel">
+        {{{ html }}}
+      </div>
+      <p class="content-page__meta">
+        <a href="/duyurular" class="link inline-flex items-center gap-1">
+          @!component('components/icon', { name: 'arrow-left', class: 'h-4 w-4' })
+          Tüm duyurular
+        </a>
+      </p>
+    </article>
+  @end
+@end

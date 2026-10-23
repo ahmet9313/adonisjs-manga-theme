@@ -1,0 +1,2 @@
+{{-- Series form → Vitrin: keeps the series on top of the home page "Son Güncellenenler" list. --}}
+@!component('components/ui/field', { name: 'pinned', label: 'Son Güncellenenler\'de sabitle', type: 'toggle', value: failed ? flashMessages.has('pinned') : (isEdit && series.pinned), hint: 'Açıkken seri ana sayfadaki listenin başında “Sabitlendi” etiketiyle durur; yeni bölüm gelmese de aşağı inmez.' })

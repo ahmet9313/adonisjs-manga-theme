@@ -1,0 +1,91 @@
+{{--
+  Admin → İçerik → Duyurular (administrators and editors): drafts first, then pinned and newest,
+  20 per page (?page=). Published ones appear on /duyurular and in the home "Duyurular" block.
+--}}
+@component('components/layout/admin', {
+  title,
+  description: 'Ekip haberleri, yeni seriler ve site duyuruları. Yayınlananlar /duyurular sayfasında ve ana sayfadaki “Duyurular” bölümünde görünür; sabitlenenler en üstte durur.'
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/duyurular', iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Sitede aç<span class="sr-only"> (yeni sekmede)</span>
+    @end
+    @component('components/ui/button', { href: '/admin/duyurular/ekle', variant: 'primary', icon: 'plus' })
+      Yeni duyuru
+    @end
+  @end
+
+  @slot('main')
+    <div class="max-w-5xl">
+      @if(items.length)
+      <div class="table-wrap">
+        <table class="table table--stack admin-table">
+          <caption class="sr-only">Duyurular</caption>
+          <thead>
+            <tr>
+              <th scope="col">Başlık</th>
+              <th scope="col">Durum</th>
+              <th scope="col">Yazan</th>
+              <th scope="col"><span class="sr-only">İşlemler</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(item in items)
+            <tr>
+              <td class="cell-main">
+                <div class="admin-cell__body">
+                  <a href="/admin/duyurular/{{ item.id }}/duzenle" class="admin-title">{{ item.title }}</a>
+                  <p class="admin-cell__meta"><span class="admin-mono">/duyuru/{{ item.slug }}</span>{{ item.publishedAt ? ' · ' + dateOf(item.publishedAt) : '' }}</p>
+                </div>
+              </td>
+              <td data-label="Durum">
+                <span class="inline-flex flex-wrap gap-1.5">
+                  @if(item.publishedAt)
+                  @!component('components/ui/badge', { kind: 'success', text: 'Yayında' })
+                  @else
+                  @!component('components/ui/badge', { kind: 'warning', text: 'Taslak' })
+                  @end
+                  @if(item.pinned)
+                  @!component('components/ui/badge', { kind: 'accent', text: 'Sabit' })
+                  @end
+                </span>
+              </td>
+              <td data-label="Yazan" class="text-sm">
+                {{ item.author ? item.author.username : '—' }}
+              </td>
+              <td class="actions">
+                <div class="admin-actions">
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: item.publishedAt ? 'external' : 'eye', href: '/duyuru/' + item.slug, target: '_blank', rel: 'noopener', label: (item.publishedAt ? 'Sitede aç: ' : 'Önizle: ') + item.title + ' (yeni sekme)', title: item.publishedAt ? 'Sitede aç' : 'Önizle' })
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: '/admin/duyurular/' + item.id + '/duzenle', label: 'Düzenle: ' + item.title, title: 'Düzenle' })
+                  <form action="/admin/duyurular/{{ item.id }}/sil" method="POST" data-submit-once
+                        data-confirm="“{{ item.title }}” duyurusu silinecek." data-confirm-title="Duyuru silinsin mi?" data-confirm-label="Sil">
+                    {{ csrfField() }}
+                    @!component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'trash', label: 'Sil: ' + item.title, title: 'Sil', class: 'admin-danger' })
+                  </form>
+                </div>
+              </td>
+            </tr>
+            @end
+          </tbody>
+        </table>
+      </div>
+      <div class="admin-listfoot">
+        <p class="admin-listfoot__info">{{ items.total }} duyuru</p>
+        @!component('components/ui/pagination', { current: items.currentPage, total: items.lastPage, label: 'Duyuru sayfaları' })
+      </div>
+      @elseif(items.total)
+      @component('components/ui/empty_state', { icon: 'list', title: 'Bu sayfada duyuru yok', description: 'İstenen sayfa son sayfadan sonra geliyor.' })
+        @component('components/ui/button', { href: '/admin/duyurular', icon: 'arrow-left' })
+          İlk sayfaya dön
+        @end
+      @end
+      @else
+      @component('components/ui/empty_state', { icon: 'megaphone', title: 'Henüz duyuru yok', description: 'Yeni bir seri, bölüm takvimi ya da site haberi paylaşmak için ilk duyuruyu yazın.' })
+        @component('components/ui/button', { href: '/admin/duyurular/ekle', variant: 'primary', icon: 'plus' })
+          Yeni duyuru
+        @end
+      @end
+      @end
+    </div>
+  @end
+@end

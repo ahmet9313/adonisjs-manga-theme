@@ -9,15 +9,17 @@ import {
   passwordValidator,
   profileUrl,
   profileValidator,
+  signOutOtherDevices,
 } from '#services/account_service'
 import progress from '#services/progress_service'
 import cards from '#services/card_service'
 import cosmetics from '#services/cosmetic_service'
 import reviews from '#services/review_service'
 import notifications from '#services/notification_service'
-import { recordAttempt, tooManyAttempts } from '#services/throttle'
+import { recordAttempt, takeAttempt, tooManyAttempts } from '#services/throttle'
 import { now } from '#services/input_service'
 import { removeContentFile, saveImage, invalidField } from '#services/upload_service'
+import accountMail from '#services/account_mail_service'
 
 const extnames = ['jpg', 'jpeg', 'png', 'webp']
 const imageRules = {
@@ -177,35 +179,67 @@ export default class AccountController {
     return response.redirect('/ayarlar')
   }
 
-  async updateAccount({ request, auth, session, response }: HttpContext) {
+  /** The current password, at most 5 tries per 15 minutes (a stolen session cannot guess it). */
+  private async checkPassword(user: User, password: string) {
+    if (!takeAttempt(`current-password:${user.id}`, 5, 15 * 60 * 1000))
+      invalidField('current_password', 'Çok fazla deneme yaptınız; 15 dakika sonra tekrar deneyin.')
+    if (!(await hash.verify(user.password, password)))
+      invalidField('current_password', 'Mevcut parola hatalı.')
+  }
+
+  async updateAccount(ctx: HttpContext) {
+    const { request, auth, session, response } = ctx
     const data = await request.validateUsing(accountValidator)
     const user = auth.user!
     const email = data.email.toLowerCase()
-    if (!(await hash.verify(user.password, data.current_password)))
-      invalidField('current_password', 'Mevcut parola hatalı.')
+    await this.checkPassword(user, data.current_password)
     await assertUniqueIdentity(null, email, user.id)
+    const previous = user.email
+    const changed = email !== previous
     user.email = email
+    // A new address is unconfirmed until its mailed link is opened (account_mail_service).
+    if (changed) user.emailVerifiedAt = null
     user.updatedAt = now()
     await user.save()
-    session.flash('success', 'E-posta adresi güncellendi')
+    if (changed) {
+      await signOutOtherDevices(user, ctx)
+      await accountMail.verification(user, request, 'email_change')
+      await accountMail.emailChanged(user, previous)
+    }
+    session.flash(
+      'success',
+      changed
+        ? `E-posta adresi güncellendi. ${email} adresine gönderdiğimiz bağlantıyla doğrula.`
+        : 'E-posta adresi güncellendi'
+    )
     return response.redirect('/ayarlar')
   }
 
-  async updatePassword({ request, auth, session, response }: HttpContext) {
+  async updatePassword(ctx: HttpContext) {
+    const { request, auth, session, response } = ctx
     const data = await request.validateUsing(passwordValidator)
     const user = auth.user!
-    if (!(await hash.verify(user.password, data.current_password)))
-      invalidField('current_password', 'Mevcut parola hatalı.')
+    await this.checkPassword(user, data.current_password)
     user.password = data.password
     user.updatedAt = now()
     await user.save()
-    session.flash('success', 'Parola değiştirildi')
+    await signOutOtherDevices(user, ctx)
+    session.flash('success', 'Parola değiştirildi; diğer cihazlardaki oturumlar kapatıldı.')
     return response.redirect('/ayarlar')
   }
 
   /** Avatar/banner upload. Answers JSON for the in-page cropper and redirects for plain forms. */
   async uploadImage(kind: 'avatar' | 'banner', { request, auth, session, response }: HttpContext) {
     const user = auth.user!
+    if (!takeAttempt(`profile-image:${user.id}`, 10, 10 * 60 * 1000))
+      return this.respond(
+        request,
+        response,
+        session,
+        kind,
+        429,
+        'Çok sık görsel yüklediniz; biraz bekleyin.'
+      )
     const file = request.file(kind, imageRules[kind])
     if (!file) {
       return this.respond(request, response, session, kind, 422, 'Bir görsel seçin.')

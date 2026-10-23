@@ -1,0 +1,112 @@
+{{--
+  Admin → Topluluk → Ekipler (administrators only): translation teams with their logo, people,
+  credited series and recruitment state; search by name (?q=). Deleting a team only removes its
+  credits and members; series and chapters stay.
+  Data: items [{ team, memberCount, seriesCount }] (team_service.adminList), search.
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@component('components/layout/admin', { title, description: 'Serileri çeviren ekipler. Bölümlerde ve seri sayfasında emeği geçenler olarak görünür; üye arayan ekipler “Ekibe Katıl” sayfasında listelenir.' })
+  @slot('actions')
+    @component('components/ui/button', { href: '/ekipler', iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Sitede gör
+    @end
+    @component('components/ui/button', { variant: 'primary', href: '/admin/ekipler/ekle', icon: 'plus' })
+      Yeni ekip
+    @end
+  @end
+
+  @slot('main')
+    <div class="max-w-4xl">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <form method="GET" action="/admin/ekipler" class="admin-search min-w-0 flex-1" role="search" aria-label="Ekiplerde ara">
+          <label class="control control--icon">
+            @!component('components/icon', { name: 'search' })
+            <span class="sr-only">Ekiplerde ara</span>
+            <input type="search" name="q" value="{{ search }}" placeholder="Ada göre ara" autocomplete="off">
+          </label>
+          @component('components/ui/button', { type: 'submit' })
+            Ara
+          @end
+          @if(search)
+          @component('components/ui/button', { variant: 'ghost', href: '/admin/ekipler' })
+            Temizle
+          @end
+          @end
+        </form>
+        <p class="admin-summary m-0">
+          <span><strong>{{ number(items.length) }}</strong> {{ search ? 'sonuç' : 'ekip' }}</span>
+        </p>
+      </div>
+
+      @if(items.length)
+      <div class="table-wrap mt-3">
+        <table class="table table--stack admin-table">
+          <caption class="sr-only">Ekipler</caption>
+          <thead>
+            <tr>
+              <th scope="col">Ekip</th>
+              <th scope="col" class="num">Üye</th>
+              <th scope="col" class="num">Seri</th>
+              <th scope="col">Alım</th>
+              <th scope="col"><span class="sr-only">İşlemler</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(item in items)
+            @let(team = item.team)
+            <tr>
+              <td class="cell-main">
+                <div class="admin-team">
+                  @!component('components/teams/logo', { team, size: 'sm' })
+                  <div class="admin-cell__body">
+                    <a href="/admin/ekipler/{{ team.id }}/duzenle" class="admin-title">{{ team.name }}</a>
+                    <p class="admin-cell__meta"><span class="admin-mono">/ekip/{{ team.slug }}</span><span class="md:hidden"> · {{ number(item.memberCount) }} üye · {{ number(item.seriesCount) }} seri</span></p>
+                  </div>
+                </div>
+              </td>
+              <td data-label="Üye" class="num max-md:hidden">{{ number(item.memberCount) }}</td>
+              <td data-label="Seri" class="num max-md:hidden">{{ number(item.seriesCount) }}</td>
+              <td data-label="Alım">
+                @if(team.recruiting)
+                @!component('components/ui/badge', { kind: 'success', text: 'Üye arıyor', size: 'sm' })
+                @else
+                <span class="text-sm text-muted">Kapalı</span>
+                @end
+              </td>
+              <td class="actions">
+                <div class="admin-actions">
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'external', href: '/ekip/' + team.slug, target: '_blank', rel: 'noopener', label: 'Ekip sayfası: ' + team.name, title: 'Ekip sayfası' })
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: '/admin/ekipler/' + team.id + '/duzenle', label: 'Düzenle: ' + team.name, title: 'Düzenle' })
+                  <form action="/admin/ekipler/{{ team.id }}/sil" method="POST" data-submit-once
+                        data-confirm="“{{ team.name }}” ekibi silinecek. {{ item.seriesCount ? item.seriesCount + ' seri ve bölümlerinden ekip bilgisi kaldırılır; seriler ve bölümler silinmez.' : 'Hiçbir seride emeği geçen olarak görünmüyor.' }}"
+                        data-confirm-title="Ekip silinsin mi?" data-confirm-label="Sil">
+                    {{ csrfField() }}
+                    @!component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'trash', label: 'Sil: ' + team.name, title: 'Sil', class: 'admin-danger' })
+                  </form>
+                </div>
+              </td>
+            </tr>
+            @end
+          </tbody>
+        </table>
+      </div>
+      @elseif(search)
+      <div class="mt-3">
+        @component('components/ui/empty_state', { icon: 'search', title: '“' + search + '” ile eşleşen ekip yok', description: 'Farklı bir yazım deneyin ya da yeni bir ekip ekleyin.' })
+          @component('components/ui/button', { href: '/admin/ekipler', icon: 'x' })
+            Aramayı temizle
+          @end
+        @end
+      </div>
+      @else
+      <div class="mt-3">
+        @component('components/ui/empty_state', { icon: 'users', title: 'Henüz ekip eklenmemiş', description: 'İlk çeviri ekibini ekleyin; seri ve bölüm formlarında hemen seçilebilir.' })
+          @component('components/ui/button', { variant: 'primary', href: '/admin/ekipler/ekle', icon: 'plus' })
+            Yeni ekip
+          @end
+        @end
+      </div>
+      @end
+    </div>
+  @end
+@end

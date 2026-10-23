@@ -1,0 +1,53 @@
+/*
+ * Share buttons (partials/share/*): brand marks in the "Paylaş" menu of the series page and the
+ * row of icon buttons at the end of a chapter or episode. Colours come from tokens only; the
+ * brand marks use currentColor.
+ */
+
+@layer components {
+  .share-icon {
+    height: 1.125rem;
+    width: 1.125rem;
+    flex-shrink: 0;
+    color: var(--t-muted);
+  }
+
+  .share-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 0.75rem;
+  }
+
+  .share-row__label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--t-muted);
+  }
+
+  .share-row__list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  /* End of a chapter: under the main actions, separated by a hairline. */
+  .reader-end .share-row {
+    margin-top: 1.5rem;
+    width: 100%;
+    border-top: 1px solid var(--t-border);
+    padding-top: 1.25rem;
+  }
+
+  /* Under the player: on its own row, aligned with the text. */
+  .watch-after {
+    flex-wrap: wrap;
+  }
+
+  .watch-after > .share-row {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}

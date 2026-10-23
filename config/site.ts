@@ -27,11 +27,66 @@ const site = {
     warn: 'Yaş uyarısı',
     members: 'Yaş uyarısı + üyelik',
   } as Record<AgePolicy, string>,
+  /**
+   * How covers of age-rated series appear in lists, cards, search and the series page (manga
+   * sites hide adult covers the same way). Per rating under Admin → Tema → Yaş ve Erişim; a series
+   * can override it in its form (`series.cover_mode`). `placeholder` never sends the real image:
+   * the default image (uploadable on that page) takes its place, banners are left out.
+   */
+  coverPolicies: { '18+': 'blur', '16+': 'show', '13+': 'show', '7+': 'show' } as Record<
+    string,
+    CoverMode
+  >,
+  coverModes: {
+    show: { label: 'Göster', icon: 'eye', hint: 'Kapak olduğu gibi görünür.' },
+    blur: {
+      label: 'Bulanıklaştır',
+      icon: 'eye-off',
+      hint: 'Kapak bulanık ve yaş etiketiyle görünür.',
+    },
+    placeholder: {
+      label: 'Varsayılan görsel',
+      icon: 'photo',
+      hint: 'Kapak yerine varsayılan görsel gösterilir; asıl görsel gönderilmez.',
+    },
+  } as Record<CoverMode, { label: string; icon: string; hint: string }>,
+  /**
+   * Who sees the real cover of a hidden one (`cover_reveal`): nobody, visitors who confirmed
+   * their age at the age gate, signed-in members, or members who also confirmed their age.
+   */
+  coverReveals: {
+    none: { label: 'Kimse', hint: 'Gizli kapaklar herkese gizli kalır.' },
+    age: {
+      label: 'Yaşını onaylayanlar',
+      hint: 'Yaş uyarısında yaşını onaylayan herkes (üye olmasa da) asıl kapağı görür.',
+    },
+    members: {
+      label: 'Üyeler',
+      hint: 'Giriş yapmış üyeler asıl kapağı görür; ziyaretçilere gizli kalır.',
+    },
+    members_age: {
+      label: 'Yaşını onaylayan üyeler',
+      hint: 'Hem giriş yapmış hem yaşını onaylamış olmak gerekir.',
+    },
+  } as Record<CoverReveal, { label: string; hint: string }>,
+  /** Built-in image for `placeholder` when none is uploaded. */
+  hiddenCover: '/images/hidden-cover.svg',
   /** Who may open a series or chapter. Staff (admin, editor) may always. */
   accessLevels: {
     public: { label: 'Herkes', chapterLabel: 'Seriyle aynı', icon: 'globe' },
     members: { label: 'Üyelere özel', chapterLabel: 'Üyelere özel', icon: 'user' },
     vip: { label: "VIP'lere özel", chapterLabel: "VIP'lere özel", icon: 'star' },
+  },
+  /**
+   * Reading statuses of a saved series (`bookmarks.status`, reading_list_service). `video` is the
+   * wording for video series. The first one is the default when a series is saved.
+   */
+  libraryStatuses: {
+    reading: { label: 'Okuyorum', video: 'İzliyorum', icon: 'book-open' },
+    plan: { label: 'Daha sonra okuyacağım', video: 'Daha sonra izleyeceğim', icon: 'clock' },
+    completed: { label: 'Bitirdim', video: 'Bitirdim', icon: 'check-circle' },
+    on_hold: { label: 'Beklemede', video: 'Beklemede', icon: 'pause' },
+    dropped: { label: 'Bıraktım', video: 'Bıraktım', icon: 'x-circle' },
   },
   adminPageSizes: [10, 20, 30, 50, 100],
   /**
@@ -75,13 +130,58 @@ const site = {
     age: Record<string, string>
   },
   socialLinks: [] as { label: string; url: string }[],
+  /** "Bölüm nasıldı?" under the chapter end card; one per member and chapter (keys are stored). */
+  chapterReactions: [
+    { key: 'like', label: 'Beğendim', emoji: '👍' },
+    { key: 'love', label: 'Bayıldım', emoji: '😍' },
+    { key: 'funny', label: 'Çok komik', emoji: '😂' },
+    { key: 'wow', label: 'Şaşırdım', emoji: '😮' },
+    { key: 'sad', label: 'Üzücü', emoji: '😢' },
+  ],
+  /** Hours after posting during which authors may edit a comment's text and spoiler flag. */
+  commentEditHours: 24,
+  /** @kullanıcı mentions linked and notified per comment (the first ones written). */
+  commentMentionLimit: 5,
+
+  /**
+   * Social accounts editable under Admin → Tema → Genel (`social_<key>` settings, http(s) only).
+   * They are listed in the footer after `socialLinks`; Discord also gets a menu button.
+   */
+  socialNetworks: [
+    { key: 'discord', label: 'Discord', placeholder: 'https://discord.gg/…' },
+    { key: 'x', label: 'X (Twitter)', placeholder: 'https://x.com/…' },
+    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/…' },
+    { key: 'telegram', label: 'Telegram', placeholder: 'https://t.me/…' },
+    { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@…' },
+  ],
+  /** Footer notice under the links (Admin → Tema → Genel can change it; empty restores this). */
+  disclaimer:
+    'Bu sitedeki çeviriler tanıtım amaçlıdır ve ticari bir amaç gütmez. Eserlerin tüm hakları yazarlarına ve yayıncılarına aittir; beğendiğin serilerin lütfen orijinal yayınını destekle.',
+  /** Static page the cookie notice links to (Admin → İçerik → Sayfalar), if it is published. */
+  privacyPage: 'gizlilik-politikasi',
+  /**
+   * Accounts whose e-mail is not confirmed yet always keep reading and saving series. When
+   * true, they cannot write comments or reviews until they confirm (false limits nothing).
+   */
+  requireVerifiedToPost: false as boolean,
+  /** Lifetimes of mailed account links (single use). */
+  accountLinks: { resetMinutes: 60, verifyDays: 7 },
 }
 
 export type ContentFormat = keyof typeof site.contentFormats
+export type CoverMode = 'show' | 'blur' | 'placeholder'
+export const coverModeKeys: CoverMode[] = ['show', 'blur', 'placeholder']
+export type CoverReveal = 'none' | 'age' | 'members' | 'members_age'
+export const coverRevealKeys: CoverReveal[] = ['none', 'age', 'members', 'members_age']
+/** A series follows its age rating (`auto`) or sets its own cover mode. */
+export type SeriesCoverMode = 'auto' | CoverMode
+export const seriesCoverModeKeys: SeriesCoverMode[] = ['auto', ...coverModeKeys]
 export type AgePolicy = 'none' | 'warn' | 'members'
 export const agePolicyKeys: AgePolicy[] = ['none', 'warn', 'members']
 export type AccessLevel = keyof typeof site.accessLevels
 export const accessLevelKeys = Object.keys(site.accessLevels) as AccessLevel[]
+export type LibraryStatus = keyof typeof site.libraryStatuses
+export const libraryStatusKeys = Object.keys(site.libraryStatuses) as LibraryStatus[]
 
 export const contentFormatKeys = Object.keys(site.contentFormats) as ContentFormat[]
 

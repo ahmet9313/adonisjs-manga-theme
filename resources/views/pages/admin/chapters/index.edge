@@ -12,6 +12,11 @@
 @let(last = Math.min(chapters.currentPage * chapters.perPage, chapters.total))
 @component('components/layout/admin', { title, description: current ? current.title + ' serisinin bölümleri. Yeni eklenen önce.' : 'Tüm serilerin bölümleri, yeni eklenen önce. Bir seri seçerek listeyi daraltın.' })
   @slot('actions')
+    @if(!current || !current.contentType || current.contentType.format === 'image')
+    @component('components/ui/button', { href: '/admin/toplu-yukle' + (current ? '?series_id=' + current.id : ''), icon: 'archive' })
+      Toplu yükle
+    @end
+    @end
     @component('components/ui/button', { variant: 'primary', href: addUrl, icon: 'plus' })
       Yeni bölüm
     @end
@@ -37,7 +42,7 @@
 
     @if(current)
     <section class="card mt-4 flex flex-wrap items-center gap-4 p-4" aria-label="Seçili seri">
-      <img src="{{ current.coverImage || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--lg" width="60" height="80" decoding="async" data-fallback="/images/no-cover.svg">
+      <img src="{{ thumbOf(current.coverImage, 160) || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--lg" width="60" height="80" decoding="async" data-fallback="/images/no-cover.svg">
       <div class="min-w-0 flex-1 basis-48">
         <p class="t-h3 line-clamp-2">{{ current.title }}</p>
         <div class="admin-cell__meta mt-1.5">
@@ -96,6 +101,7 @@
                 <span class="flex flex-wrap gap-1">
                   @if(chapter.draft)
                   @!component('components/ui/badge', { kind: 'draft', tone: 'warning', text: 'Taslak', size: 'sm', title: 'Yayında değil; yalnız yönetim görür' })
+                  @!component('partials/admin/scheduled_badge', { at: chapter.publishAt })
                   @end
                   @if(chapter.access !== 'public')
                   @!component('components/ui/badge', { kind: 'access', tone: chapter.access === 'vip' ? 'accent' : 'neutral', text: site.accessLevels[chapter.access].label, size: 'sm' })

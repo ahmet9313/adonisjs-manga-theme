@@ -19,6 +19,8 @@
       </div>
     </section>
 
+    @include('partials/admin/view_stats')
+
     <section class="section" aria-labelledby="quick-title">
       @!component('components/ui/section_head', { title: 'Hızlı işlemler', id: 'quick-title' })
       <div class="admin-quick">
@@ -42,6 +44,7 @@
           </span>
           @!component('components/icon', { name: 'arrow-right', class: 'admin-quick__arrow' })
         </a>
+        @include('partials/admin/moderation_quick')
         @if(me.isAdmin)
         <a href="/admin/kullanicilar" class="admin-quick__item">
           <span class="admin-quick__icon">
@@ -56,6 +59,8 @@
         @end
       </div>
     </section>
+
+    @include('partials/admin/scheduled_list')
 
     <div class="section admin-recent">
       <section class="panel panel--flush" aria-labelledby="recent-series-title">
@@ -81,7 +86,7 @@
               <tr>
                 <td class="cell-main">
                   <div class="admin-cell">
-                    <img src="{{ series.coverImage || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--sm" width="32" height="43" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+                    <img src="{{ thumbOf(series.coverImage, 160) || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--sm" width="32" height="43" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
                     <div class="admin-cell__body">
                       <a href="/admin/seriler/{{ series.id }}/duzenle" class="admin-title line-clamp-1">{{ series.title }}</a>
                       <div class="admin-cell__meta">

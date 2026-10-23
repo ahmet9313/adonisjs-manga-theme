@@ -1,0 +1,26 @@
+{{--
+  "Planlı yayın zamanı" in the "Yayın ve erişim" panel of the series and chapter forms. Shown
+  while the Taslak switch (#f-draft) is on; posts `publish_at` (datetime-local, site time zone).
+  The scheduler publishes the draft at that time (publishing_service.publishDue); an empty
+  field keeps a plain draft. Props: stored (the record's publishAt), draft (switch state now),
+  subject ('Seri' | 'Bölüm').
+--}}
+<div class="publish-at" x-data="{ draft: {{ draft ? 'true' : 'false' }} }"
+     x-init="draft = Boolean(document.getElementById('f-draft')?.checked)"
+     @change.document="if ($event.target.id === 'f-draft') draft = $event.target.checked"
+     x-show="draft" {{ draft ? '' : 'x-cloak' }}>
+  @!component('components/ui/field', {
+    name: 'publish_at',
+    label: 'Planlı yayın zamanı (isteğe bağlı)',
+    type: 'datetime-local',
+    value: schedule.input(stored),
+    min: schedule.inputNow(),
+    hint: subject + ' seçtiğin zamanda kendiliğinden yayınlanır' + (subject === 'Bölüm' ? ' ve kaydedenlere bildirim gider' : '') + '. Saat, site saatine (' + site.timezone + ') göredir. Boş bırakırsan taslak olarak kalır.'
+  })
+  @if(stored)
+  <p class="publish-at__current">
+    @!component('components/icon', { name: 'clock', class: 'h-4 w-4' })
+    Şu an planlı: <strong>{{ schedule.label(stored) }}</strong>
+  </p>
+  @end
+</div>

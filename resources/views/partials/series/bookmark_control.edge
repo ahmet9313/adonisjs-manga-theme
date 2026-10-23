@@ -1,0 +1,64 @@
+{{--
+  Save button with reading statuses (bookmarkButton, bookmarks.js). Not saved: "Kaydet" saves the
+  series as "Okuyorum", the arrow opens the status menu. Saved: the button shows the status and
+  opens the menu (other status or "Kaydedilenlerden kaldır"). Accounts store it on the server,
+  guests in localStorage (moved into the account after signing in).
+  Needs: series, reading (account state or null), isVideo.
+--}}
+@let(saved = Boolean(reading && reading.bookmarked))
+@let(status = reading && reading.status ? reading.status : 'reading')
+@let(statusList = Object.keys(site.libraryStatuses).map((key) => ({ key, label: isVideo ? site.libraryStatuses[key].video : site.libraryStatuses[key].label, icon: site.libraryStatuses[key].icon })))
+@let(statusLabel = statusList.find((item) => item.key === status).label)
+<div class="bookmark-control" x-data="bookmarkButton" data-statuses="{{ JSON.stringify(statusList) }}"
+     @keydown="onKeydown($event)" @click.outside="close()">
+  <button type="button" class="btn btn--secondary btn--lg bookmark-control__main" x-ref="main"
+    data-bookmark="{{ JSON.stringify({ type: series.type, slug: series.slug, title: series.title, coverImage: series.coverImage, coverVeil: series.coverVeil }) }}"
+    data-saved="{{ saved ? 'true' : 'false' }}" data-status="{{ status }}"
+    aria-pressed="{{ saved ? 'true' : 'false' }}" :aria-pressed="saved.toString()" :aria-busy="busy.toString()"
+    :aria-haspopup="saved ? 'menu' : null" :aria-expanded="saved ? open.toString() : null" :aria-controls="saved ? 'bookmark-menu' : null"
+    @click="primary()">
+    @!component('components/icon', { name: 'bookmark', class: 'btn__icon icon-fill' })
+    <span x-show="saved"
+      @if(!saved)
+      style="display: none"
+      @end
+      ><span class="sr-only">Kaydedildi: </span><span x-text="label">{{ statusLabel }}</span></span>
+    <span x-show="!saved"
+      @if(saved)
+      style="display: none"
+      @end
+      >Kaydet</span>
+  </button>
+  <button type="button" class="btn btn--secondary btn--lg btn--icon bookmark-control__more" x-ref="button"
+    aria-haspopup="menu" aria-expanded="false" :aria-expanded="open.toString()" aria-controls="bookmark-menu"
+    aria-label="{{ isVideo ? 'İzleme durumunu seç' : 'Okuma durumunu seç' }}" title="{{ isVideo ? 'İzleme durumu' : 'Okuma durumu' }}"
+    @click="toggle()">
+    @!component('components/icon', { name: 'chevron-down', class: 'btn__icon' })
+  </button>
+  <div id="bookmark-menu" x-ref="panel" x-cloak x-show="open" x-transition.origin.top.duration.120ms
+       class="menu bookmark-control__menu" role="menu" aria-label="{{ isVideo ? 'İzleme durumu' : 'Okuma durumu' }}">
+    <p class="menu__label" aria-hidden="true">{{ isVideo ? 'İzleme durumu' : 'Okuma durumu' }}</p>
+    @each(item in statusList)
+    <button type="button" class="menu__item" role="menuitemradio" data-key="{{ item.key }}"
+      aria-checked="{{ saved && item.key === status ? 'true' : 'false' }}" :aria-checked="(saved && status === $el.dataset.key).toString()"
+      @click="choose($el.dataset.key)" :disabled="busy">
+      @!component('components/icon', { name: item.icon })
+      <span class="flex-1">{{ item.label }}</span>
+      @!component('components/icon', { name: 'check', class: 'bookmark-control__tick', stroke: 2.4 })
+    </button>
+    @end
+    <div class="menu__sep" x-show="saved"
+      @if(!saved)
+      style="display: none"
+      @end
+      ></div>
+    <button type="button" class="menu__item menu__item--danger" role="menuitem" x-show="saved" @click="remove()" :disabled="busy"
+      @if(!saved)
+      style="display: none"
+      @end
+      >
+      @!component('components/icon', { name: 'trash' })
+      <span>Kaydedilenlerden kaldır</span>
+    </button>
+  </div>
+</div>

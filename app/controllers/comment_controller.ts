@@ -3,13 +3,15 @@ import vine from '@vinejs/vine'
 import Comment from '#models/comment'
 import Chapter from '#models/chapter'
 import SeriesModel from '#models/series'
-import comments, { type CommentSort } from '#services/comment_service'
+import comments, { editable, type CommentSort } from '#services/comment_service'
 import { pageNumber } from '#services/input_service'
 import { removeContentFile, saveImage } from '#services/upload_service'
-import { recordAttempt, tooManyAttempts } from '#services/throttle'
+import { refundAttempt, takeAttempt } from '#services/throttle'
 import cosmetics from '#services/cosmetic_service'
 import access from '#services/access_service'
 import type User from '#models/user'
+import moderation from '#services/moderation_service'
+import wordFilter from '#services/word_filter_service'
 
 export const commentImageRules = { size: '8mb', extnames: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }
 const maxBody = 1000
@@ -21,6 +23,13 @@ const commentValidator = vine.compile(
     parent_id: vine.number().positive().withoutDecimals().optional(),
     body: vine.string().trim().maxLength(maxBody).optional(),
     sticker_id: vine.number().positive().withoutDecimals().optional(),
+    spoiler: vine.enum(['on', '1', 'true']).optional(),
+  })
+)
+
+const editValidator = vine.compile(
+  vine.object({
+    body: vine.string().trim().maxLength(maxBody).optional(),
     spoiler: vine.enum(['on', '1', 'true']).optional(),
   })
 )
@@ -38,14 +47,34 @@ const listValidator = vine.compile(
  * are a page concern and do not block the thread.
  */
 async function threadOpen(user: User | null, seriesId: number, chapterId: number | null) {
+  const audience = await audienceOf(seriesId, chapterId)
+  return Boolean(audience && audience(user))
+}
+
+/** Who may open a thread (null when the series or chapter does not exist). */
+async function audienceOf(seriesId: number, chapterId: number | null) {
   const series = await SeriesModel.find(seriesId)
-  if (!series) return false
+  if (!series) return null
   const chapter = chapterId
     ? await Chapter.query().where('id', chapterId).where('seriesId', seriesId).first()
     : null
-  if (chapterId && !chapter) return false
+  if (chapterId && !chapter) return null
   const target = { series, chapter }
-  return access.visible(user, target) && access.allows(user, access.effectiveAccess(target))
+  return (user: User | null) =>
+    access.visible(user, target) && access.allows(user, access.effectiveAccess(target))
+}
+
+/** Link of a thread for notifications (series page or chapter, at the comments). */
+async function threadLink(seriesId: number, chapterId: number | null) {
+  const series = await SeriesModel.query().where('id', seriesId).preload('contentType').first()
+  if (!series) return null
+  let link = `/series/${series.contentType.slug}/${series.slug}`
+  if (chapterId) {
+    const chapter = await Chapter.find(chapterId)
+    if (!chapter) return null
+    link += `/${chapter.number}`
+  }
+  return `${link}#yorumlar`
 }
 
 export default class CommentController {
@@ -74,36 +103,46 @@ export default class CommentController {
 
   async store({ request, auth, response }: HttpContext) {
     const user = auth.user!
-    const key = `comment:${user.id}`
-    if (tooManyAttempts(key, 6))
-      return response.tooManyRequests({
-        error: 'Çok hızlı yorum yapıyorsun. Biraz bekleyip tekrar dene.',
-      })
-
+    const muted = moderation.muteError(user)
+    if (muted) return response.forbidden({ error: muted })
     const data = await request.validateUsing(commentValidator)
     const body = data.body ?? ''
     const file = request.file('image', commentImageRules)
     if (!body && !file && !data.sticker_id)
       return response.unprocessableEntity({ error: 'Bir şey yaz, görsel ya da çıkartma ekle.' })
+    const blocked = wordFilter.check('comment', body)
+    if (blocked) return response.unprocessableEntity({ error: blocked })
+    // Counted at once (not after the image is saved), so parallel posts cannot slip through;
+    // a post refused further down gives its attempt back.
+    const key = `comment:${user.id}`
+    if (!takeAttempt(key, 6, 60 * 1000))
+      return response.tooManyRequests({
+        error: 'Çok hızlı yorum yapıyorsun. Biraz bekleyip tekrar dene.',
+      })
+    const refuse = <T>(answer: T) => {
+      refundAttempt(key)
+      return answer
+    }
     const sticker = data.sticker_id ? await cosmetics.usableSticker(user, data.sticker_id) : null
     if (data.sticker_id && !sticker)
-      return response.unprocessableEntity({ error: 'Bu çıkartma henüz açılmadı.' })
+      return refuse(response.unprocessableEntity({ error: 'Bu çıkartma henüz açılmadı.' }))
 
     const series = await SeriesModel.query()
       .where('id', data.series_id)
       .preload('contentType')
       .first()
-    if (!series) return response.notFound({ error: 'Seri bulunamadı' })
+    if (!series) return refuse(response.notFound({ error: 'Seri bulunamadı' }))
     const chapterId = data.chapter_id ?? null
-    if (!(await threadOpen(user, series.id, chapterId)))
-      return response.forbidden({ error: 'Bu içeriğe yorum yazamazsın.' })
+    const audience = await audienceOf(series.id, chapterId)
+    if (!audience || !audience(user))
+      return refuse(response.forbidden({ error: 'Bu içeriğe yorum yazamazsın.' }))
     let link = `/series/${series.contentType.slug}/${series.slug}`
     if (chapterId) {
       const chapter = await Chapter.query()
         .where('id', chapterId)
         .where('seriesId', series.id)
         .first()
-      if (!chapter) return response.notFound({ error: 'Bölüm bulunamadı' })
+      if (!chapter) return refuse(response.notFound({ error: 'Bölüm bulunamadı' }))
       link += `/${chapter.number}`
     }
     let parent: Comment | null = null
@@ -115,18 +154,19 @@ export default class CommentController {
         parent.seriesId !== series.id ||
         parent.chapterId !== chapterId
       )
-        return response.unprocessableEntity({ error: 'Yanıtlanan yorum bulunamadı.' })
+        return refuse(response.unprocessableEntity({ error: 'Yanıtlanan yorum bulunamadı.' }))
     }
 
     let image: string | null = null
     if (file) {
       if (!file.isValid)
-        return response.unprocessableEntity({
-          error: 'Görsel JPG, PNG, WebP veya GIF olmalı ve 8 MB sınırını aşmamalı.',
-        })
+        return refuse(
+          response.unprocessableEntity({
+            error: 'Görsel JPG, PNG, WebP veya GIF olmalı ve 8 MB sınırını aşmamalı.',
+          })
+        )
       image = await saveImage(file, ['comments'])
     }
-    recordAttempt(key, 60 * 1000)
     try {
       const comment = await comments.create(
         user,
@@ -138,6 +178,7 @@ export default class CommentController {
           stickerId: sticker?.id ?? null,
           parent,
           link: `${link}#yorumlar`,
+          audience,
         }
       )
       return response.created(comment)
@@ -147,9 +188,34 @@ export default class CommentController {
     }
   }
 
-  /** Legacy like endpoint: toggles an up-vote. */
-  async like(ctx: HttpContext) {
-    return this.castVote(ctx, 1)
+  /**
+   * The author edits the text and spoiler flag within site.commentEditHours. Staff cannot edit
+   * other people's words (they may delete them).
+   */
+  async update({ params, request, auth, response }: HttpContext) {
+    const user = auth.user!
+    const comment = await Comment.find(params.id)
+    if (!comment || comment.deletedAt) return response.notFound({ error: 'Yorum bulunamadı' })
+    if (comment.userId !== user.id)
+      return response.forbidden({ error: 'Yalnızca kendi yorumunu düzenleyebilirsin.' })
+    if (!editable(comment))
+      return response.forbidden({ error: 'Bu yorumun düzenleme süresi doldu.' })
+    const data = await request.validateUsing(editValidator)
+    const body = data.body ?? ''
+    if (!body && !comment.image && !comment.stickerId)
+      return response.unprocessableEntity({ error: 'Yorum boş kalamaz.' })
+    const audience = await audienceOf(comment.seriesId, comment.chapterId)
+    const link = await threadLink(comment.seriesId, comment.chapterId)
+    if (!audience || !link || !audience(user))
+      return response.forbidden({ error: 'Bu içeriğe yorum yazamazsın.' })
+    if (!takeAttempt(`comment-edit:${user.id}`, 10, 60 * 1000))
+      return response.tooManyRequests({ error: 'Çok sık düzenliyorsun. Biraz bekleyip dene.' })
+    return comments.edit(user, comment, {
+      body,
+      spoiler: Boolean(data.spoiler),
+      link,
+      audience,
+    })
   }
 
   async vote(ctx: HttpContext) {
@@ -157,9 +223,14 @@ export default class CommentController {
   }
 
   private async castVote({ params, auth, response }: HttpContext, value: 1 | -1) {
+    const user = auth.user!
+    if (!takeAttempt(`comment-vote:${user.id}`, 30, 60 * 1000))
+      return response.tooManyRequests({ error: 'Biraz yavaşla.' })
     const comment = await Comment.find(params.id)
     if (!comment || comment.deletedAt) return response.notFound({ error: 'Yorum bulunamadı' })
-    return comments.vote(auth.user!, comment, value)
+    if (!(await threadOpen(user, comment.seriesId, comment.chapterId)))
+      return response.forbidden({ error: 'Bu içeriğin yorumlarına oy veremezsin.' })
+    return comments.vote(user, comment, value)
   }
 
   async destroy({ params, auth, response }: HttpContext) {

@@ -1,0 +1,50 @@
+{{--
+  Admin → Kullanıcılar → Düzenle: mute state (users.muted_until) with unmute, or mute choices.
+  Staff accounts and the administrator's own account cannot be muted. Needs `member`, `isSelf`
+  and `mute` = { durations, until } (Admin\UserController#edit). Forms go to Admin → Moderasyon.
+--}}
+@let(muteBack = '/admin/kullanicilar/' + member.id + '/duzenle')
+<section class="panel" aria-labelledby="mute-title">
+  <div class="panel__head">
+    <div class="min-w-0">
+      <h2 id="mute-title" class="panel__title">Susturma</h2>
+      @if(member.isMuted)
+      <p class="panel__desc">{{ mute.until === 'süresiz' ? 'Süresiz olarak susturuldu' : mute.until + ' tarihine kadar susturuldu' }}: yorum ve inceleme yazamaz, okumaya devam edebilir.</p>
+      @else
+      <p class="panel__desc">Susturulan kullanıcı belirlenen süre boyunca yorum ve inceleme yazamaz; okumaya ve oy vermeye devam eder.</p>
+      @end
+    </div>
+    @if(member.isMuted)
+    @!component('components/ui/badge', { kind: 'danger', text: 'Susturuldu' })
+    @else
+    @!component('components/ui/badge', { kind: 'success', text: 'Yazabilir' })
+    @end
+  </div>
+  @if(member.isMuted)
+  <form action="/admin/moderasyon/uye/{{ member.id }}/susturma-kaldir" method="POST" data-submit-once>
+    {{ csrfField() }}
+    <input type="hidden" name="back" value="{{ muteBack }}">
+    @component('components/ui/button', { type: 'submit', icon: 'check-circle' })
+      Susturmayı kaldır
+    @end
+  </form>
+  @elseif(isSelf || member.isStaff)
+  <p class="text-sm text-(--t-muted)">Yetkili hesaplar susturulamaz; gerekirse önce rolünü değiştir.</p>
+  @else
+  <form action="/admin/moderasyon/uye/{{ member.id }}/sustur" method="POST" class="mod-mute__form" data-submit-once
+        data-confirm="{{ '@' + member.username }} seçtiğin süre boyunca yorum ve inceleme yazamayacak; gelen kutusuna bilgi düşer."
+        data-confirm-title="Kullanıcı susturulsun mu?" data-confirm-label="Sustur">
+    {{ csrfField() }}
+    <input type="hidden" name="back" value="{{ muteBack }}">
+    <label for="mute-days" class="mod-mute__label">Süre</label>
+    <select id="mute-days" name="days" class="control control--sm mod-mute__select">
+      @each(entry in mute.durations)
+      <option value="{{ entry.days }}" {{ entry.days === 7 ? 'selected' : '' }}>{{ entry.label }}</option>
+      @end
+    </select>
+    @component('components/ui/button', { type: 'submit', variant: 'danger', size: 'sm', icon: 'lock' })
+      Sustur
+    @end
+  </form>
+  @end
+</section>

@@ -155,8 +155,6 @@ export const colorTokens: ColorToken[] = [
   token('badge_age7', '7+', 'badges', '--t-badge-age7', '#2563eb', '#2563eb'),
 ]
 
-export const colorKeys = colorTokens.map((item) => item.key)
-
 /** Colours whose change is marked on <html> (`data-accent`, `data-accent2`). */
 export const derivedAccents: Record<string, string> = {
   accent: 'data-accent',
@@ -347,8 +345,22 @@ export const flags: Flag[] = [
   { key: 'nav_series', label: '"Seri Listesi" bağlantısı', group: 'header', default: true },
   { key: 'nav_recommend', label: '"Öneriler" bağlantısı', group: 'header', default: true },
   { key: 'nav_bookmarks', label: '"Kaydedilenler" bağlantısı', group: 'header', default: true },
+  {
+    key: 'nav_discover',
+    label: '"A–Z" ve "Rastgele seri" bağlantıları',
+    group: 'header',
+    default: true,
+    hint: 'Masaüstünde arama kutusunun yanında "Rastgele seri" düğmesi, mobil menüde iki bağlantı.',
+  },
   { key: 'search', label: 'Arama kutusu', group: 'header', default: true },
   { key: 'bell', label: 'Bildirim zili', group: 'header', default: true },
+  {
+    key: 'nav_discord',
+    label: 'Discord düğmesi',
+    group: 'header',
+    default: true,
+    hint: 'Yalnız Tema → Genel → Sosyal bağlantılar altında Discord adresi girildiyse görünür.',
+  },
   {
     key: 'scheme_switch',
     label: 'Ziyaretçi renk şemasını seçebilsin (Koyu / Açık / Sistem)',
@@ -356,9 +368,17 @@ export const flags: Flag[] = [
     default: true,
     hint: 'Kapalıyken herkes Renkler sayfasındaki varsayılan şemayı görür.',
   },
+  {
+    key: 'mobile_bottom_nav',
+    label: 'Telefonda alt gezinme çubuğu',
+    group: 'header',
+    default: true,
+    hint: '1024 px altında Ana Sayfa, Seriler, Kaydedilenler, Bildirimler ve Menü kısayolları.',
+  },
 
   { key: 'home_hero', label: 'Öne çıkan seri bannerı', group: 'home', default: true },
   { key: 'home_updates', label: '"Son Güncellenenler" listesi', group: 'home', default: true },
+  { key: 'home_announcements', label: '"Duyurular" (son 3 duyuru)', group: 'home', default: true },
   { key: 'home_popular', label: '"Popüler Seriler" şeridi', group: 'home', default: true },
   { key: 'home_genres', label: '"Türlere Göre Keşfet"', group: 'home', default: true },
   {
@@ -377,16 +397,50 @@ export const flags: Flag[] = [
   { key: 'series_reviews', label: 'Puan ve incelemeler', group: 'series', default: true },
   { key: 'series_comments', label: 'Seri yorumları', group: 'series', default: true },
   {
+    key: 'share_buttons',
+    label: 'Paylaşım düğmeleri (WhatsApp, Telegram, X, Facebook, bağlantıyı kopyala)',
+    group: 'series',
+    default: true,
+    hint: 'Seri sayfasındaki "Paylaş" menüsü ve bölüm sonundaki paylaşım düğmeleri.',
+  },
+  {
     key: 'reader_toolbar',
     label: 'Okuyucu araç çubuğu (bölüm seçici, okuma ayarları)',
     group: 'series',
     default: true,
   },
   { key: 'reader_comments', label: 'Bölüm okuyucusunda yorumlar', group: 'series', default: true },
+  {
+    key: 'team_credits',
+    label: 'Çeviri ekibi (okuyucu başlığı, bölüm listesi, seri bilgileri)',
+    group: 'series',
+    default: true,
+  },
+  {
+    key: 'chapter_reactions',
+    label: '"Bölüm nasıldı?" tepkileri (bölüm sonunda)',
+    group: 'series',
+    default: true,
+  },
 
   { key: 'footer', label: 'Alt bilgiyi göster', group: 'footer', default: true },
   { key: 'footer_social', label: 'Sosyal bağlantılar', group: 'footer', default: true },
   { key: 'footer_description', label: 'Site açıklaması', group: 'footer', default: true },
+  {
+    key: 'footer_pages',
+    label: 'Sayfa bağlantıları (Hakkımızda, S.S.S., Telif Hakkı …)',
+    group: 'footer',
+    default: true,
+    hint: 'Hangi sayfaların listeleneceği İçerik → Sayfalar bölümünde seçilir.',
+  },
+  { key: 'footer_disclaimer', label: 'Telif uyarısı', group: 'footer', default: true },
+  {
+    key: 'cookie_notice',
+    label: 'Çerez bildirimi',
+    group: 'footer',
+    default: true,
+    hint: 'Sayfanın altında küçük, kapatılabilir bir çubuk; ziyaretçi "Tamam" deyince bir yıl gösterilmez.',
+  },
 
   { key: 'bg_glow', label: 'Arka plan parıltıları', group: 'effects', default: true },
   { key: 'bg_dots', label: 'Noktalı desen', group: 'effects', default: true },

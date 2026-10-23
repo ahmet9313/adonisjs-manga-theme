@@ -39,3 +39,6 @@ Thumbs.db
 *.sqlite3-*
 *.sqlite
 *.sqlite-*
+
+# Local Claude Code worktrees
+.claude/

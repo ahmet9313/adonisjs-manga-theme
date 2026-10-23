@@ -69,9 +69,12 @@
       >
       <picture class="home-hero__art">
         @if(item.bannerImage)
-        <source media="(min-width: 640px)" srcset="{{ encodeURI(item.bannerImage) }}">
+        <source media="(min-width: 640px)" srcset="{{ srcsetOf(item.bannerImage, [640, 1280]) || encodeURI(item.bannerImage) }}" sizes="100vw">
         @end
-        <img src="{{ item.coverImage }}" alt="" decoding="async" data-fallback=""
+        <img src="{{ thumbOf(item.coverImage, 640) }}" alt="" decoding="async" data-fallback=""
+          @if(item.coverVeil === 'blur')
+          data-veil="blur"
+          @end
           @if(index === 0)
           fetchpriority="high"
           @else
@@ -83,11 +86,15 @@
 
       <div class="home-hero__inner">
         <a href="{{ url }}" class="home-hero__cover" tabindex="-1" aria-hidden="true">
-          <img src="{{ item.coverImage }}" alt="" width="300" height="450" decoding="async" data-fallback="/images/no-cover.svg"
+          <img src="{{ thumbOf(item.coverImage, 320) }}" srcset="{{ srcsetOf(item.coverImage, [320, 640]) || '' }}" sizes="200px" alt="" width="300" height="450" decoding="async" data-fallback="/images/no-cover.svg"
+            @if(item.coverVeil)
+            data-veil="{{ item.coverVeil }}"
+            @end
             @if(index !== 0)
             loading="lazy"
             @end
             >
+          @!component('components/series/veil', { series: item })
         </a>
         <div class="home-hero__content">
           <p class="home-hero__meta">
