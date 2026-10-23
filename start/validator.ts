@@ -68,6 +68,15 @@ vine.messagesProvider = new SimpleMessagesProvider(
     logo_url: 'Logo adresi',
     announcement_text: 'Duyuru metni',
     announcement_url: 'Duyuru bağlantısı',
+    // Pages, announcements and footer links (Admin → İçerik, Tema → Genel)
+    slug: 'Adres',
+    sort: 'Sıra',
+    footer_disclaimer: 'Telif uyarısı',
+    social_discord: 'Discord adresi',
+    social_x: 'X (Twitter) adresi',
+    social_instagram: 'Instagram adresi',
+    social_telegram: 'Telegram adresi',
+    social_youtube: 'YouTube adresi',
     // Comments and reviews
     body: 'Metin',
     rating: 'Puan',

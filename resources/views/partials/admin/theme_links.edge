@@ -1,0 +1,38 @@
+{{--
+  Admin → Tema → Genel, second form (part=links): the footer disclaimer (empty restores
+  config/site.ts → disclaimer) and the social accounts of config/site.ts → socialNetworks
+  (`social_<key>`, http(s) addresses only). Discord also gets a header button. Expects
+  `links` from ThemeController.show: { disclaimer, defaultDisclaimer, social: [{ key, label,
+  placeholder, value }] }.
+--}}
+<section class="panel" aria-labelledby="links-form-title">
+  <div class="panel__head">
+    <div class="min-w-0">
+      <h2 id="links-form-title" class="panel__title te-title">
+        @!component('components/icon', { name: 'link' })
+        Alt bilgi ve sosyal bağlantılar
+      </h2>
+      <p class="panel__desc">Sitenin altındaki telif uyarısı ve sosyal hesaplar. Discord adresi girerseniz üst menüde de bir Discord düğmesi görünür.</p>
+    </div>
+  </div>
+  <form action="/admin/tema/genel" method="POST" class="te-links" data-submit-once>
+    {{ csrfField() }}
+    <input type="hidden" name="part" value="links">
+    @!component('components/ui/field', { name: 'footer_disclaimer', label: 'Telif uyarısı', type: 'textarea', rows: 3, maxlength: 400, value: links.disclaimer, placeholder: links.defaultDisclaimer, hint: 'Alt bilginin en altında görünür. Boş bırakırsanız varsayılan metin kullanılır; tamamen gizlemek için Göster / Gizle → Alt bilgi → Telif uyarısı.' })
+    <fieldset class="grid gap-3">
+      <legend class="field__label">Sosyal hesaplar (isteğe bağlı)</legend>
+      <div class="te-links__social">
+        @each(network in links.social)
+        @!component('components/ui/field', { name: 'social_' + network.key, label: network.label, type: 'url', maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', value: network.value, placeholder: network.placeholder })
+        @end
+      </div>
+      <p class="field__hint">Tam adres girin (https:// ile başlayan). Boş bırakılan hesap gösterilmez.</p>
+    </fieldset>
+    <div class="te-form-foot">
+      <p>Kaydettiğinizde tüm sayfalarda hemen güncellenir.</p>
+      @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+        Kaydet
+      @end
+    </div>
+  </form>
+</section>

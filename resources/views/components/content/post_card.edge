@@ -1,0 +1,23 @@
+{{--
+  One announcement in a list (/duyurular and the home "Duyurular" block).
+  Props: item (post_service.postSummary(): title, slug, pinned, publishedAt, excerpt),
+         level (heading tag, 'h2'; the home block uses 'h3'), class.
+--}}
+@let(level = $props.get('level', 'h2'))
+<article class="post-card {{ $props.get('class', '') }}">
+  <p class="post-card__meta">
+    @if(item.pinned)
+    <span class="badge badge--sm" data-tone="accent">
+      @!component('components/icon', { name: 'flag', class: 'h-3 w-3' })
+      Sabit
+    </span>
+    @end
+    <time datetime="{{ item.publishedAt.replace(' ', 'T') }}">{{ dateOf(item.publishedAt) }}</time>
+  </p>
+  <{{ level }} class="post-card__title">
+    <a href="/duyuru/{{ item.slug }}" class="post-card__link">{{ item.title }}</a>
+  </{{ level }}>
+  @if(item.excerpt)
+  <p class="post-card__excerpt">{{ item.excerpt }}</p>
+  @end
+</article>

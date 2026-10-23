@@ -11,6 +11,8 @@ import type User from '#models/user'
 import type { Scheme } from '#config/theme'
 import { coverView, type CoverSource } from '#services/cover_policy_service'
 import { variantSrcset, variantUrl } from '#services/media_service'
+import siteContent, { COOKIE_NOTICE_COOKIE } from '#services/site_content_service'
+import posts from '#services/post_service'
 
 edge.global('site', site)
 edge.global('adminNav', adminNav)
@@ -148,4 +150,24 @@ edge.global('visualStyle', (visual: { css?: string; img?: string } | null) => {
   if (!visual) return ''
   if (visual.img) return `background-image: url("${encodeURI(visual.img)}")`
   return visual.css || ''
+})
+
+/**
+ * Footer pages, disclaimer, social accounts, the cookie notice and the home "Duyurular" block
+ * (app/services/site_content_service.ts, post_service.ts). The async ones are awaited in views:
+ * `@let(links = await footerPages())`.
+ */
+edge.global('footerPages', () => siteContent.footerPages())
+edge.global('pageUrl', (slug: string) => siteContent.pageUrl(slug))
+edge.global('disclaimer', () => siteContent.disclaimer())
+edge.global('socialLinks', () => siteContent.socialLinks())
+edge.global('discordUrl', () => siteContent.discordUrl())
+edge.global('latestPosts', (limit = 3) => posts.latest(limit))
+/** True until the visitor dismissed the cookie notice (`cookie_ok`, plain and unsigned). */
+edge.global('cookieNoticeOpen', (request?: { plainCookie?: (...args: unknown[]) => unknown }) => {
+  try {
+    return request?.plainCookie?.(COOKIE_NOTICE_COOKIE, { encoded: false }) !== '1'
+  } catch {
+    return true
+  }
 })

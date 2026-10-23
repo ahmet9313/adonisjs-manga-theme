@@ -1,0 +1,69 @@
+{{--
+  Static page form (create and edit, administrators only). Posted fields: title, slug (optional:
+  empty takes the title's address on create and keeps the current one on edit), body (Markdown
+  subset with live preview), published, show_in_footer, sort.
+--}}
+@let(isEdit = Boolean(page))
+@let(sent = flashMessages.has('title'))
+@let(published = sent ? flashMessages.has('published') : (isEdit ? page.published : true))
+@let(inFooter = sent ? flashMessages.has('show_in_footer') : (isEdit ? page.showInFooter : true))
+@component('components/layout/admin', {
+  title: isEdit ? page.title : title,
+  description: isEdit ? 'Adres: /sayfa/' + page.slug : 'Hakkımızda, S.S.S. veya Gizlilik Politikası gibi sabit bir sayfa ekleyin.',
+  crumbs: [{ label: 'Sayfalar', href: '/admin/sayfalar' }, { label: isEdit ? 'Düzenle' : 'Yeni sayfa' }]
+})
+  @slot('actions')
+    @if(isEdit)
+    @component('components/ui/button', { href: '/sayfa/' + page.slug, iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Sitede aç<span class="sr-only"> (yeni sekmede)</span>
+    @end
+    @end
+  @end
+
+  @slot('main')
+    <form action="{{ isEdit ? '/admin/sayfalar/' + page.id + '/duzenle' : '/admin/sayfalar/ekle' }}" method="POST" class="content-form" data-submit-once>
+      {{ csrfField() }}
+      <div class="content-form__main panel">
+        <div class="admin-fields">
+          @!component('components/ui/field', { name: 'title', label: 'Başlık', required: true, maxlength: 120, autocomplete: 'off', value: isEdit ? page.title : '', placeholder: 'ör. Sıkça Sorulan Sorular', autofocus: !isEdit })
+          @!component('components/ui/field', { name: 'slug', label: 'Adres (isteğe bağlı)', maxlength: 140, autocomplete: 'off', spellcheck: 'false', value: isEdit ? page.slug : '', placeholder: isEdit ? page.slug : 'baslik-adresi', hint: isEdit ? 'Sayfa /sayfa/' + page.slug + ' adresinde. Değiştirirseniz eski adres çalışmaz; boş bırakırsanız aynı kalır.' : 'Boş bırakırsanız başlıktan oluşturulur (ör. “Sıkça Sorulan Sorular” → sikca-sorulan-sorular).' })
+          @!component('components/admin/markdown_editor', { name: 'body', value: isEdit ? page.body : '', html: previewHtml || '', limit, rows: 18 })
+        </div>
+      </div>
+
+      <aside class="content-form__side">
+        @component('components/ui/panel', { title: 'Yayın', id: 'page-publish' })
+          <div class="grid gap-4">
+            @!component('components/ui/field', { name: 'published', label: 'Yayında', type: 'toggle', value: published, hint: 'Kapalıyken sayfa ziyaretçilere 404 verir; yönetici ve editörler önizleyebilir.' })
+            @!component('components/ui/field', { name: 'show_in_footer', label: 'Alt bilgide göster', type: 'toggle', value: inFooter, hint: 'Sitenin altındaki “Bilgi” sütununda listelenir (Tema → Göster / Gizle → Sayfa bağlantıları açıkken).' })
+            @!component('components/ui/field', { name: 'sort', label: 'Sıra', type: 'number', min: 0, max: 9999, step: 1, value: isEdit ? page.sort : nextSort, hint: 'Küçük sayılar önce gelir.' })
+          </div>
+        @end
+        <div class="form-actions">
+          @component('components/ui/button', { variant: 'ghost', href: '/admin/sayfalar' })
+            Vazgeç
+          @end
+          @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+            {{ isEdit ? 'Kaydet' : 'Sayfayı ekle' }}
+          @end
+        </div>
+      </aside>
+    </form>
+
+    @if(isEdit)
+    <section class="panel admin-danger-zone mt-6 flex max-w-3xl flex-wrap items-center justify-between gap-4" aria-labelledby="danger-title">
+      <div class="min-w-0 flex-1 basis-64">
+        <h2 id="danger-title" class="panel__title">Sayfayı sil</h2>
+        <p class="panel__desc">Sayfa ve adresi kalıcı olarak kaldırılır. Yalnız gizlemek için “Yayında” seçeneğini kapatın.</p>
+      </div>
+      <form action="/admin/sayfalar/{{ page.id }}/sil" method="POST" data-submit-once
+            data-confirm="“{{ page.title }}” sayfası silinecek ve adresi (/sayfa/{{ page.slug }}) artık açılmayacak." data-confirm-title="Sayfa silinsin mi?" data-confirm-label="Sil">
+        {{ csrfField() }}
+        @component('components/ui/button', { type: 'submit', variant: 'danger', icon: 'trash' })
+          Sayfayı sil
+        @end
+      </form>
+    </section>
+    @end
+  @end
+@end

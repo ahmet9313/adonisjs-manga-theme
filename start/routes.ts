@@ -33,6 +33,13 @@ router
   .prefix('/kutuphane')
   .use(middleware.auth())
 
+// Static pages, announcements and the cookie notice (Admin → İçerik)
+const ContentController = () => import('#controllers/content_controller')
+router.get('/sayfa/:slug', [ContentController, 'page']).as('content.page')
+router.get('/duyurular', [ContentController, 'posts']).as('content.posts')
+router.get('/duyuru/:slug', [ContentController, 'post']).as('content.post')
+router.post('/cerez-onayi', [ContentController, 'acceptCookies']).as('content.cookies')
+
 // Comments: reading is public, writing requires an account
 const CommentController = () => import('#controllers/comment_controller')
 router.get('/yorumlar', [CommentController, 'index']).as('comments.index')
@@ -140,6 +147,8 @@ const AdminCosmeticController = () => import('#controllers/admin/cosmetic_contro
 const AdminCardController = () => import('#controllers/admin/card_controller')
 const AdminRoleController = () => import('#controllers/admin/role_controller')
 const AdminThemeController = () => import('#controllers/admin/theme_controller')
+const AdminPageController = () => import('#controllers/admin/page_controller')
+const AdminPostController = () => import('#controllers/admin/post_controller')
 
 router
   .group(() => {
@@ -213,6 +222,27 @@ router
         router.post('/kartlar/:id/sil', [AdminCardController, 'destroy']).as('admin.cards.destroy')
       })
       .use(middleware.role(['admin']))
+
+    // Static pages (administrators only), announcements and their live Markdown preview
+    router
+      .group(() => {
+        router.get('/sayfalar', [AdminPageController, 'index']).as('admin.pages.index')
+        router.get('/sayfalar/ekle', [AdminPageController, 'create']).as('admin.pages.create')
+        router.post('/sayfalar/ekle', [AdminPageController, 'store']).as('admin.pages.store')
+        router.get('/sayfalar/:id/duzenle', [AdminPageController, 'edit']).as('admin.pages.edit')
+        router
+          .post('/sayfalar/:id/duzenle', [AdminPageController, 'update'])
+          .as('admin.pages.update')
+        router.post('/sayfalar/:id/sil', [AdminPageController, 'destroy']).as('admin.pages.destroy')
+      })
+      .use(middleware.role(['admin']))
+    router.post('/icerik/onizleme', [AdminPageController, 'preview']).as('admin.content.preview')
+    router.get('/duyurular', [AdminPostController, 'index']).as('admin.posts.index')
+    router.get('/duyurular/ekle', [AdminPostController, 'create']).as('admin.posts.create')
+    router.post('/duyurular/ekle', [AdminPostController, 'store']).as('admin.posts.store')
+    router.get('/duyurular/:id/duzenle', [AdminPostController, 'edit']).as('admin.posts.edit')
+    router.post('/duyurular/:id/duzenle', [AdminPostController, 'update']).as('admin.posts.update')
+    router.post('/duyurular/:id/sil', [AdminPostController, 'destroy']).as('admin.posts.destroy')
 
     // Series CRUD
     router.get('/seriler', [AdminSeriesController, 'index']).as('admin.series.index')

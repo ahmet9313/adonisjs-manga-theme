@@ -84,6 +84,8 @@
       </div>
       @end
 
+      @!component('components/social/discord')
+
       @if(ui('bell') && auth && auth.user)
       <button type="button" @click="$dispatch('open-inbox')" class="btn btn--ghost btn--md btn--icon relative"
               aria-label="Gelen kutusu" :aria-label="'Gelen kutusu' + ($store.account.unread ? ', ' + $store.account.unread + ' okunmamış' : '')">
@@ -137,6 +139,8 @@
         </ul>
       </nav>
       @end
+
+      @!component('components/social/discord', { variant: 'mobile' })
 
       @if(!(auth && auth.user))
       <div class="grid grid-cols-2 gap-2">

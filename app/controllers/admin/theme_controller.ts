@@ -21,6 +21,7 @@ import theme, {
 import { invalidField, removeContentFile, saveImage } from '#services/upload_service'
 import site, { agePolicyKeys, coverModeKeys, coverRevealKeys } from '#config/site'
 import { agePolicyKey, coverPolicyKey } from '#services/settings_service'
+import { DISCLAIMER_KEY, socialKey } from '#services/site_content_service'
 
 /** Public paths or http(s) addresses only; blocks `javascript:` and protocol-relative links. */
 const link = vine
@@ -53,6 +54,23 @@ const coverValidator = vine.compile(
     ),
     cover_reveal: vine.enum(coverRevealKeys),
     cover_placeholder_url: link,
+  })
+)
+/** Tema → Genel, second form: footer disclaimer and social accounts (http(s) only). */
+const linksValidator = vine.compile(
+  vine.object({
+    footer_disclaimer: vine.string().trim().maxLength(400).optional(),
+    ...Object.fromEntries(
+      site.socialNetworks.map((network) => [
+        socialKey(network.key),
+        vine
+          .string()
+          .trim()
+          .maxLength(300)
+          .regex(/^https?:\/\/[^\s"'<>]+$/)
+          .optional(),
+      ])
+    ),
   })
 )
 const duyuruValidator = vine.compile(
@@ -141,6 +159,14 @@ export default class ThemeController {
           'announcement_url',
         ].map((key) => [key, settings.get(key)])
       )
+      data.links = {
+        disclaimer: settings.get(DISCLAIMER_KEY),
+        defaultDisclaimer: site.disclaimer,
+        social: site.socialNetworks.map((network) => ({
+          ...network,
+          value: settings.get(socialKey(network.key)),
+        })),
+      }
     } else if (section === 'renkler') {
       const colors = currentColors()
       data.config = {
@@ -198,7 +224,14 @@ export default class ThemeController {
     const body = request.all()
     let entries: Record<string, string> = {}
 
-    if (section === 'genel') {
+    if (section === 'genel' && body.part === 'links') {
+      const data = (await request.validateUsing(linksValidator)) as Record<string, string>
+      entries = Object.fromEntries(
+        [DISCLAIMER_KEY, ...site.socialNetworks.map((network) => socialKey(network.key))].map(
+          (key) => [key, data[key] ?? '']
+        )
+      )
+    } else if (section === 'genel') {
       const data = await request.validateUsing(genelValidator)
       entries = {
         site_name: data.site_name,

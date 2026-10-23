@@ -1,0 +1,83 @@
+{{--
+  Admin → İçerik → Sayfalar (administrators only): every static page in footer order, with its
+  address, state, footer flag and order. Starter pages (Hakkımızda, S.S.S., Telif Hakkı …) come
+  from migration 0029 as templates to edit.
+--}}
+@component('components/layout/admin', {
+  title,
+  description: 'Hakkımızda, S.S.S., Telif Hakkı, Gizlilik gibi sabit sayfalar. Yayında olan ve “Alt bilgide göster” seçili sayfalar sitenin altındaki “Bilgi” sütununda listelenir.'
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/admin/sayfalar/ekle', variant: 'primary', icon: 'plus' })
+      Yeni sayfa
+    @end
+  @end
+
+  @slot('main')
+    <div class="max-w-5xl">
+      @if(items.length)
+      <div class="table-wrap">
+        <table class="table table--stack admin-table">
+          <caption class="sr-only">Sayfalar</caption>
+          <thead>
+            <tr>
+              <th scope="col">Başlık</th>
+              <th scope="col">Durum</th>
+              <th scope="col">Alt bilgi</th>
+              <th scope="col" class="num">Sıra</th>
+              <th scope="col"><span class="sr-only">İşlemler</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @each(item in items)
+            <tr>
+              <td class="cell-main">
+                <div class="admin-cell__body">
+                  <a href="/admin/sayfalar/{{ item.id }}/duzenle" class="admin-title">{{ item.title }}</a>
+                  <p class="admin-cell__meta"><span class="admin-mono">/sayfa/{{ item.slug }}</span> · güncellendi {{ agoOf(item.updatedAt) }}</p>
+                </div>
+              </td>
+              <td data-label="Durum">
+                @if(item.published)
+                @!component('components/ui/badge', { kind: 'success', text: 'Yayında' })
+                @else
+                @!component('components/ui/badge', { kind: 'warning', text: 'Yayında değil' })
+                @end
+              </td>
+              <td data-label="Alt bilgi">
+                @if(item.showInFooter)
+                <span class="inline-flex items-center gap-1.5 text-sm">
+                  @!component('components/icon', { name: 'check', class: 'size-4 text-(--t-success)' })
+                  Listeleniyor
+                </span>
+                @else
+                <span class="text-sm text-muted">Listelenmiyor</span>
+                @end
+              </td>
+              <td data-label="Sıra" class="num">{{ item.sort }}</td>
+              <td class="actions">
+                <div class="admin-actions">
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'external', href: '/sayfa/' + item.slug, target: '_blank', rel: 'noopener', label: 'Sitede aç: ' + item.title + ' (yeni sekme)', title: 'Sitede aç' })
+                  @!component('components/ui/button', { variant: 'ghost', size: 'sm', icon: 'pencil', href: '/admin/sayfalar/' + item.id + '/duzenle', label: 'Düzenle: ' + item.title, title: 'Düzenle' })
+                  <form action="/admin/sayfalar/{{ item.id }}/sil" method="POST" data-submit-once
+                        data-confirm="“{{ item.title }}” sayfası silinecek ve adresi (/sayfa/{{ item.slug }}) artık açılmayacak." data-confirm-title="Sayfa silinsin mi?" data-confirm-label="Sil">
+                    {{ csrfField() }}
+                    @!component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'trash', label: 'Sil: ' + item.title, title: 'Sil', class: 'admin-danger' })
+                  </form>
+                </div>
+              </td>
+            </tr>
+            @end
+          </tbody>
+        </table>
+      </div>
+      @else
+      @component('components/ui/empty_state', { icon: 'document', title: 'Henüz sayfa yok', description: 'Hakkımızda, S.S.S. veya Gizlilik Politikası gibi bir sayfa ekleyin.' })
+        @component('components/ui/button', { href: '/admin/sayfalar/ekle', variant: 'primary', icon: 'plus' })
+          Yeni sayfa
+        @end
+      @end
+      @end
+    </div>
+  @end
+@end
