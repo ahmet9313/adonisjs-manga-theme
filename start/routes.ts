@@ -42,8 +42,19 @@ router
     router.post('/', [CommentController, 'store']).as('comments.store')
     router.post('/:id/oy', [CommentController, 'vote']).as('comments.vote')
     router.post('/:id/sil', [CommentController, 'destroy']).as('comments.destroy')
+    router.post('/:id/duzenle', [CommentController, 'update']).as('comments.update')
   })
   .prefix('/yorumlar')
+  .use(middleware.auth())
+
+// Chapter reactions ("Bölüm nasıldı?") and the @mention picker (members)
+const ReactionController = () => import('#controllers/reaction_controller')
+const MemberController = () => import('#controllers/member_controller')
+router
+  .group(() => {
+    router.post('/bolumler/:id/tepki', [ReactionController, 'store']).as('reactions.store')
+    router.get('/uyeler/ara', [MemberController, 'search']).as('members.search')
+  })
   .use(middleware.auth())
 
 // Ratings and reviews: reading is public, rating requires an account

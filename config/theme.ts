@@ -354,6 +354,13 @@ export const flags: Flag[] = [
     default: true,
     hint: 'Kapalıyken herkes Renkler sayfasındaki varsayılan şemayı görür.',
   },
+  {
+    key: 'mobile_bottom_nav',
+    label: 'Telefonda alt gezinme çubuğu',
+    group: 'header',
+    default: true,
+    hint: '1024 px altında Ana Sayfa, Seriler, Kaydedilenler, Bildirimler ve Menü kısayolları.',
+  },
 
   { key: 'home_hero', label: 'Öne çıkan seri bannerı', group: 'home', default: true },
   { key: 'home_updates', label: '"Son Güncellenenler" listesi', group: 'home', default: true },
@@ -381,6 +388,12 @@ export const flags: Flag[] = [
     default: true,
   },
   { key: 'reader_comments', label: 'Bölüm okuyucusunda yorumlar', group: 'series', default: true },
+  {
+    key: 'chapter_reactions',
+    label: '"Bölüm nasıldı?" tepkileri (bölüm sonunda)',
+    group: 'series',
+    default: true,
+  },
 
   { key: 'footer', label: 'Alt bilgiyi göster', group: 'footer', default: true },
   { key: 'footer_social', label: 'Sosyal bağlantılar', group: 'footer', default: true },

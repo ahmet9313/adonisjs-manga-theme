@@ -3,7 +3,7 @@ import vine from '@vinejs/vine'
 import Comment from '#models/comment'
 import Chapter from '#models/chapter'
 import SeriesModel from '#models/series'
-import comments, { type CommentSort } from '#services/comment_service'
+import comments, { editable, type CommentSort } from '#services/comment_service'
 import { pageNumber } from '#services/input_service'
 import { removeContentFile, saveImage } from '#services/upload_service'
 import { refundAttempt, takeAttempt } from '#services/throttle'
@@ -25,6 +25,13 @@ const commentValidator = vine.compile(
   })
 )
 
+const editValidator = vine.compile(
+  vine.object({
+    body: vine.string().trim().maxLength(maxBody).optional(),
+    spoiler: vine.enum(['on', '1', 'true']).optional(),
+  })
+)
+
 const listValidator = vine.compile(
   vine.object({
     series: vine.number().positive().withoutDecimals(),
@@ -38,14 +45,34 @@ const listValidator = vine.compile(
  * are a page concern and do not block the thread.
  */
 async function threadOpen(user: User | null, seriesId: number, chapterId: number | null) {
+  const audience = await audienceOf(seriesId, chapterId)
+  return Boolean(audience && audience(user))
+}
+
+/** Who may open a thread (null when the series or chapter does not exist). */
+async function audienceOf(seriesId: number, chapterId: number | null) {
   const series = await SeriesModel.find(seriesId)
-  if (!series) return false
+  if (!series) return null
   const chapter = chapterId
     ? await Chapter.query().where('id', chapterId).where('seriesId', seriesId).first()
     : null
-  if (chapterId && !chapter) return false
+  if (chapterId && !chapter) return null
   const target = { series, chapter }
-  return access.visible(user, target) && access.allows(user, access.effectiveAccess(target))
+  return (user: User | null) =>
+    access.visible(user, target) && access.allows(user, access.effectiveAccess(target))
+}
+
+/** Link of a thread for notifications (series page or chapter, at the comments). */
+async function threadLink(seriesId: number, chapterId: number | null) {
+  const series = await SeriesModel.query().where('id', seriesId).preload('contentType').first()
+  if (!series) return null
+  let link = `/series/${series.contentType.slug}/${series.slug}`
+  if (chapterId) {
+    const chapter = await Chapter.find(chapterId)
+    if (!chapter) return null
+    link += `/${chapter.number}`
+  }
+  return `${link}#yorumlar`
 }
 
 export default class CommentController {
@@ -100,7 +127,8 @@ export default class CommentController {
       .first()
     if (!series) return refuse(response.notFound({ error: 'Seri bulunamadı' }))
     const chapterId = data.chapter_id ?? null
-    if (!(await threadOpen(user, series.id, chapterId)))
+    const audience = await audienceOf(series.id, chapterId)
+    if (!audience || !audience(user))
       return refuse(response.forbidden({ error: 'Bu içeriğe yorum yazamazsın.' }))
     let link = `/series/${series.contentType.slug}/${series.slug}`
     if (chapterId) {
@@ -144,6 +172,7 @@ export default class CommentController {
           stickerId: sticker?.id ?? null,
           parent,
           link: `${link}#yorumlar`,
+          audience,
         }
       )
       return response.created(comment)
@@ -151,6 +180,36 @@ export default class CommentController {
       await removeContentFile(image)
       throw error
     }
+  }
+
+  /**
+   * The author edits the text and spoiler flag within site.commentEditHours. Staff cannot edit
+   * other people's words (they may delete them).
+   */
+  async update({ params, request, auth, response }: HttpContext) {
+    const user = auth.user!
+    const comment = await Comment.find(params.id)
+    if (!comment || comment.deletedAt) return response.notFound({ error: 'Yorum bulunamadı' })
+    if (comment.userId !== user.id)
+      return response.forbidden({ error: 'Yalnızca kendi yorumunu düzenleyebilirsin.' })
+    if (!editable(comment))
+      return response.forbidden({ error: 'Bu yorumun düzenleme süresi doldu.' })
+    const data = await request.validateUsing(editValidator)
+    const body = data.body ?? ''
+    if (!body && !comment.image && !comment.stickerId)
+      return response.unprocessableEntity({ error: 'Yorum boş kalamaz.' })
+    const audience = await audienceOf(comment.seriesId, comment.chapterId)
+    const link = await threadLink(comment.seriesId, comment.chapterId)
+    if (!audience || !link || !audience(user))
+      return response.forbidden({ error: 'Bu içeriğe yorum yazamazsın.' })
+    if (!takeAttempt(`comment-edit:${user.id}`, 10, 60 * 1000))
+      return response.tooManyRequests({ error: 'Çok sık düzenliyorsun. Biraz bekleyip dene.' })
+    return comments.edit(user, comment, {
+      body,
+      spoiler: Boolean(data.spoiler),
+      link,
+      audience,
+    })
   }
 
   async vote(ctx: HttpContext) {

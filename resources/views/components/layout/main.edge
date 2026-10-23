@@ -37,6 +37,7 @@
     {{{ await $slots.main() }}}
   </main>
   @include('partials/footer')
+  @include('partials/bottom_nav')
 
   {{-- Dialogs, notifications and background helpers (dialogs are teleported to the end of <body>). --}}
   @if(auth && auth.user)

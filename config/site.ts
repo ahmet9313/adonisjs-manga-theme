@@ -119,6 +119,18 @@ const site = {
     age: Record<string, string>
   },
   socialLinks: [] as { label: string; url: string }[],
+  /** "Bölüm nasıldı?" under the chapter end card; one per member and chapter (keys are stored). */
+  chapterReactions: [
+    { key: 'like', label: 'Beğendim', emoji: '👍' },
+    { key: 'love', label: 'Bayıldım', emoji: '😍' },
+    { key: 'funny', label: 'Çok komik', emoji: '😂' },
+    { key: 'wow', label: 'Şaşırdım', emoji: '😮' },
+    { key: 'sad', label: 'Üzücü', emoji: '😢' },
+  ],
+  /** Hours after posting during which authors may edit a comment's text and spoiler flag. */
+  commentEditHours: 24,
+  /** @kullanıcı mentions linked and notified per comment (the first ones written). */
+  commentMentionLimit: 5,
 }
 
 export type ContentFormat = keyof typeof site.contentFormats

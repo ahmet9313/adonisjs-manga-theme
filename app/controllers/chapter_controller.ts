@@ -4,6 +4,7 @@ import library from '#services/library_service'
 import progress from '#services/progress_service'
 import watch from '#config/watch'
 import access, { AGE_COOKIE } from '#services/access_service'
+import reactions from '#services/reaction_service'
 
 /**
  * Reading mode and page size from the plain `reader` cookie ("paged-125", written by reader.js),
@@ -83,6 +84,7 @@ export default class ChapterController {
       nextChapter,
       commentThread: { seriesId: series.id, chapterId: chapter.id },
       readerView: readerViewOf(readerCookie),
+      reactions: await reactions.summary(chapter.id, auth.user?.id ?? null),
       reward: reward
         ? {
             exp: reward.exp,

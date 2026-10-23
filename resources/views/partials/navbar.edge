@@ -17,6 +17,7 @@
         x-data="{ mobileOpen: false }"
         @click.outside="mobileOpen = false"
         @keydown.escape.window="mobileOpen = false"
+        @toggle-mobile-menu.window="mobileOpen = !mobileOpen"
         @resize.window="if (window.innerWidth >= 1024) mobileOpen = false">
   <div class="mx-auto flex h-16 max-w-(--t-container) items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
     <button type="button" class="btn btn--ghost btn--md btn--icon -ml-2 lg:hidden"

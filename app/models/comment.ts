@@ -50,6 +50,10 @@ export default class Comment extends BaseModel {
   @column()
   declare deletedAt: string | null
 
+  /** Last edit by the author (null when never edited). */
+  @column()
+  declare editedAt: string | null
+
   @column()
   declare createdAt: string
 

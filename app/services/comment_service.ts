@@ -7,6 +7,8 @@ import { removeContentFile } from '#services/upload_service'
 import cosmetics from '#services/cosmetic_service'
 import notifications from '#services/notification_service'
 import progress from '#services/progress_service'
+import mentions from '#services/mention_service'
+import site from '#config/site'
 
 export const commentPageSize = 20
 export const replyPreviewSize = 2
@@ -18,11 +20,30 @@ export interface Thread {
   chapterId: number | null
 }
 
+/** Whether a mentioned account may open the thread (drafts, members / VIP content). */
+export type Audience = (user: User) => boolean
+
 export function avatarHue(username: string) {
   return ([...(username || 'u')].reduce((sum, char) => sum + char.charCodeAt(0), 0) * 37) % 360
 }
 
 const toIso = (value: string) => (value ? `${value.replace(' ', 'T')}Z` : null)
+
+/** Milliseconds of a stored timestamp ('YYYY-MM-DD HH:mm:ss' UTC, or a driver Date). */
+const timeOf = (value: unknown) =>
+  value instanceof Date ? value.getTime() : Date.parse(`${String(value).replace(' ', 'T')}Z`)
+
+/** True while the author may still edit the comment (config/site.ts → commentEditHours). */
+export function editable(comment: Pick<Comment, 'createdAt' | 'deletedAt'>, at = Date.now()) {
+  if (comment.deletedAt) return false
+  return at - timeOf(comment.createdAt) < site.commentEditHours * 60 * 60 * 1000
+}
+
+/** Per-page lookups shared by every serialized comment: the viewer's votes, mentioned names. */
+interface Lookups {
+  votes: Map<number, number>
+  known: Set<string>
+}
 
 /** One-line description of a comment, used to show what a reply answers. */
 export function excerptOf(
@@ -43,7 +64,7 @@ class CommentService {
   private serialize(
     comment: Comment,
     viewer: User | null,
-    votes: Map<number, number>
+    lookups: Lookups
   ): Record<string, unknown> {
     const deleted = Boolean(comment.deletedAt)
     const author = comment.user
@@ -55,16 +76,21 @@ class CommentService {
       rootId: comment.rootId,
       depth: comment.depth,
       body: deleted ? '' : comment.body,
+      /** Escaped text with @mentions of existing accounts linked (mention_service). */
+      bodyHtml: deleted ? '' : mentions.render(comment.body, lookups.known),
       image: deleted ? null : comment.image,
       sticker: deleted ? null : cosmetics.sticker(comment.stickerId),
       spoiler: !deleted && comment.spoiler,
       likeCount: comment.likeCount,
       dislikeCount: comment.dislikeCount || 0,
       replyCount: comment.replyCount,
-      vote: votes.get(comment.id) ?? 0,
+      vote: lookups.votes.get(comment.id) ?? 0,
       deleted,
       createdAt: toIso(comment.createdAt),
+      editedAt: deleted || !comment.editedAt ? null : toIso(comment.editedAt),
       canDelete: !deleted && Boolean(viewer && (viewer.id === comment.userId || viewer.isStaff)),
+      // Only the author edits the text; staff can still delete.
+      canEdit: Boolean(viewer && viewer.id === comment.userId && editable(comment)),
       replyTo: parentAuthor ? parentAuthor.username : null,
       /** What this reply answers (null for top-level comments). */
       parent: parent
@@ -91,20 +117,23 @@ class CommentService {
             look: cosmetics.look(author),
           },
       replies: comment.$preloaded.replies
-        ? comment.replies.map((reply) => this.serialize(reply, viewer, votes))
+        ? comment.replies.map((reply) => this.serialize(reply, viewer, lookups))
         : [],
     }
   }
 
-  private async voteMap(viewer: User | null, comments: Comment[]) {
+  private async lookups(viewer: User | null, comments: Comment[]): Promise<Lookups> {
     await cosmetics.ready()
-    const ids = comments.flatMap((comment) => [
-      comment.id,
-      ...(comment.$preloaded.replies ? comment.replies.map((reply) => reply.id) : []),
+    const all = comments.flatMap((comment) => [
+      comment,
+      ...(comment.$preloaded.replies ? comment.replies : []),
     ])
-    if (!viewer || !ids.length) return new Map<number, number>()
+    const known = await mentions.known(all.map((comment) => comment.body))
+    const ids = all.map((comment) => comment.id)
+    if (!viewer || !ids.length) return { votes: new Map(), known }
     const rows = await CommentLike.query().where('userId', viewer.id).whereIn('commentId', ids)
-    return new Map(rows.map((row) => [row.commentId, Number(row.value) < 0 ? -1 : 1]))
+    const votes = new Map(rows.map((row) => [row.commentId, Number(row.value) < 0 ? -1 : 1]))
+    return { votes, known }
   }
 
   /** Thread totals: all comments, top-level ones and replies. */
@@ -161,10 +190,10 @@ class CommentService {
 
     const result = await query.paginate(page, commentPageSize)
     const comments = result.all()
-    const votes = await this.voteMap(viewer, comments)
+    const lookups = await this.lookups(viewer, comments)
     const counts = await this.counts(thread)
     return {
-      items: comments.map((comment) => this.serialize(comment, viewer, votes)),
+      items: comments.map((comment) => this.serialize(comment, viewer, lookups)),
       hasMore: result.hasMorePages,
       total: counts.total,
       roots: counts.roots,
@@ -181,9 +210,9 @@ class CommentService {
       .orderBy('id', 'asc')
       .paginate(page, commentPageSize)
     const comments = result.all()
-    const votes = await this.voteMap(viewer, comments)
+    const lookups = await this.lookups(viewer, comments)
     return {
-      items: comments.map((comment) => this.serialize(comment, viewer, votes)),
+      items: comments.map((comment) => this.serialize(comment, viewer, lookups)),
       hasMore: result.hasMorePages,
     }
   }
@@ -198,6 +227,7 @@ class CommentService {
       stickerId: number | null
       parent: Comment | null
       link: string
+      audience: Audience
     }
   ) {
     const timestamp = now()
@@ -230,8 +260,12 @@ class CommentService {
     await comment.load('user')
     if (comment.parentId) await comment.load('parent', (parent) => parent.preload('user'))
     const parentAuthor = data.parent ? comment.parent?.user : null
-    if (parentAuthor && parentAuthor.id !== user.id && !data.parent?.deletedAt)
-      await notifications.notify(parentAuthor.id, 'activity', {
+    const repliedTo =
+      parentAuthor && parentAuthor.id !== user.id && !data.parent?.deletedAt
+        ? parentAuthor.id
+        : null
+    if (repliedTo)
+      await notifications.notify(repliedTo, 'activity', {
         title: `${user.fullName} yorumuna yanıt verdi`,
         body: data.body
           ? data.body.slice(0, 140)
@@ -240,8 +274,70 @@ class CommentService {
             : 'Bir görsel gönderdi.',
         link: data.link,
       })
-    await cosmetics.ready()
-    return this.serialize(comment, user, new Map())
+    await this.notifyMentions(user, data.body, {
+      link: data.link,
+      audience: data.audience,
+      // The reply notice already told the parent's author.
+      skip: repliedTo ? [repliedTo] : [],
+    })
+    return this.serialize(comment, user, await this.lookups(user, [comment]))
+  }
+
+  /**
+   * Edits the text and spoiler flag of the author's own comment inside the edit window. Names
+   * mentioned for the first time get the mention notice; earlier ones are not told twice.
+   */
+  async edit(
+    user: User,
+    comment: Comment,
+    data: { body: string; spoiler: boolean; link: string; audience: Audience }
+  ) {
+    const before = new Set(mentions.extract(comment.body))
+    const timestamp = now()
+    await db.from('comments').where('id', comment.id).update({
+      body: data.body,
+      spoiler: data.spoiler,
+      edited_at: timestamp,
+      updated_at: timestamp,
+    })
+    const fresh = await Comment.query()
+      .where('id', comment.id)
+      .preload('user')
+      .preload('parent', (parent) => parent.preload('user'))
+      .firstOrFail()
+    const parentAuthor = fresh.parentId ? fresh.parent?.userId : null
+    await this.notifyMentions(user, data.body, {
+      link: data.link,
+      audience: data.audience,
+      skip: parentAuthor ? [parentAuthor] : [],
+      already: before,
+    })
+    return this.serialize(fresh, user, await this.lookups(user, [fresh]))
+  }
+
+  /**
+   * "X seni bir yorumda andı" for the mentioned accounts that may open the thread: never the
+   * author, never twice per comment, not for names in `already`, not for ids in `skip`.
+   */
+  private async notifyMentions(
+    author: User,
+    body: string,
+    options: { link: string; audience: Audience; skip?: number[]; already?: Set<string> }
+  ) {
+    const names = mentions.extract(body).filter((name) => !options.already?.has(name))
+    const resolved = await mentions.resolve(names)
+    const ids = [...resolved.values()].filter(
+      (id) => id !== author.id && !options.skip?.includes(id)
+    )
+    if (!ids.length) return
+    const users = await User.query().whereIn('id', ids)
+    const allowed = users.filter((user) => options.audience(user)).map((user) => user.id)
+    if (!allowed.length) return
+    await notifications.notifyMany(allowed, 'activity', {
+      title: `${author.fullName} seni bir yorumda andı`,
+      body: body.replace(/\s+/g, ' ').trim().slice(0, 140),
+      link: options.link,
+    })
   }
 
   /** Up/down vote. Sending the current vote again removes it. */
