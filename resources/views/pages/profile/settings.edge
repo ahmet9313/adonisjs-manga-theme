@@ -10,13 +10,15 @@
 @slot('main')
   @let(look = lookOf(member))
   @let(failed = flashMessages.has('inputErrorsBag'))
-  @let(initialTab = flashMessages.has('email') ? 'account' : (flashMessages.has('inputErrorsBag.current_password') || flashMessages.has('inputErrorsBag.password') || flashMessages.has('inputErrorsBag.password_confirmation')) ? 'security' : 'profile')
+  @let(deleteError = flashMessages.has('inputErrorsBag.delete_password') || flashMessages.has('inputErrorsBag.confirm_username'))
+  @let(initialTab = flashMessages.has('email') ? 'account' : (deleteError || flashMessages.has('inputErrorsBag.current_password') || flashMessages.has('inputErrorsBag.password') || flashMessages.has('inputErrorsBag.password_confirmation')) ? 'security' : 'profile')
   @let(nameValue = flashMessages.has('full_name') ? String(flashMessages.get('full_name') || '') : member.fullName)
   @let(bioValue = flashMessages.has('bio') ? String(flashMessages.get('bio') || '') : (member.bio || ''))
   @let(sections = [{ key: 'profile', label: 'Profil', icon: 'user' }, { key: 'account', label: 'Hesap', icon: 'mail' }, { key: 'security', label: 'Güvenlik', icon: 'lock' }])
   <div class="settings" x-data="profileSettings"
        data-config="{{ JSON.stringify({ csrf: csrfToken, avatar: member.avatar, banner: member.banner, name: nameValue, username: member.username, bio: bioValue, tab: initialTab, errors: failed }) }}">
     @!component('components/ui/page_header', { title: 'Ayarlar', description: 'Profilini, hesap bilgilerini ve parolanı buradan yönet.' })
+    @include('partials/account/verify_banner')
 
     <div class="settings__layout">
       {{-- Section tabs: a row on phones and tablets, a vertical list from lg. --}}
@@ -163,6 +165,7 @@
               <button type="submit" class="btn btn--primary btn--md">E-postayı güncelle</button>
             </div>
           </form>
+          @include('partials/account/email_status')
         </div>
 
         {{-- Security: password --}}
@@ -191,6 +194,7 @@
               <button type="submit" class="btn btn--primary btn--md">Parolayı değiştir</button>
             </div>
           </form>
+          @include('partials/account/privacy')
         </div>
       </div>
     </div>

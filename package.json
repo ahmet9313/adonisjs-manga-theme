@@ -86,6 +86,7 @@
     "@adonisjs/auth": "^10.1.0",
     "@adonisjs/core": "^7.3.4",
     "@adonisjs/lucid": "^22.4.2",
+    "@adonisjs/mail": "^10.4.0",
     "@adonisjs/session": "^8.1.0",
     "@adonisjs/shield": "^9.0.0",
     "@adonisjs/static": "^2.0.1",

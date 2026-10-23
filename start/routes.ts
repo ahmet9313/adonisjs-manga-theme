@@ -70,7 +70,7 @@ router.get('/yorumlar', [CommentController, 'index']).as('comments.index')
 router.get('/yorumlar/:id/yanitlar', [CommentController, 'replies']).as('comments.replies')
 router
   .group(() => {
-    router.post('/', [CommentController, 'store']).as('comments.store')
+    router.post('/', [CommentController, 'store']).as('comments.store').use(middleware.verified())
     router.post('/:id/oy', [CommentController, 'vote']).as('comments.vote')
     router.post('/:id/sil', [CommentController, 'destroy']).as('comments.destroy')
     router.post('/:id/duzenle', [CommentController, 'update']).as('comments.update')
@@ -93,7 +93,7 @@ const ReviewController = () => import('#controllers/review_controller')
 router.get('/incelemeler', [ReviewController, 'index']).as('reviews.index')
 router
   .group(() => {
-    router.post('/', [ReviewController, 'store']).as('reviews.store')
+    router.post('/', [ReviewController, 'store']).as('reviews.store').use(middleware.verified())
     router.post('/:id/faydali', [ReviewController, 'vote']).as('reviews.vote')
     router.post('/:id/sil', [ReviewController, 'destroy']).as('reviews.destroy')
   })
@@ -118,6 +118,24 @@ router.get('/kayit', [AuthController, 'showRegister']).as('auth.register')
 router.post('/kayit', [AuthController, 'register']).as('auth.register.post')
 router.post('/cikis', [AuthController, 'logout']).as('auth.logout')
 router.get('/uye/:username', [AccountController, 'show']).as('profile.show')
+
+// Password reset, e-mail verification, data export and account deletion
+const PasswordResetController = () => import('#controllers/password_reset_controller')
+const VerificationController = () => import('#controllers/email_verification_controller')
+const AccountDataController = () => import('#controllers/account_data_controller')
+router.get('/sifremi-unuttum', [PasswordResetController, 'showForgot']).as('password.forgot')
+router.post('/sifremi-unuttum', [PasswordResetController, 'sendForgot']).as('password.send')
+router.get('/sifre-sifirla/:token', [PasswordResetController, 'showReset']).as('password.reset')
+router.post('/sifre-sifirla/:token', [PasswordResetController, 'reset']).as('password.update')
+router.get('/eposta-dogrula/:token', [VerificationController, 'verify']).as('email.verify')
+router
+  .group(() => {
+    router.post('/dogrulama', [VerificationController, 'resend']).as('email.resend')
+    router.get('/verilerim', [AccountDataController, 'export']).as('account.export')
+    router.post('/hesabi-sil', [AccountDataController, 'destroy']).as('account.destroy')
+  })
+  .prefix('/ayarlar')
+  .use(middleware.auth())
 router
   .post('/uye/:username/begen', [AccountController, 'like'])
   .as('profile.like')

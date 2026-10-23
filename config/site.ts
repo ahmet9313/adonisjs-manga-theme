@@ -159,6 +159,13 @@ const site = {
     'Bu sitedeki çeviriler tanıtım amaçlıdır ve ticari bir amaç gütmez. Eserlerin tüm hakları yazarlarına ve yayıncılarına aittir; beğendiğin serilerin lütfen orijinal yayınını destekle.',
   /** Static page the cookie notice links to (Admin → İçerik → Sayfalar), if it is published. */
   privacyPage: 'gizlilik-politikasi',
+  /**
+   * Accounts whose e-mail is not confirmed yet always keep reading and saving series. When
+   * true, they cannot write comments or reviews until they confirm (false limits nothing).
+   */
+  requireVerifiedToPost: false as boolean,
+  /** Lifetimes of mailed account links (single use). */
+  accountLinks: { resetMinutes: 60, verifyDays: 7 },
 }
 
 export type ContentFormat = keyof typeof site.contentFormats

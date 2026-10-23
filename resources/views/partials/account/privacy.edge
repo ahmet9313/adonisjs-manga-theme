@@ -1,0 +1,63 @@
+{{--
+  Settings → Güvenlik, below the password form: "Verilerimi indir" (JSON file) and
+  "Hesabımı sil" (current password + typing the user name; `accountDelete` in
+  account_security.js opens the button, the shared confirm dialog asks once more).
+  Props: member, deleteError (the deletion form failed, so it starts open).
+--}}
+<section class="panel panel--flush settings-form" aria-labelledby="export-title">
+  <div class="settings-form__body">
+    <div class="panel__head">
+      <div class="min-w-0">
+        <h2 id="export-title" class="panel__title">Verilerimi indir</h2>
+        <p class="panel__desc">Profilin, kaydettiğin seriler, okuma geçmişin, yorumların, puan ve incelemelerin, bildirimlerin, kozmetiklerin ve kartların tek bir JSON dosyasında.</p>
+      </div>
+    </div>
+  </div>
+  <div class="settings-form__foot">
+    <p class="t-caption">Dosya yalnız sana indirilir; saatte birkaç kez isteyebilirsin.</p>
+    @component('components/ui/button', { href: '/ayarlar/verilerim', icon: 'download', download: true })
+      Verilerimi indir
+    @end
+  </div>
+</section>
+
+<section class="panel panel--flush settings-form danger-zone" aria-labelledby="delete-title">
+  <details class="danger-zone__details"
+    @if(deleteError)
+    open
+    @end
+    >
+    <summary class="danger-zone__summary">
+      <span class="tone-icon" data-tone="danger" aria-hidden="true">
+        @!component('components/icon', { name: 'trash' })
+      </span>
+      <span class="min-w-0 flex-1">
+        <span id="delete-title" class="panel__title">Hesabımı sil</span>
+        <span class="panel__desc">Hesabın ve kişisel verilerin kalıcı olarak silinir; bu işlem geri alınamaz.</span>
+      </span>
+      @!component('components/icon', { name: 'chevron-down', class: 'danger-zone__chevron' })
+    </summary>
+    <form action="/ayarlar/hesabi-sil" method="POST" x-data="accountDelete" data-username="{{ member.username }}"
+          data-confirm="Hesabın ve kişisel verilerin kalıcı olarak silinecek. Bu işlem geri alınamaz."
+          data-confirm-title="Hesabın silinsin mi?" data-confirm-label="Evet, hesabımı sil" data-confirm-tone="danger"
+          @submit="rememberTab()">
+      {{ csrfField() }}
+      <div class="settings-form__body">
+        <ul class="danger-zone__list">
+          <li>Kaydettiğin seriler, okuma geçmişin, bildirimlerin, kozmetiklerin, kartların, rozetlerin, puan ve incelemelerin, verdiğin oylar ve beğeniler silinir.</li>
+          <li>Yorumların konuşmalar bozulmasın diye yerinde kalır, yazarı "Silinmiş üye" görünür. İstersen aşağıdan yorumlarını da silebilirsin.</li>
+          <li>Önce verilerini indirmek isteyebilirsin.</li>
+        </ul>
+        <div class="settings-form__fields">
+          @!component('components/auth/password', { id: 'delete-password', name: 'delete_password', label: 'Parolan', autocomplete: 'current-password' })
+          @!component('components/ui/field', { name: 'confirm_username', id: 'delete-username', label: 'Onaylamak için kullanıcı adını yaz', required: true, maxlength: 40, autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', placeholder: member.username, 'x-model': 'typed', hint: 'Kullanıcı adın: ' + member.username })
+          @!component('components/ui/field', { name: 'delete_comments', id: 'delete-comments', type: 'checkbox', label: 'Yorumlarımın metnini ve görsellerini de sil' })
+        </div>
+      </div>
+      <div class="settings-form__foot">
+        <p class="t-caption">Sitenin tek yöneticisiysen önce başka birine yönetici rolü vermelisin.</p>
+        <button type="submit" class="btn btn--danger-solid btn--md" :disabled="!matches">Hesabımı kalıcı olarak sil</button>
+      </div>
+    </form>
+  </details>
+</section>

@@ -1,0 +1,40 @@
+{{--
+  "Şifremi unuttum" (/sifremi-unuttum): asks for the account's e-mail address and mails a reset
+  link. The answer is the same whether or not the address has an account; after sending, the
+  card shows a "check your inbox" note (flash `resetSent`) above the form.
+--}}
+@component('components/layout/main', { title })
+
+@slot('main')
+  @let(sentTo = flashMessages.has('resetSent') ? String(flashMessages.get('resetSent')) : '')
+  <div class="auth-page">
+    <div class="auth-page__grid auth-page__grid--single">
+      <section class="panel auth-card" aria-labelledby="auth-title">
+        <span class="tone-icon auth-card__icon" data-tone="accent" aria-hidden="true">
+          @!component('components/icon', { name: 'lock' })
+        </span>
+        <h1 id="auth-title" class="t-h1 auth-card__title">Şifremi unuttum</h1>
+        <p class="auth-card__lead">Hesabına kayıtlı e-posta adresini yaz; yeni parola belirleyebileceğin bir bağlantı gönderelim.</p>
+
+        @if(sentTo)
+        @component('components/ui/alert', { tone: 'success', title: 'E-postanı kontrol et', class: 'mt-6' })
+          <p>{{ sentTo }} adresine kayıtlı bir hesap varsa bağlantı birkaç dakika içinde gelir. Bağlantı {{ site.accountLinks.resetMinutes }} dakika geçerlidir ve bir kez kullanılabilir. Gelmezse gereksiz klasörüne bak ya da aşağıdan tekrar iste.</p>
+        @end
+        @end
+
+        <form action="/sifremi-unuttum" method="POST" class="mt-6 space-y-4" data-submit-once>
+          {{ csrfField() }}
+          @!component('components/ui/field', { id: 'forgot-email', name: 'email', type: 'email', label: 'E-posta adresi', value: sentTo, required: true, maxlength: 255, autocomplete: 'email', autocapitalize: 'none', spellcheck: 'false', placeholder: 'ornek@eposta.com', 'data-autofocus': true })
+          <button type="submit" class="btn btn--primary btn--lg btn--block">{{ sentTo ? 'Bağlantıyı tekrar gönder' : 'Sıfırlama bağlantısı gönder' }}</button>
+        </form>
+
+        <p class="auth-card__switch">
+          Parolanı hatırladın mı?
+          <a href="/giris" class="link">Giriş yap</a>
+        </p>
+      </section>
+    </div>
+  </div>
+@end
+
+@end
