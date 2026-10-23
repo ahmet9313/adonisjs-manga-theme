@@ -1,5 +1,6 @@
 import site, { accessLevelKeys, seriesCoverModeKeys } from '#config/site'
 import vine from '@vinejs/vine'
+import calendar, { weekdayKeys } from '#config/calendar'
 
 const relationIds = () =>
   vine.array(vine.number().positive().withoutDecimals()).maxLength(100).optional()
@@ -19,6 +20,10 @@ export const seriesValidator = vine.compile(
     draft: vine.enum(['on']).optional(),
     access: vine.enum(accessLevelKeys).optional(),
     cover_mode: vine.enum(seriesCoverModeKeys).optional(),
+    /** Planned publication (datetime-local, site time zone), checked by publishing_service. */
+    publish_at: vine.string().trim().maxLength(25).optional(),
+    release_days: vine.array(vine.enum(weekdayKeys)).maxLength(7).optional(),
+    release_note: vine.string().trim().maxLength(calendar.noteLength).optional(),
     keywords: vine.string().maxLength(5000).optional(),
     genres: relationIds(),
     authors: relationIds(),
@@ -35,6 +40,7 @@ export const chapterValidator = vine.compile(
     title: vine.string().trim().maxLength(255).optional(),
     draft: vine.enum(['on']).optional(),
     access: vine.enum(accessLevelKeys).optional(),
+    publish_at: vine.string().trim().maxLength(25).optional(),
     warning: vine.string().trim().maxLength(500).optional(),
     text_content: vine.string().maxLength(1000000).optional(),
     page_order: vine.string().maxLength(100000).optional(),

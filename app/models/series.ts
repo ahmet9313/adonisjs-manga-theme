@@ -69,6 +69,17 @@ export default class Series extends BaseModel {
   @column()
   declare coverMode: SeriesCoverMode
 
+  /** Draft published by the scheduler at this UTC time (publishing_service.publishDue). */
+  @column()
+  declare publishAt: string | null
+
+  /** Weekdays of new chapters ("cum,cmt", config/calendar.ts) and an optional free-text note. */
+  @column()
+  declare releaseDays: string | null
+
+  @column()
+  declare releaseNote: string | null
+
   @column()
   declare featuredDescription: string | null
 

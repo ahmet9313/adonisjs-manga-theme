@@ -75,6 +75,7 @@
                     @!component('components/ui/badge', { kind: 'status', value: series.status, size: 'sm', class: 'md:hidden' })
                     @if(series.draft)
                     @!component('components/ui/badge', { kind: 'draft', tone: 'warning', text: 'Taslak', size: 'sm', title: 'Yayında değil; yalnız yönetim görür' })
+                    @!component('partials/admin/scheduled_badge', { at: series.publishAt })
                     @end
                     @if(series.access !== 'public')
                     @!component('components/ui/badge', { kind: 'access', tone: series.access === 'vip' ? 'accent' : 'neutral', text: site.accessLevels[series.access].label, size: 'sm' })

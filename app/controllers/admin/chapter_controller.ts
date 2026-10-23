@@ -1,7 +1,7 @@
 import { now, pageNumber, pageSize } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
-import notifications from '#services/notification_service'
+import publishing, { schedule } from '#services/publishing_service'
 import Chapter from '#models/chapter'
 import SeriesModel from '#models/series'
 import { chapterValidator } from '#validators/admin'
@@ -11,7 +11,6 @@ import {
   pageImages,
   removeContentFiles,
 } from '#services/upload_service'
-import { localDay } from '#services/level'
 import db from '@adonisjs/lucid/services/db'
 import watch from '#config/watch'
 import {
@@ -100,6 +99,11 @@ export default class ChapterAdminController {
 
   private async save(request: HttpContext['request'], chapter = new Chapter()) {
     const data = await request.validateUsing(chapterValidator)
+    const publishAt = publishing.scheduleFrom(
+      data.draft === 'on',
+      data.publish_at,
+      chapter.publishAt
+    )
     const duplicate = await Chapter.query()
       .where('seriesId', data.series_id)
       .where('number', data.number)
@@ -133,11 +137,12 @@ export default class ChapterAdminController {
     const timestamp = now()
     const oldSeriesId = chapter.seriesId
     const draft = data.draft === 'on'
-    // A chapter leaving draft is published now: it gets today's date and its announcement.
+    // A chapter leaving draft is published now: it gets today's date and its announcement
+    // (the scheduler takes the same steps for a planned chapter, see publishing_service).
     const published = !draft && (!chapter.$isPersisted || chapter.draft)
     const before = new Set(pageImages(previous))
     const added = pageImages(chapterBody).filter((page) => !before.has(page))
-    const today = localDay()
+    const today = publishing.dayOf(new Date())
     try {
       await db.transaction(async (trx) => {
         chapter.useTransaction(trx)
@@ -147,6 +152,7 @@ export default class ChapterAdminController {
           title: data.title || null,
           content: chapterBody,
           draft,
+          publishAt,
           access: data.access ?? 'public',
           warning: data.warning || null,
           credits: data.credits || null,
@@ -158,10 +164,7 @@ export default class ChapterAdminController {
         await chapter.save()
         await teamService.sync('chapter_teams', chapter.id, teamIds, trx)
         // Drafts do not move the series up in "Son Güncellenenler".
-        if (!draft)
-          await SeriesModel.query({ client: trx })
-            .whereIn('id', [...new Set([series.id, oldSeriesId].filter(Boolean))])
-            .update({ updatedAt: timestamp })
+        if (!draft) await publishing.bumpSeries([series.id, oldSeriesId], timestamp, trx)
       })
     } catch (error) {
       // Pages written for this save are not kept when the save itself fails.
@@ -177,41 +180,29 @@ export default class ChapterAdminController {
   }
 
   /**
-   * Tells every reader who saved the series that a new chapter is out. The chapter is already
-   * saved, so a failure here is logged instead of answering the editor with an error page (a
-   * retry would only hit "bu numara zaten var").
+   * Tells every reader who saved the series that a new chapter is out (the same step the
+   * scheduler takes, publishing_service). The chapter is already saved, so a failure here is
+   * logged instead of answering the editor with an error page (a retry would only hit "bu numara
+   * zaten var").
    */
   private async announce(chapter: Chapter) {
     try {
-      await this.notifyReaders(chapter)
+      await publishing.announceChapter(chapter.id)
     } catch (error) {
       logger.error({ err: error, chapterId: chapter.id }, 'Yeni bölüm bildirimi gönderilemedi')
     }
   }
 
-  private async notifyReaders(chapter: Chapter) {
-    const series = await SeriesModel.query()
-      .where('id', chapter.seriesId)
-      .preload('contentType')
-      .firstOrFail()
-    if (series.draft) return
-    const readers = await db.from('bookmarks').where('series_id', series.id).select('user_id')
-    await notifications.notifyMany(
-      readers.map((row) => Number(row.user_id)),
-      'chapter',
-      {
-        title: `Yeni bölüm: ${series.title}`,
-        body: `Bölüm ${chapter.number}${chapter.title ? ` — ${chapter.title}` : ''} yayında.`,
-        link: `/series/${series.contentType.slug}/${series.slug}/${chapter.number}`,
-      }
-    )
-  }
-
   async store({ request, session, response }: HttpContext) {
     const { chapter, published } = await this.save(request)
     if (published) await this.announce(chapter)
-    session.flash('success', chapter.draft ? 'Bölüm taslak olarak kaydedildi' : 'Bölüm eklendi')
+    session.flash('success', this.savedMessage(chapter, 'Bölüm eklendi'))
     return response.redirect('/admin/bolumler')
+  }
+
+  private savedMessage(chapter: Chapter, fallback: string) {
+    if (chapter.publishAt) return `Bölüm planlandı: ${schedule.label(chapter.publishAt)}`
+    return chapter.draft ? 'Bölüm taslak olarak kaydedildi' : fallback
   }
 
   async edit({ view, params }: HttpContext) {
@@ -238,7 +229,10 @@ export default class ChapterAdminController {
     const { chapter, published } = await this.save(request, await Chapter.findOrFail(params.id))
     // A draft series stays quiet; its readers hear about the chapter when the series goes live.
     if (published) await this.announce(chapter)
-    session.flash('success', published ? 'Bölüm yayınlandı' : 'Bölüm güncellendi')
+    session.flash(
+      'success',
+      published ? 'Bölüm yayınlandı' : this.savedMessage(chapter, 'Bölüm güncellendi')
+    )
     return response.redirect('/admin/bolumler')
   }
 

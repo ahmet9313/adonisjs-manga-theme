@@ -20,6 +20,7 @@ import Chapter from '#models/chapter'
 import { localVideoPaths, removeUnusedVideos } from '#services/video_service'
 import teamService from '#services/team_service'
 import { refreshSearchText } from '#services/search_index_service'
+import publishing, { releaseDaysOf, schedule } from '#services/publishing_service'
 
 export default class SeriesAdminController {
   /** Series list with read-only filters: ?search (title, address, alternative titles), ?status, ?type (slug). */
@@ -107,6 +108,11 @@ export default class SeriesAdminController {
 
   private async save(request: HttpContext['request'], series = new SeriesModel()) {
     const data = await request.validateUsing(seriesValidator)
+    const publishAt = publishing.scheduleFrom(
+      data.draft === 'on',
+      data.publish_at,
+      series.publishAt
+    )
     const slug = series.$isPersisted ? series.slug : slugify(data.title)
     if (!slug) invalidField('title', 'Başlık en az bir harf veya rakam içermeli.')
     const duplicate = await SeriesModel.query()
@@ -164,6 +170,9 @@ export default class SeriesAdminController {
           featured: data.featured === 'on',
           featuredDescription: data.featured_description || null,
           draft: data.draft === 'on',
+          publishAt,
+          releaseDays: releaseDaysOf(data.release_days),
+          releaseNote: data.release_note || null,
           access: data.access ?? 'public',
           coverMode: data.cover_mode ?? 'auto',
           coverImage,
@@ -188,11 +197,16 @@ export default class SeriesAdminController {
     await removeUnreferencedImages(
       previous.filter((path) => path !== coverImage && path !== bannerImage)
     )
+    return series
+  }
+
+  private savedMessage(series: SeriesModel, fallback: string) {
+    return series.publishAt ? `Seri planlandı: ${schedule.label(series.publishAt)}` : fallback
   }
 
   async store({ request, session, response }: HttpContext) {
-    await this.save(request)
-    session.flash('success', 'Seri eklendi')
+    const series = await this.save(request)
+    session.flash('success', this.savedMessage(series, 'Seri eklendi'))
     return response.redirect('/admin/seriler')
   }
 
@@ -235,8 +249,8 @@ export default class SeriesAdminController {
   }
 
   async update({ request, params, session, response }: HttpContext) {
-    await this.save(request, await SeriesModel.findOrFail(params.id))
-    session.flash('success', 'Seri güncellendi')
+    const series = await this.save(request, await SeriesModel.findOrFail(params.id))
+    session.flash('success', this.savedMessage(series, 'Seri güncellendi'))
     return response.redirect('/admin/seriler')
   }
 

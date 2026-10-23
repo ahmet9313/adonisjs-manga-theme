@@ -7,7 +7,7 @@
 --}}
 <section id="home-updates" class="section mt-6 scroll-mt-20 sm:mt-8" aria-labelledby="home-updates-title" x-data="homeUpdates" @click="navigate">
   <div data-updates-content>
-    @!component('components/ui/section_head', {
+    @component('components/ui/section_head', {
       title: 'Son Güncellenenler',
       id: 'home-updates-title',
       icon: 'clock',
@@ -15,6 +15,10 @@
       href: '/seriler',
       linkLabel: 'Tüm seriler'
     })
+      @slot('actions')
+        @include('partials/home/calendar_link')
+      @end
+    @end
 
     @if(recentlyUpdated.length)
     <ul class="home-updates">

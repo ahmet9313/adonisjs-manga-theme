@@ -7,6 +7,7 @@ import cosmetics from '#services/cosmetic_service'
 import { levelFor, parseTimestamp } from '#services/level'
 import { excerptOf } from '#services/comment_service'
 import { buildPaginationPages } from '#services/input_service'
+import { schedule } from '#services/publishing_service'
 import type User from '#models/user'
 import type { Scheme } from '#config/theme'
 import { coverView, type CoverSource } from '#services/cover_policy_service'
@@ -131,6 +132,8 @@ edge.global('dateOf', (value: string, withYear = true) => {
     timeZone: site.timezone,
   })
 })
+/** Planned publication times and release days ("25 Eki 14:00", "Cuma, Cumartesi"). */
+edge.global('schedule', schedule)
 /** Page numbers with gaps ('...') for `ui/pagination`. */
 edge.global('pagesOf', (current: number, total: number) => buildPaginationPages(current, total))
 /**

@@ -31,6 +31,8 @@ router.get('/sitemaps/:file', [SeoController, 'sitemapPart']).as('seo.sitemap_pa
 router.get('/rss.xml', [SeoController, 'feed']).as('seo.feed')
 router.get('/series/:type/:slug/rss.xml', [SeoController, 'seriesFeed']).as('seo.series_feed')
 router.get('/series/:type/:slug/:chapter', [ChapterController, 'show']).as('chapter.show')
+const CalendarController = () => import('#controllers/calendar_controller')
+router.get('/takvim', [CalendarController, 'index']).as('calendar')
 const LibraryController = () => import('#controllers/library_controller')
 router.get('/kaydedilenler', [LibraryController, 'index']).as('bookmarks')
 router.get('/kutuphane/kapaklar', [LibraryController, 'saved']).as('library.saved')
