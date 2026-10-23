@@ -4,19 +4,7 @@ import library from '#services/library_service'
 import progress from '#services/progress_service'
 import watch from '#config/watch'
 import access, { AGE_COOKIE } from '#services/access_service'
-
-/**
- * Reading mode and page size from the plain `reader` cookie ("paged-125", written by reader.js),
- * so the first paint already has the visitor's layout. Sizes match reader.js (30–200 %).
- */
-function readerViewOf(value: unknown) {
-  const match = /^(webtoon|paged)-(\d{2,3})$/.exec(typeof value === 'string' ? value : '')
-  const zoom = match ? Number(match[2]) : 100
-  return {
-    mode: match?.[1] ?? 'webtoon',
-    zoom: zoom >= 30 && zoom <= 200 ? zoom : 100,
-  }
-}
+import readerService from '#services/reader_service'
 
 export default class ChapterController {
   async show({ view, params, request, response, auth }: HttpContext) {
@@ -63,12 +51,19 @@ export default class ChapterController {
     }
 
     const allChapters = await seriesService.getChaptersOf(series.id, { drafts })
+    // Layout of the first paint: the account's settings, else the plain `reader` cookie.
+    const accountPrefs = readerService.prefsOf(auth.user)
     let readerCookie: unknown = null
-    try {
-      readerCookie = request.plainCookie('reader', { encoded: false })
-    } catch {
-      readerCookie = null
+    if (!accountPrefs) {
+      try {
+        readerCookie = request.plainCookie('reader', { encoded: false })
+      } catch {
+        readerCookie = null
+      }
     }
+    const pageCount = chapter.pages?.length ?? 0
+    const resumePage =
+      auth.user && pageCount ? await readerService.positionOf(auth.user.id, chapter.id) : null
     const currentIndex = allChapters.findIndex((c) => c.number === Number(chapterNum))
     const prevChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null
     const nextChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null
@@ -82,7 +77,10 @@ export default class ChapterController {
       prevChapter,
       nextChapter,
       commentThread: { seriesId: series.id, chapterId: chapter.id },
-      readerView: readerViewOf(readerCookie),
+      readerView: accountPrefs ?? readerService.viewOfCookie(readerCookie),
+      readerAccount: accountPrefs,
+      // "Kaldığın yer" only between the first and the last page.
+      resumePage: resumePage && resumePage > 1 && resumePage < pageCount ? resumePage : null,
       reward: reward
         ? {
             exp: reward.exp,

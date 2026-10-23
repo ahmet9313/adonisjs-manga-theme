@@ -76,6 +76,10 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare profileLikeCount: number
 
+  /** Reading settings as JSON (reader_service.normalizePrefs); null until first changed. */
+  @column({ serializeAs: null })
+  declare readerPrefs: string | null
+
   @column()
   declare createdAt: string
 
