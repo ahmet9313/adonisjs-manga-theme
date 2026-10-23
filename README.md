@@ -6,6 +6,10 @@ Fansub ekipleri için hazır bir okuma sitesi ve yönetim paneli: manga / manhwa
 
 **Teknoloji:** AdonisJS 7, Lucid, Edge, Alpine.js 3, Tailwind CSS 4 · Node.js 24+ ve npm 11+ · SQLite (varsayılan) veya MySQL 8.
 
+> **Bu sürüm hakkında (Ekim 2026):** Projenin şimdiye kadarki en büyük güncellemesidir. MangaDex, MangaTR ve büyük scan siteleriyle karşılaştırılarak eksik kalan özelliklerin neredeyse tamamı eklendi: görüntülenme sayacı ve popüler sekmeleri, okuma durumları, gelişmiş okuyucu, hata bildirme ve moderasyon, çeviri ekipleri, sabit sayfalar ve duyurular, planlı yayın ve yayın takvimi, gelişmiş arama, ZIP'ten toplu bölüm yükleme, SEO, şifre sıfırlama ve e-posta doğrulama, bölüm tepkileri ve WordPress tarzı kurulum sihirbazı ([ayrıntılar](#fansub-sitesi-özellikleri-2026-10-23), [güncelleme günlüğü](AGENTS.md#güncelleme-günlüğü)). Veritabanına 11 yeni migration eklendi (yalnız ekleme yapar). Güncellemeden önce `npm run db:backup` ile yedek alın, ardından `npm install` ve `npm run setup` çalıştırıp sunucuyu yeniden başlatın.
+>
+> **Bundan sonrası:** Özellik tarafı büyük ölçüde tamamlandı. Önümüzdeki güncellemeler ağırlıkla **performans** (sorgu ve önbellek iyileştirmeleri, görsel boyutları, sayfa hızı) ve **hata düzeltmeleri** üzerine olacak; yeni özellikler daha seyrek ve küçük adımlarla gelecek. Hata bildirimleri ve öneriler için GitHub Issues kullanılabilir.
+
 ![MangaHub ana sayfa, koyu şema](docs/screenshots/ana-sayfa.webp)
 
 ## Öne çıkanlar
