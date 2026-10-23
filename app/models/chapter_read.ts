@@ -15,4 +15,8 @@ export default class ChapterRead extends BaseModel {
 
   @column()
   declare readAt: string
+
+  /** Page last seen in the chapter (1-based); null when unknown. */
+  @column()
+  declare lastPage: number | null
 }

@@ -40,6 +40,16 @@ router
   .prefix('/kutuphane')
   .use(middleware.auth())
 
+// Reader settings and reading position for accounts (guests keep them in the browser)
+const ReaderController = () => import('#controllers/reader_controller')
+router
+  .group(() => {
+    router.post('/tercihler', [ReaderController, 'prefs']).as('reader.prefs')
+    router.post('/konum', [ReaderController, 'position']).as('reader.position')
+  })
+  .prefix('/okuyucu')
+  .use(middleware.auth())
+
 // Comments: reading is public, writing requires an account
 const CommentController = () => import('#controllers/comment_controller')
 router.get('/yorumlar', [CommentController, 'index']).as('comments.index')
