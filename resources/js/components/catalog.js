@@ -4,9 +4,11 @@
  * The bar is a plain GET form whose dropdowns are <details> elements, so it works without
  * JavaScript. This component adds: one open dropdown at a time (outside clicks and Escape close
  * it, focus returns to its button), arrow keys inside a dropdown, a live genre search that
- * ignores Turkish diacritics, live counts on the buttons, and clean URLs (empty fields are left
- * out). The initial state comes from the server in `data-config` (AGENTS.md rule 9):
- * { genres, statuses, types, order, sorts: { value: label } }.
+ * ignores Turkish diacritics, three-state genre chips (dahil → hariç → temizle; they drive the
+ * `genre` / `xgenre` checkboxes of partials/catalog/genre_filter.edge), live counts on the
+ * buttons, and clean URLs (empty fields are left out). The initial state comes from the server in
+ * `data-config` (AGENTS.md rule 9):
+ * { genres, excludedGenres, genreMode, statuses, types, order, sorts: { value: label } }.
  */
 
 /** "Doğaüstü" and "dogaustu" match: lower case (Turkish rules), no diacritics, dotless ı → i. */
@@ -18,7 +20,7 @@ const fold = (text) =>
     .replace(/[̀-ͯ]/g, '')
     .trim()
 
-const MENUS = ['openGenre', 'openStatus', 'openType', 'openSort']
+const MENUS = ['openGenre', 'openStatus', 'openType', 'openMore', 'openSort']
 
 const list = (value) => (Array.isArray(value) ? value.map(String) : [])
 
@@ -28,8 +30,11 @@ export function filterBar() {
     openStatus: false,
     openSort: false,
     openType: false,
+    openMore: false,
     genreSearch: '',
     selectedGenres: [],
+    excludedGenres: [],
+    genreMode: '',
     selectedStatuses: [],
     selectedTypes: [],
     selectedOrder: '',
@@ -43,6 +48,8 @@ export function filterBar() {
         config = {}
       }
       this.selectedGenres = list(config.genres)
+      this.excludedGenres = list(config.excludedGenres)
+      this.genreMode = config.genreMode === 'all' ? 'all' : ''
       this.selectedStatuses = list(config.statuses)
       this.selectedTypes = list(config.types)
       this.selectedOrder = typeof config.order === 'string' ? config.order : ''
@@ -101,6 +108,35 @@ export function filterBar() {
     genreMatches(name) {
       const query = fold(this.genreSearch)
       return !query || fold(name).includes(query)
+    },
+
+    /** 'include', 'exclude' or '' for one genre chip. */
+    genreState(name) {
+      if (this.selectedGenres.includes(name)) return 'include'
+      return this.excludedGenres.includes(name) ? 'exclude' : ''
+    },
+
+    /** One press: include; second: exclude; third: clear. */
+    cycleGenre(name) {
+      const state = this.genreState(name)
+      this.selectedGenres = this.selectedGenres.filter((item) => item !== name)
+      this.excludedGenres = this.excludedGenres.filter((item) => item !== name)
+      if (state === '') this.selectedGenres.push(name)
+      else if (state === 'include') this.excludedGenres.push(name)
+    },
+
+    genreCount() {
+      return this.selectedGenres.length + this.excludedGenres.length
+    },
+
+    clearGenres() {
+      this.selectedGenres = []
+      this.excludedGenres = []
+    },
+
+    /** Empties the year and chapter fields of the "Diğer" dropdown. */
+    clearMore() {
+      for (const input of this.$root.querySelectorAll('#filter-more input')) input.value = ''
     },
 
     hasGenreMatch() {

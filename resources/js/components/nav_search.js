@@ -111,8 +111,16 @@ function navSearch(prefix = 'search') {
       this.$nextTick(() => document.getElementById(this.activeId() || '')?.scrollIntoView({ block: 'nearest' }))
     },
 
+    /** "“Kimetsu no Yaiba” · Manga · Bölüm 205 · Aksiyon": the alternative title that matched, type, latest chapter. */
     describe(item) {
-      return [typeLabel(item.type), ...(item.genres || [])].filter(Boolean).join(' · ')
+      return [
+        item.alias ? `“${item.alias}”` : '',
+        typeLabel(item.type),
+        item.lastChapter ? `Bölüm ${item.lastChapter}` : '',
+        ...(item.genres || []).slice(0, item.alias ? 1 : 2),
+      ]
+        .filter(Boolean)
+        .join(' · ')
     },
   }
 }

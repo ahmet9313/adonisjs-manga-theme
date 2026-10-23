@@ -345,6 +345,13 @@ export const flags: Flag[] = [
   { key: 'nav_series', label: '"Seri Listesi" bağlantısı', group: 'header', default: true },
   { key: 'nav_recommend', label: '"Öneriler" bağlantısı', group: 'header', default: true },
   { key: 'nav_bookmarks', label: '"Kaydedilenler" bağlantısı', group: 'header', default: true },
+  {
+    key: 'nav_discover',
+    label: '"A–Z" ve "Rastgele seri" bağlantıları',
+    group: 'header',
+    default: true,
+    hint: 'Masaüstünde arama kutusunun yanında "Rastgele seri" düğmesi, mobil menüde iki bağlantı.',
+  },
   { key: 'search', label: 'Arama kutusu', group: 'header', default: true },
   { key: 'bell', label: 'Bildirim zili', group: 'header', default: true },
   {

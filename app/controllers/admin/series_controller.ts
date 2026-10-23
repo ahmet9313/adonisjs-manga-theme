@@ -19,6 +19,7 @@ import {
 import Chapter from '#models/chapter'
 import { localVideoPaths, removeUnusedVideos } from '#services/video_service'
 import teamService from '#services/team_service'
+import { refreshSearchText } from '#services/search_index_service'
 
 export default class SeriesAdminController {
   /** Series list with read-only filters: ?search (title, address, alternative titles), ?status, ?type (slug). */
@@ -175,6 +176,8 @@ export default class SeriesAdminController {
         await series.related('authors').sync([...new Set(data.authors || [])])
         await series.related('artists').sync([...new Set(data.artists || [])])
         await teamService.sync('series_teams', series.id, teamIds, trx)
+        // Authors/artists are part of the search text (the model hook saw the old ones).
+        await refreshSearchText([series.id], trx)
       })
     } catch (error) {
       // Images uploaded with a save that failed are not kept.
