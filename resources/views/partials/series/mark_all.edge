@@ -1,0 +1,16 @@
+{{--
+  "Tümünü okundu işaretle" above the chapter list (chapterList.markAll, chapter_list.js). Marks
+  every published chapter the visitor may open; it gives no EXP, cards or badges. Shown while
+  some of them are unread; asks first through the shared confirm dialog (data-confirm).
+--}}
+@if(markable && markable.length)
+<form x-cloak x-show="unreadCount() > 0" @submit.prevent="markAll()"
+      data-confirm="{{ isVideo ? 'Açabildiğin tüm bölümler izlendi olarak işaretlenecek. Bu işaretler EXP ya da kart kazandırmaz.' : 'Açabildiğin tüm bölümler okundu olarak işaretlenecek. Bu işaretler EXP ya da kart kazandırmaz.' }}"
+      data-confirm-title="{{ isVideo ? 'Tümü izlendi işaretlensin mi?' : 'Tümü okundu işaretlensin mi?' }}"
+      data-confirm-label="{{ isVideo ? 'İzlendi işaretle' : 'Okundu işaretle' }}" data-confirm-tone="accent">
+  <button type="submit" class="btn btn--ghost btn--sm" :disabled="marking" aria-busy="false" :aria-busy="marking.toString()">
+    @!component('components/icon', { name: 'check-circle', class: 'btn__icon' })
+    <span>{{ isVideo ? 'Tümünü izlendi işaretle' : 'Tümünü okundu işaretle' }}</span>
+  </button>
+</form>
+@end

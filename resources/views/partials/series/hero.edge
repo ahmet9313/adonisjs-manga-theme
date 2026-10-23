@@ -1,12 +1,11 @@
 {{--
   Series header over the banner art: cover, title, other names, metadata, genres, description and
   the main actions (start/continue reading or watching, save, share).
-  Hooks: continueReading (data-config with the account's last chapter), bookmarkButton (the first
-  [data-bookmark] on the page), textClamp and seriesShare (chapter_list.js).
+  Hooks: continueReading (data-config with the account's last chapter), bookmarkButton
+  (partials/series/bookmark_control), textClamp and seriesShare (chapter_list.js).
 --}}
 @let(firstChapter = chapters.length ? chapters[chapters.length - 1] : null)
 @let(resume = reading && reading.last !== null && chapters.some((chapter) => chapter.number === reading.last) ? reading.last : null)
-@let(saved = Boolean(reading && reading.bookmarked))
 <section class="series-hero" aria-labelledby="series-title">
   <div class="series-hero__grid">
     @if(series.coverVeil === 'blur')
@@ -116,15 +115,7 @@
         <button type="button" class="btn btn--primary btn--lg" disabled>Henüz bölüm yok</button>
         @end
 
-        <button type="button" class="btn btn--secondary btn--lg"
-          x-data="bookmarkButton"
-          data-bookmark="{{ JSON.stringify({ type: series.type, slug: series.slug, title: series.title, coverImage: series.coverImage, coverVeil: series.coverVeil }) }}"
-          data-saved="{{ saved ? 'true' : 'false' }}"
-          aria-pressed="{{ saved ? 'true' : 'false' }}"
-          @click="toggle()" :aria-pressed="saved.toString()" :aria-busy="busy.toString()">
-          @!component('components/icon', { name: 'bookmark', class: 'btn__icon icon-fill' })
-          <span x-text="saved ? 'Kaydedildi' : 'Kaydet'">{{ saved ? 'Kaydedildi' : 'Kaydet' }}</span>
-        </button>
+        @include('partials/series/bookmark_control')
 
         <button type="button" class="btn btn--secondary btn--lg series-share" x-data="seriesShare" data-share-title="{{ series.title }}" @click="share()" title="Bağlantıyı paylaş">
           @!component('components/icon', { name: 'share', class: 'btn__icon' })

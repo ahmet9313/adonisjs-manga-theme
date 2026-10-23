@@ -15,4 +15,8 @@ export default class ChapterRead extends BaseModel {
 
   @column()
   declare readAt: string
+
+  /** Marked read by hand (not opened); see migration 0025. */
+  @column({ consume: (value) => Boolean(value) })
+  declare marked: boolean
 }
