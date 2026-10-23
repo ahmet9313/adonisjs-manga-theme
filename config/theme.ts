@@ -375,6 +375,13 @@ export const flags: Flag[] = [
   { key: 'series_reviews', label: 'Puan ve incelemeler', group: 'series', default: true },
   { key: 'series_comments', label: 'Seri yorumları', group: 'series', default: true },
   {
+    key: 'share_buttons',
+    label: 'Paylaşım düğmeleri (WhatsApp, Telegram, X, Facebook, bağlantıyı kopyala)',
+    group: 'series',
+    default: true,
+    hint: 'Seri sayfasındaki "Paylaş" menüsü ve bölüm sonundaki paylaşım düğmeleri.',
+  },
+  {
     key: 'reader_toolbar',
     label: 'Okuyucu araç çubuğu (bölüm seçici, okuma ayarları)',
     group: 'series',

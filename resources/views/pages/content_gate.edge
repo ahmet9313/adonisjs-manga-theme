@@ -14,7 +14,7 @@
 @let(continueUrl = next + (next.includes('?') ? '&' : '?') + 'onay=1')
 @let(age = gate.kind === 'age' ? gate.age : (series.ageRating ? parseInt(series.ageRating, 10) : 0))
 @let(icons = { age: 'shield', login: 'lock', vip: 'star', warning: 'exclamation' })
-@component('components/layout/main', { title, description: series.title })
+@component('components/layout/main', { title, description: series.title, noindex: true })
   @slot('main')
   <div class="gate">
     <section class="gate__card" aria-labelledby="gate-title">

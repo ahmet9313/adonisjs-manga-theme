@@ -2,7 +2,7 @@ import type SeriesModel from '#models/series'
 import type ContentType from '#models/content_type'
 import type Chapter from '#models/chapter'
 import type { VideoSourceKind } from '#config/watch'
-import type { AccessLevel, ContentFormat } from '#config/site'
+import type { AccessLevel, ContentFormat, SeriesCoverMode } from '#config/site'
 import { coverView } from '#services/cover_policy_service'
 
 export interface Person {
@@ -33,6 +33,8 @@ export interface SeriesInfo {
   bannerImage: string | null
   /** Hidden cover for this visitor (cover_policy_service): blurred or the default image. */
   coverVeil: 'blur' | 'placeholder' | null
+  /** The series' own cover rule (`auto` follows its age rating); link previews use it. */
+  coverMode: SeriesCoverMode
   featured: boolean
   featuredDescription: string | null
   /** Only staff ever receive drafts (previews); lists leave them out. */
@@ -106,6 +108,7 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
     publicationYear: s.publicationYear,
     ageRating: s.ageRating,
     ...coverView(s),
+    coverMode: s.coverMode || 'auto',
     featured: s.featured,
     featuredDescription: s.featuredDescription,
     draft: Boolean(s.draft),

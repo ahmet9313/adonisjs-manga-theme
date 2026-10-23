@@ -1,7 +1,7 @@
 {{--
   Admin → Tema → Genel: site_name (2–40), site_description (≤200), logo_url, logo_mobile_url and
-  favicon_url (/yol or http(s)://). Each image field has an upload area (components/ui/brand_image)
-  that uploads to /admin/tema/gorsel and fills the field; replaced uploads are deleted on save.
+  favicon_url (/yol or http(s)://), site_url (https://alan-adi; canonical links, sitemap and feeds,
+  seo_service). Each image field has an upload area (components/ui/brand_image) that uploads to /admin/tema/gorsel and fills the field; replaced uploads are deleted on save.
   The preview shows the wordmark in the header, the browser tab and a search result; it reads
   the fields as you type (values are never written into scripts).
 --}}
@@ -10,6 +10,7 @@
 @let(logo = flashMessages.get('logo_url') ?? values.logo_url)
 @let(logoMobile = flashMessages.get('logo_mobile_url') ?? values.logo_mobile_url)
 @let(favicon = flashMessages.get('favicon_url') ?? values.favicon_url)
+@let(siteUrl = flashMessages.get('site_url') ?? values.site_url)
 @component('components/layout/admin', {
   title,
   description: 'Site adı, açıklama ve logo; menüde, alt bilgide, sekme başlığında ve arama sonuçlarında kullanılır.',
@@ -123,6 +124,7 @@
             @!component('components/ui/field', { name: 'favicon_url', label: 'Sekme simgesi / favicon (isteğe bağlı)', value: favicon, maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '/favicon.png veya https://…', hint: 'Tarayıcı sekmesinde ve yer imlerinde görünür. Kare PNG (en az 64×64) veya ICO önerilir; en fazla 1 MB. Boşsa varsayılan simge kullanılır.', 'x-on:input': 'icon = $event.target.value.trim()' })
             @!component('components/ui/brand_image', { target: 'f-favicon_url', kind: 'favicon', label: 'Sekme simgesi yükle', shape: 'square', accept: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'ico'], max: 1024 * 1024 })
           </div>
+          @!component('components/ui/field', { name: 'site_url', label: 'Site adresi (isteğe bağlı)', value: siteUrl, maxlength: 200, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: 'https://alanadi.com', hint: 'Arama motorlarına, site haritasına, RSS akışına ve paylaşım bağlantılarına yazılan tam adres. Boşsa .env dosyasındaki APP_URL, o da yoksa sitenin açıldığı adres kullanılır.' })
           <div class="te-form-foot">
             <p>Kaydettiğinizde tüm sayfalarda hemen güncellenir.</p>
             @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })

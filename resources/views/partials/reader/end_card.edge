@@ -1,6 +1,6 @@
 {{--
   End of the chapter: what comes next and the main ways on (next chapter, the series page,
-  rating the series).
+  rating the series) and the share buttons.
 --}}
 <section class="reader-end" aria-labelledby="reader-end-title">
   <span class="reader-end__icon" aria-hidden="true">
@@ -32,4 +32,7 @@
     </a>
     @end
   </div>
+  @if(ui('share_buttons'))
+  @!component('partials/share/row', { url: siteUrl(request, chapterUrl(chapter.number)), title: series.title + ' — Bölüm ' + chapter.number, label: 'Bu bölümü paylaş' })
+  @end
 </section>
