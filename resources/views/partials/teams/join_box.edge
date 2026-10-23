@@ -1,0 +1,28 @@
+{{--
+  "Ekibe katıl" box of a recruiting team (team page aside and /ekibe-katil): the recruitment text
+  and the team's links; there is no application form, people apply through these links.
+  Data: team, links ([{ label, icon, url }]); `compact` hides the heading (the recruit page has
+  the team name as its own heading).
+--}}
+<section class="panel panel--tight team-join" aria-labelledby="team-join-{{ team.id }}">
+  @if(!compact)
+  <h2 id="team-join-{{ team.id }}" class="team-aside__title">
+    @!component('components/icon', { name: 'user-plus', class: 'h-4 w-4' })
+    Ekibe katıl
+  </h2>
+  @else
+  <h3 id="team-join-{{ team.id }}" class="sr-only">{{ team.name }} alım duyurusu</h3>
+  @end
+  <p class="team-join__text">{{ team.recruitmentText || 'Ekip yeni üyeler arıyor. Ayrıntılar için ekiple iletişime geç.' }}</p>
+  @if(links.length)
+  <div class="team-links">
+    @each(link in links)
+    @component('components/ui/button', { href: link.url, size: 'sm', variant: link.icon === 'chat' ? 'primary' : 'secondary', icon: link.icon, target: '_blank', rel: 'noopener nofollow ugc' })
+      {{ link.icon === 'chat' ? 'Discord’dan başvur' : link.label }}
+    @end
+    @end
+  </div>
+  @else
+  <p class="team-join__note">Ekip henüz iletişim bağlantısı eklemedi; üyelerinden birinin profiline göz atabilirsin.</p>
+  @end
+</section>

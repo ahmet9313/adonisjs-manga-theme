@@ -18,6 +18,7 @@ import {
 } from '#services/upload_service'
 import Chapter from '#models/chapter'
 import { localVideoPaths, removeUnusedVideos } from '#services/video_service'
+import teamService from '#services/team_service'
 
 export default class SeriesAdminController {
   /** Series list with read-only filters: ?search (title, address, alternative titles), ?status, ?type (slug). */
@@ -99,6 +100,7 @@ export default class SeriesAdminController {
       authors,
       artists,
       allKeywords,
+      teams: await teamService.options(),
     })
   }
 
@@ -122,6 +124,7 @@ export default class SeriesAdminController {
       const records = await Model.query().whereIn('id', ids)
       if (records.length !== ids.length) invalidField(field, 'Seçilen kayıt bulunamadı.')
     }
+    const teamIds = await teamService.checkIds(data.teams)
     const cover = request.file('cover_image', imageOptions)
     const banner = request.file('banner_image', imageOptions)
     for (const file of [cover, banner])
@@ -171,6 +174,7 @@ export default class SeriesAdminController {
         await series.related('genres').sync([...new Set(data.genres || [])])
         await series.related('authors').sync([...new Set(data.authors || [])])
         await series.related('artists').sync([...new Set(data.artists || [])])
+        await teamService.sync('series_teams', series.id, teamIds, trx)
       })
     } catch (error) {
       // Images uploaded with a save that failed are not kept.
@@ -222,6 +226,8 @@ export default class SeriesAdminController {
       selectedGenreIds,
       selectedAuthorIds,
       selectedArtistIds,
+      teams: await teamService.options(),
+      selectedTeamIds: await teamService.idsOf('series_teams', series.id),
     })
   }
 

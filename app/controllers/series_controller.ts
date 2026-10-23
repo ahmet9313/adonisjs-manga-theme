@@ -9,6 +9,7 @@ import Artist from '#models/artist'
 import ContentType from '#models/content_type'
 import access, { AGE_COOKIE } from '#services/access_service'
 import views from '#services/view_service'
+import teamService from '#services/team_service'
 
 export default class SeriesController {
   async index({ view, request }: HttpContext) {
@@ -126,6 +127,7 @@ export default class SeriesController {
       reading,
       savers,
       commentThread: { seriesId: series.id, chapterId: null },
+      teamCredits: await teamService.seriesCredits(series.id),
       reviewConfig: {
         seriesId: series.id,
         labels: ratingLabels,

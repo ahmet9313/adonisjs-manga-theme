@@ -45,6 +45,10 @@ export default class Chapter extends BaseModel {
   @column({ consume: (value) => Number(value) || 0 })
   declare viewCount: number
 
+  /** Optional free-text credit line ("Çeviri: X · Edit: Y"); teams are in `chapter_teams`. */
+  @column()
+  declare credits: string | null
+
   @column()
   declare createdAt: string
 

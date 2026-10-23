@@ -120,6 +120,8 @@
           </div>
         @end
 
+        @include('partials/teams/chapter_panel')
+
         <div x-show="!format" x-cloak>
           @!component('components/ui/empty_state', { icon: 'book-open', title: 'Önce bir seri seçin', description: 'İçerik alanı serinin içerik türünün biçimine göre açılır: görsel türlerde (manga, manhwa, webtoon) sayfa görselleri, metin türlerinde (novel) bölüm metni, video türlerde (anime) video kaynakları.' })
         </div>

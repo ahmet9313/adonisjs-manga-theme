@@ -23,6 +23,8 @@ export const seriesValidator = vine.compile(
     genres: relationIds(),
     authors: relationIds(),
     artists: relationIds(),
+    /** Translation teams (team_service checks them). */
+    teams: relationIds(),
   })
 )
 
@@ -38,5 +40,8 @@ export const chapterValidator = vine.compile(
     page_order: vine.string().maxLength(100000).optional(),
     /** Video episodes: JSON list of sources, checked by `parseSources` (video_service). */
     sources: vine.string().maxLength(200000).optional(),
+    /** Translation teams of this chapter (empty: the series' teams) and a free-text credit. */
+    teams: relationIds(),
+    credits: vine.string().trim().maxLength(200).optional(),
   })
 )

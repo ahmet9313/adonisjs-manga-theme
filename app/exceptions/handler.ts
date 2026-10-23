@@ -23,6 +23,7 @@ const ADMIN_RECORDS: Record<string, string> = {
   'kozmetikler': 'Kozmetik',
   'kartlar': 'Kart',
   'kullanicilar': 'Kullanıcı',
+  'ekipler': 'Ekip',
 }
 
 export default class HttpExceptionHandler extends ExceptionHandler {

@@ -21,6 +21,7 @@ import {
   VideoUploadError,
   receiveVideo,
 } from '#services/video_service'
+import teamService from '#services/team_service'
 
 export default class ChapterAdminController {
   async index({ view, request }: HttpContext) {
@@ -79,6 +80,7 @@ export default class ChapterAdminController {
       currentFormat,
       preSelectedSeriesId: preSelectedSeriesId ? Number(preSelectedSeriesId) : null,
       ...this.videoOptions(),
+      teams: await teamService.options(),
     })
   }
 
@@ -109,6 +111,7 @@ export default class ChapterAdminController {
       .preload('contentType')
       .first()
     if (!series) invalidField('series_id', 'Seri bulunamadı.')
+    const teamIds = await teamService.checkIds(data.teams)
     const previous = chapter.$isPersisted ? chapter.content : undefined
     const chapterBody: Chapter['content'] =
       series.contentType.format === 'video'
@@ -146,12 +149,14 @@ export default class ChapterAdminController {
           draft,
           access: data.access ?? 'public',
           warning: data.warning || null,
+          credits: data.credits || null,
           // The site's calendar day (config/site.ts timezone), not the UTC one.
           publishedAt: published && chapter.$isPersisted ? today : chapter.publishedAt || today,
           createdAt: chapter.createdAt || timestamp,
           updatedAt: timestamp,
         })
         await chapter.save()
+        await teamService.sync('chapter_teams', chapter.id, teamIds, trx)
         // Drafts do not move the series up in "Son Güncellenenler".
         if (!draft)
           await SeriesModel.query({ client: trx })
@@ -224,6 +229,8 @@ export default class ChapterAdminController {
       seriesFormats: this.formatsOf(seriesList),
       currentFormat: chapter.series?.contentType?.format || 'image',
       ...this.videoOptions(),
+      teams: await teamService.options(),
+      selectedTeamIds: await teamService.idsOf('chapter_teams', chapter.id),
     })
   }
 
