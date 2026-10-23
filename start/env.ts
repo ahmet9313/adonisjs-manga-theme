@@ -41,7 +41,6 @@ export default await Env.create(new URL('../', import.meta.url), {
   | Account mails (all optional; without SMTP_HOST mails go to the log)
   |----------------------------------------------------------
   */
-  APP_URL: Env.schema.string.optional({ format: 'url', tld: false }),
   SMTP_HOST: Env.schema.string.optional({ format: 'host' }),
   SMTP_PORT: Env.schema.number.optional(),
   SMTP_USERNAME: Env.schema.string.optional(),

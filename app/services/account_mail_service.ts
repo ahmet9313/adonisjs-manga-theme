@@ -2,7 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import emitter from '@adonisjs/core/services/emitter'
 import logger from '@adonisjs/core/services/logger'
 import mail from '@adonisjs/mail/services/main'
-import env from '#start/env'
+import seo from '#services/seo_service'
 import site from '#config/site'
 import type User from '#models/user'
 import tokens, { type AccountTokenType } from '#services/account_token_service'
@@ -14,15 +14,11 @@ emitter.on('queued:mail:error', ({ error, mailerName }) => {
 })
 
 /**
- * Public address for links in mails: APP_URL when set (recommended in production, behind a
- * proxy or with several host names), otherwise the address this request came to.
+ * Public address for links in mails, the same as canonical links (seo_service): Admin → Tema →
+ * Genel → "Site adresi", then APP_URL, then the address this request came to.
  */
 export function publicUrl(request: HttpContext['request'], path: string) {
-  const base = (env.get('APP_URL') || `${request.protocol()}://${request.host()}`).replace(
-    /\/+$/,
-    ''
-  )
-  return `${base}${path}`
+  return seo.url(request, path)
 }
 
 /** Site name from Admin → Tema → Genel (settings_service keeps `site.name` in step). */
