@@ -24,6 +24,8 @@ const ADMIN_RECORDS: Record<string, string> = {
   'kartlar': 'Kart',
   'kullanicilar': 'Kullanıcı',
   'ekipler': 'Ekip',
+  'sayfalar': 'Sayfa',
+  'duyurular': 'Duyuru',
 }
 
 export default class HttpExceptionHandler extends ExceptionHandler {

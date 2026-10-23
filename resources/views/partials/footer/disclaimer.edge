@@ -1,0 +1,9 @@
+{{--
+  Footer notice (switch footer_disclaimer): "Bu sitedeki çeviriler tanıtım amaçlıdır …"; the text
+  is set under Admin → Tema → Genel (config/site.ts → disclaimer when empty).
+--}}
+@if(ui('footer_disclaimer') && disclaimer())
+<div class="border-t border-(--t-border)">
+  <p class="footer-disclaimer mx-auto max-w-(--t-container) px-4 py-4 sm:px-6 lg:px-8">{{ disclaimer() }}</p>
+</div>
+@end

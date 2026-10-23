@@ -1,0 +1,29 @@
+{{--
+  Cookie notice (switch cookie_notice): a small bar at the bottom that never covers the page
+  behind a dialog and takes no focus. "Tamam" writes the plain `cookie_ok` cookie for a year:
+  `cookieNotice` (resources/js/components/cookie_notice.js) does it in place, without JavaScript
+  the form posts to /cerez-onayi and comes back to the same page. Not rendered once accepted.
+--}}
+@if(ui('cookie_notice') && cookieNoticeOpen(request))
+@let(privacyUrl = await pageUrl(site.privacyPage))
+<div x-data="cookieNotice" x-show="open">
+{{-- Room under the footer so the bar never hides the end of the page. --}}
+<div class="cookie-notice-spacer" aria-hidden="true"></div>
+<section class="cookie-notice" aria-label="Çerez bildirimi">
+  @!component('components/icon', { name: 'info', class: 'cookie-notice__icon' })
+  <p class="cookie-notice__text">
+    Siteyi kullanarak çerez kullanımını kabul edersin.
+    @if(privacyUrl)
+    Ayrıntılar: <a href="{{ privacyUrl }}" class="link">Gizlilik Politikası</a>
+    @end
+  </p>
+  <form action="/cerez-onayi" method="POST" class="cookie-notice__form" @submit.prevent="accept()">
+    {{ csrfField() }}
+    <input type="hidden" name="next" value="{{ request.url(true) }}">
+    @component('components/ui/button', { type: 'submit', variant: 'primary', size: 'sm' })
+      Tamam
+    @end
+  </form>
+</section>
+</div>
+@end

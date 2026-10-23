@@ -24,6 +24,10 @@
   <h1 class="sr-only">{{ site.name }} — {{ site.description }}</h1>
   @end
 
+  @if(ui('home_announcements'))
+  @include('partials/home/announcements')
+  @end
+
   @if(ui('home_updates'))
   @include('partials/home/updates')
   @end

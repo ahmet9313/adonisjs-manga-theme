@@ -131,6 +131,23 @@ const site = {
   commentEditHours: 24,
   /** @kullanıcı mentions linked and notified per comment (the first ones written). */
   commentMentionLimit: 5,
+
+  /**
+   * Social accounts editable under Admin → Tema → Genel (`social_<key>` settings, http(s) only).
+   * They are listed in the footer after `socialLinks`; Discord also gets a menu button.
+   */
+  socialNetworks: [
+    { key: 'discord', label: 'Discord', placeholder: 'https://discord.gg/…' },
+    { key: 'x', label: 'X (Twitter)', placeholder: 'https://x.com/…' },
+    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/…' },
+    { key: 'telegram', label: 'Telegram', placeholder: 'https://t.me/…' },
+    { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@…' },
+  ],
+  /** Footer notice under the links (Admin → Tema → Genel can change it; empty restores this). */
+  disclaimer:
+    'Bu sitedeki çeviriler tanıtım amaçlıdır ve ticari bir amaç gütmez. Eserlerin tüm hakları yazarlarına ve yayıncılarına aittir; beğendiğin serilerin lütfen orijinal yayınını destekle.',
+  /** Static page the cookie notice links to (Admin → İçerik → Sayfalar), if it is published. */
+  privacyPage: 'gizlilik-politikasi',
 }
 
 export type ContentFormat = keyof typeof site.contentFormats

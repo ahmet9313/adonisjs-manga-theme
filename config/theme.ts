@@ -355,6 +355,13 @@ export const flags: Flag[] = [
   { key: 'search', label: 'Arama kutusu', group: 'header', default: true },
   { key: 'bell', label: 'Bildirim zili', group: 'header', default: true },
   {
+    key: 'nav_discord',
+    label: 'Discord düğmesi',
+    group: 'header',
+    default: true,
+    hint: 'Yalnız Tema → Genel → Sosyal bağlantılar altında Discord adresi girildiyse görünür.',
+  },
+  {
     key: 'scheme_switch',
     label: 'Ziyaretçi renk şemasını seçebilsin (Koyu / Açık / Sistem)',
     group: 'header',
@@ -371,6 +378,7 @@ export const flags: Flag[] = [
 
   { key: 'home_hero', label: 'Öne çıkan seri bannerı', group: 'home', default: true },
   { key: 'home_updates', label: '"Son Güncellenenler" listesi', group: 'home', default: true },
+  { key: 'home_announcements', label: '"Duyurular" (son 3 duyuru)', group: 'home', default: true },
   { key: 'home_popular', label: '"Popüler Seriler" şeridi', group: 'home', default: true },
   { key: 'home_genres', label: '"Türlere Göre Keşfet"', group: 'home', default: true },
   {
@@ -418,6 +426,21 @@ export const flags: Flag[] = [
   { key: 'footer', label: 'Alt bilgiyi göster', group: 'footer', default: true },
   { key: 'footer_social', label: 'Sosyal bağlantılar', group: 'footer', default: true },
   { key: 'footer_description', label: 'Site açıklaması', group: 'footer', default: true },
+  {
+    key: 'footer_pages',
+    label: 'Sayfa bağlantıları (Hakkımızda, S.S.S., Telif Hakkı …)',
+    group: 'footer',
+    default: true,
+    hint: 'Hangi sayfaların listeleneceği İçerik → Sayfalar bölümünde seçilir.',
+  },
+  { key: 'footer_disclaimer', label: 'Telif uyarısı', group: 'footer', default: true },
+  {
+    key: 'cookie_notice',
+    label: 'Çerez bildirimi',
+    group: 'footer',
+    default: true,
+    hint: 'Sayfanın altında küçük, kapatılabilir bir çubuk; ziyaretçi "Tamam" deyince bir yıl gösterilmez.',
+  },
 
   { key: 'bg_glow', label: 'Arka plan parıltıları', group: 'effects', default: true },
   { key: 'bg_dots', label: 'Noktalı desen', group: 'effects', default: true },

@@ -64,6 +64,7 @@
             @end
             <ul id="nav-{{ group.key }}" class="mt-1 space-y-0.5 pl-3" x-show="isGroupOpen('{{ group.key }}')">
               @each(item in group.items)
+                @if(!item.roles || item.roles.includes(me.role))
                 @let(active = item.exact ? request.url() === item.href : request.url().startsWith(item.href))
                 <li>
                   <a href="{{ item.href }}" {{ active ? 'aria-current=page' : '' }} class="admin-link">
@@ -72,6 +73,7 @@
                     @include('partials/admin/nav_badge')
                   </a>
                 </li>
+                @end
               @end
             </ul>
           </div>
