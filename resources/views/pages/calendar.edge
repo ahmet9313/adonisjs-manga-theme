@@ -53,7 +53,7 @@
             @each(series in item.planned)
             <li class="calendar-row">
               <a href="{{ seriesUrl(series) }}" class="calendar-row__cover" tabindex="-1" aria-hidden="true">
-                <img src="{{ thumbOf(series.coverImage, 160) }}" srcset="{{ srcsetOf(series.coverImage, [160, 320]) || null }}" sizes="48px" alt="" width="48" height="64" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
+                <img src="{{ thumbOf(series.coverImage, 160) }}" srcset="{{ srcsetOf(series.coverImage, [160, 320]) || '' }}" sizes="48px" alt="" width="48" height="64" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
                   @if(series.coverVeil)
                   data-veil="{{ series.coverVeil }}"
                   @end
@@ -123,7 +123,7 @@
             @each(series in group.series)
             <li class="calendar-row">
               <a href="{{ seriesUrl(series) }}" class="calendar-row__cover" tabindex="-1" aria-hidden="true">
-                <img src="{{ thumbOf(series.coverImage, 160) }}" srcset="{{ srcsetOf(series.coverImage, [160, 320]) || null }}" sizes="48px" alt="" width="48" height="64" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
+                <img src="{{ thumbOf(series.coverImage, 160) }}" srcset="{{ srcsetOf(series.coverImage, [160, 320]) || '' }}" sizes="48px" alt="" width="48" height="64" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
                   @if(series.coverVeil)
                   data-veil="{{ series.coverVeil }}"
                   @end

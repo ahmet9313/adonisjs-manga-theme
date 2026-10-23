@@ -11,7 +11,7 @@
     @if(series.coverVeil === 'blur')
     {{-- Blurred cover (cover_policy_service): "Göster" uncovers it on this page only. --}}
     <div class="series-hero__cover" x-data="{ shown: false }">
-      <img src="{{ thumbOf(series.coverImage, 640) }}" srcset="{{ srcsetOf(series.coverImage, [320, 640]) || null }}" sizes="(min-width: 1024px) 240px, 150px" alt="{{ series.title }} kapak görseli" width="460" height="644" decoding="async" fetchpriority="high" data-fallback="/images/no-cover.svg" data-veil="blur" :data-veil="shown ? null : 'blur'">
+      <img src="{{ thumbOf(series.coverImage, 640) }}" srcset="{{ srcsetOf(series.coverImage, [320, 640]) || '' }}" sizes="(min-width: 1024px) 240px, 150px" alt="{{ series.title }} kapak görseli" width="460" height="644" decoding="async" fetchpriority="high" data-fallback="/images/no-cover.svg" data-veil="blur" :data-veil="shown ? null : 'blur'">
       <div class="cover-veil cover-veil--action" x-show="!shown">
         @!component('components/icon', { name: 'eye-off', stroke: 1.8, class: 'cover-veil__icon' })
         <button type="button" class="btn btn--sm btn--secondary" @click="shown = true">Kapağı göster</button>
@@ -19,7 +19,7 @@
     </div>
     @else
     <div class="series-hero__cover">
-      <img src="{{ thumbOf(series.coverImage, 640) }}" srcset="{{ srcsetOf(series.coverImage, [320, 640]) || null }}" sizes="(min-width: 1024px) 240px, 150px" alt="{{ series.title }} kapak görseli" width="460" height="644" decoding="async" fetchpriority="high" data-fallback="/images/no-cover.svg">
+      <img src="{{ thumbOf(series.coverImage, 640) }}" srcset="{{ srcsetOf(series.coverImage, [320, 640]) || '' }}" sizes="(min-width: 1024px) 240px, 150px" alt="{{ series.title }} kapak görseli" width="460" height="644" decoding="async" fetchpriority="high" data-fallback="/images/no-cover.svg">
     </div>
     @end
 
