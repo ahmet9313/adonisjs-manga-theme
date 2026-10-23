@@ -6,6 +6,8 @@ import { roleNames, isRole } from '#config/roles'
 import { now, pageNumber, pageSize, searchText } from '#services/input_service'
 import settings from '#services/settings_service'
 import { invalidField } from '#services/upload_service'
+import moderation from '#services/moderation_service'
+import { muteDurations } from '#config/moderation'
 
 const userValidator = vine.compile(
   vine.object({
@@ -62,6 +64,7 @@ export default class UserController {
       member,
       roleList: settings.allRoles(),
       roleLabels: Object.fromEntries(settings.allRoles().map((role) => [role.key, role.label])),
+      mute: { durations: muteDurations, until: moderation.untilLabel(member.mutedUntil) },
     })
   }
 

@@ -101,18 +101,26 @@
                     </p>
                   </div>
 
-                  <template x-if="node && node.canDelete">
+                  <template x-if="node && (node.canDelete || canReport(node))">
                     <div class="relative -mr-1.5 -mt-1" x-data="dropdown" @keydown="onKeydown($event)" @click.outside="close()">
                       <button type="button" x-ref="button" @click="toggle()" class="btn btn--ghost btn--sm btn--icon" aria-label="Yorum seçenekleri" aria-expanded="false" :aria-expanded="open.toString()">
                         @!component('components/icon', { name: 'dots', class: 'btn__icon' })
                       </button>
                       <div x-ref="panel" x-cloak x-show="open" x-transition.origin.top.right.duration.120ms class="menu absolute right-0 top-full z-10 mt-1 w-48">
-                        <form @submit.prevent="close(); remove(node.id)" data-confirm="Yorum kalıcı olarak silinecek. Yanıtları varsa yerinde “Bu yorum silindi.” yazar." data-confirm-title="Yorum silinsin mi?" data-confirm-label="Sil">
-                          <button type="submit" class="menu__item menu__item--danger">
-                            @!component('components/icon', { name: 'trash' })
-                            Yorumu sil
+                        <template x-if="canReport(node)">
+                          <button type="button" class="menu__item" @click="close(true); report(node)">
+                            @!component('components/icon', { name: 'flag' })
+                            Şikâyet et
                           </button>
-                        </form>
+                        </template>
+                        <template x-if="node.canDelete">
+                          <form @submit.prevent="close(); remove(node.id)" data-confirm="Yorum kalıcı olarak silinecek. Yanıtları varsa yerinde “Bu yorum silindi.” yazar." data-confirm-title="Yorum silinsin mi?" data-confirm-label="Sil">
+                            <button type="submit" class="menu__item menu__item--danger">
+                              @!component('components/icon', { name: 'trash' })
+                              Yorumu sil
+                            </button>
+                          </form>
+                        </template>
                       </div>
                     </div>
                   </template>

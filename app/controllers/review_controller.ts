@@ -6,6 +6,8 @@ import reviews, { isReviewSort } from '#services/review_service'
 import { pageNumber } from '#services/input_service'
 import { recordAttempt, tooManyAttempts } from '#services/throttle'
 import access from '#services/access_service'
+import moderation from '#services/moderation_service'
+import wordFilter from '#services/word_filter_service'
 
 const saveValidator = vine.compile(
   vine.object({
@@ -53,10 +55,14 @@ export default class ReviewController {
 
   async store({ request, auth, response }: HttpContext) {
     const user = auth.user!
+    const muted = moderation.muteError(user)
+    if (muted) return response.forbidden({ error: muted })
     const key = `review:${user.id}`
     if (tooManyAttempts(key, 8))
       return response.tooManyRequests({ error: 'Çok hızlı işlem yapıyorsun. Biraz bekle.' })
     const data = await request.validateUsing(saveValidator)
+    const blocked = wordFilter.check('review', data.title, data.body)
+    if (blocked) return response.unprocessableEntity({ error: blocked })
     const series = await SeriesModel.find(data.series_id)
     if (!series || !access.visible(user, { series }))
       return response.notFound({ error: 'Seri bulunamadı' })

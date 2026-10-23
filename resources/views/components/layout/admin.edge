@@ -69,6 +69,7 @@
                   <a href="{{ item.href }}" {{ active ? 'aria-current=page' : '' }} class="admin-link">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false"><path stroke-linecap="round" stroke-linejoin="round" d="{{ item.icon }}"/></svg>
                     {{ item.label }}
+                    @include('partials/admin/nav_badge')
                   </a>
                 </li>
               @end

@@ -1,0 +1,7 @@
+{{-- Counter after an admin nav label (config/admin_nav.ts → badge), e.g. open reports. Needs `item`. --}}
+@if(item.badge)
+@let(badgeCount = await navBadge(item.badge))
+@if(badgeCount)
+<span class="admin-link__count t-num" title="{{ badgeCount }} açık bildirim">{{ badgeCount > 99 ? '99+' : badgeCount }}<span class="sr-only"> açık bildirim</span></span>
+@end
+@end

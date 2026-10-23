@@ -7,6 +7,7 @@ import { staffRoles, isRole, type Role } from '#config/roles'
 import settings from '#services/settings_service'
 import { onlineMinutes } from '#config/rewards'
 import { levelFor, isRecent } from '#services/level'
+import { now } from '#services/input_service'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email', 'username'],
@@ -76,6 +77,13 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare profileLikeCount: number
 
+  /** Until when the member may not write comments or reviews (Admin → Moderasyon). */
+  @column({
+    consume: (value) =>
+      value instanceof Date ? value.toISOString().slice(0, 19).replace('T', ' ') : value,
+  })
+  declare mutedUntil: string | null
+
   @column()
   declare createdAt: string
 
@@ -96,6 +104,11 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   get level() {
     return levelFor(this.exp || 0).level
+  }
+
+  /** True while a mute runs; `muted_until` is 'YYYY-MM-DD HH:MM:SS' UTC like input_service.now. */
+  get isMuted() {
+    return Boolean(this.mutedUntil && String(this.mutedUntil) > now())
   }
 
   get isOnline() {

@@ -1,6 +1,6 @@
 import { csrfToken } from './library.js'
 import { tierOf, toast } from './shared.js'
-import { shortTime, stamp, timeAgo } from './comments.js'
+import { flash, shortTime, stamp, timeAgo } from './comments.js'
 
 const emptyForm = () => ({
   rating: 0,
@@ -90,6 +90,7 @@ export default function reviewSection() {
         this.hasMore = data.hasMore
         if (data.summary) this.summary = data.summary
         if (page === 1 && 'mine' in data) this.setMine(data.mine)
+        if (page === 1) this.showLinked()
       } catch {
         this.loadError = 'İncelemeler yüklenemedi. Bağlantını kontrol edip tekrar dene.'
       }
@@ -219,6 +220,23 @@ export default function reviewSection() {
         form.error = 'Sunucuya ulaşılamadı.'
         form.busy = false
       }
+    },
+
+    /** Opens the report dialog (partials/report/dialog.edge) for someone else's review. */
+    report(item) {
+      this.$dispatch('open-report', {
+        type: 'review',
+        id: item.id,
+        set: 'content',
+        label: `@${item.author.username} kişisinin incelemesi`,
+      })
+    },
+
+    /** A link to #inceleme-<id> (e.g. from the moderation page) points at that review. */
+    showLinked() {
+      const match = /^#inceleme-(\d+)$/.exec(window.location.hash)
+      if (match && this.items.some((item) => String(item.id) === match[1]))
+        this.$nextTick(() => flash(document.getElementById(`inceleme-${match[1]}`)))
     },
 
     /** Deletes a review; the confirmation dialog (form data-confirm) has already asked. */

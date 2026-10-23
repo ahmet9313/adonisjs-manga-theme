@@ -11,6 +11,8 @@ import type User from '#models/user'
 import type { Scheme } from '#config/theme'
 import { coverView, type CoverSource } from '#services/cover_policy_service'
 import { variantSrcset, variantUrl } from '#services/media_service'
+import { reportNoteMax, reportReasons } from '#config/moderation'
+import moderation from '#services/moderation_service'
 
 edge.global('site', site)
 edge.global('adminNav', adminNav)
@@ -149,3 +151,6 @@ edge.global('visualStyle', (visual: { css?: string; img?: string } | null) => {
   if (visual.img) return `background-image: url("${encodeURI(visual.img)}")`
   return visual.css || ''
 })
+/** Reports and moderation: reasons for the report dialog and admin nav counters. */
+edge.global('reportConfig', { reasons: reportReasons, noteMax: reportNoteMax })
+edge.global('navBadge', (key: string) => moderation.navBadge(key))

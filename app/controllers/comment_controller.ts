@@ -10,6 +10,8 @@ import { refundAttempt, takeAttempt } from '#services/throttle'
 import cosmetics from '#services/cosmetic_service'
 import access from '#services/access_service'
 import type User from '#models/user'
+import moderation from '#services/moderation_service'
+import wordFilter from '#services/word_filter_service'
 
 export const commentImageRules = { size: '8mb', extnames: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }
 const maxBody = 1000
@@ -74,11 +76,15 @@ export default class CommentController {
 
   async store({ request, auth, response }: HttpContext) {
     const user = auth.user!
+    const muted = moderation.muteError(user)
+    if (muted) return response.forbidden({ error: muted })
     const data = await request.validateUsing(commentValidator)
     const body = data.body ?? ''
     const file = request.file('image', commentImageRules)
     if (!body && !file && !data.sticker_id)
       return response.unprocessableEntity({ error: 'Bir şey yaz, görsel ya da çıkartma ekle.' })
+    const blocked = wordFilter.check('comment', body)
+    if (blocked) return response.unprocessableEntity({ error: blocked })
     // Counted at once (not after the image is saved), so parallel posts cannot slip through;
     // a post refused further down gives its attempt back.
     const key = `comment:${user.id}`
