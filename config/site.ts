@@ -77,6 +77,17 @@ const site = {
     members: { label: 'Üyelere özel', chapterLabel: 'Üyelere özel', icon: 'user' },
     vip: { label: "VIP'lere özel", chapterLabel: "VIP'lere özel", icon: 'star' },
   },
+  /**
+   * Reading statuses of a saved series (`bookmarks.status`, reading_list_service). `video` is the
+   * wording for video series. The first one is the default when a series is saved.
+   */
+  libraryStatuses: {
+    reading: { label: 'Okuyorum', video: 'İzliyorum', icon: 'book-open' },
+    plan: { label: 'Daha sonra okuyacağım', video: 'Daha sonra izleyeceğim', icon: 'clock' },
+    completed: { label: 'Bitirdim', video: 'Bitirdim', icon: 'check-circle' },
+    on_hold: { label: 'Beklemede', video: 'Beklemede', icon: 'pause' },
+    dropped: { label: 'Bıraktım', video: 'Bıraktım', icon: 'x-circle' },
+  },
   adminPageSizes: [10, 20, 30, 50, 100],
   /**
    * The three kinds of content a type can be (`content_types.format`, chosen under Admin →
@@ -162,6 +173,8 @@ export type AgePolicy = 'none' | 'warn' | 'members'
 export const agePolicyKeys: AgePolicy[] = ['none', 'warn', 'members']
 export type AccessLevel = keyof typeof site.accessLevels
 export const accessLevelKeys = Object.keys(site.accessLevels) as AccessLevel[]
+export type LibraryStatus = keyof typeof site.libraryStatuses
+export const libraryStatusKeys = Object.keys(site.libraryStatuses) as LibraryStatus[]
 
 export const contentFormatKeys = Object.keys(site.contentFormats) as ContentFormat[]
 

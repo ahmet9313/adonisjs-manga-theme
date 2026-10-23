@@ -40,6 +40,9 @@ router
   .group(() => {
     router.post('/kaydet', [LibraryController, 'toggle']).as('library.toggle')
     router.post('/kaldir', [LibraryController, 'remove']).as('library.remove')
+    router.post('/durum', [LibraryController, 'status']).as('library.status')
+    router.post('/okundu', [LibraryController, 'markChapter']).as('library.read')
+    router.post('/okundu/tumu', [LibraryController, 'markAll']).as('library.readAll')
     router.post('/aktar', [LibraryController, 'import']).as('library.import')
   })
   .prefix('/kutuphane')

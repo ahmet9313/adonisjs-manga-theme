@@ -3,14 +3,15 @@
   (bookmarks.js) with the same classes as components/series/card. Members get their list in
   data-items (compact JSON, rendered by the server); guests have no data-items attribute and
   read localStorage. "Hepsini kaldır" asks first through the shared confirm dialog (data-confirm).
+  Status tabs ("Tümü", "Okuyorum" …, config/site.ts → libraryStatuses) filter the grid.
 --}}
 @component('components/layout/main', { title: 'Kaydedilenler' })
 
 @slot('main')
   @if(items)
-  <div x-data="bookmarkPage" data-items="{{ JSON.stringify(items) }}" data-video-types="{{ JSON.stringify(videoTypes || []) }}">
+  <div x-data="bookmarkPage" data-items="{{ JSON.stringify(items) }}" data-video-types="{{ JSON.stringify(videoTypes || []) }}" data-statuses="{{ JSON.stringify(statuses) }}">
   @else
-  <div x-data="bookmarkPage" data-video-types="{{ JSON.stringify(videoTypes || []) }}">
+  <div x-data="bookmarkPage" data-video-types="{{ JSON.stringify(videoTypes || []) }}" data-statuses="{{ JSON.stringify(statuses) }}">
   @end
     @component('components/ui/page_header', { title: 'Kaydedilenler', description: items ? 'Kaydettiğin seriler hesabında saklanır; her cihazda aynı listeyi görürsün.' : 'Kaydettiğin seriler ve kaldığın bölümler.' })
       <p class="mt-2 text-sm font-semibold text-(--t-text-2) t-num" x-cloak x-show="bookmarks.length > 0" x-text="summary"></p>
@@ -61,9 +62,27 @@
       @end
     </div>
 
+    {{-- Status tabs: buttons that filter in the browser (aria-pressed), with counts --}}
+    <div class="bookmark-filter" x-cloak x-show="bookmarks.length > 0" role="group" aria-label="Okuma durumuna göre süz" data-bookmarks-filter>
+      <button type="button" class="chip" @click="setFilter('all')" :aria-pressed="(filter === 'all').toString()">
+        Tümü <span class="chip__count t-num" x-text="countOf('all')"></span>
+      </button>
+      @each(status in statuses)
+      <button type="button" class="chip" data-key="{{ status.key }}" @click="setFilter($el.dataset.key)" :aria-pressed="(filter === $el.dataset.key).toString()">
+        {{ status.label }} <span class="chip__count t-num" x-text="countOf($el.parentElement.dataset.key)"></span>
+      </button>
+      @end
+    </div>
+
+    <div x-cloak x-show="bookmarks.length > 0 && visible.length === 0" class="bookmark-filter__empty">
+      @component('components/ui/empty_state', { icon: 'bookmark', title: 'Bu durumda seri yok', description: 'Seri sayfasında Kaydet düğmesinin yanındaki oktan durumu değiştirebilirsin.' })
+        <button type="button" class="btn btn--secondary btn--md" @click="setFilter('all')">Tümünü göster</button>
+      @end
+    </div>
+
     {{-- Grid: the markup of components/series/card, drawn by Alpine --}}
-    <ul class="series-grid" x-cloak x-show="bookmarks.length > 0" aria-label="Kaydedilen seriler">
-      <template x-for="item in bookmarks" :key="item.key">
+    <ul class="series-grid" x-cloak x-show="visible.length > 0" aria-label="Kaydedilen seriler">
+      <template x-for="item in visible" :key="item.key">
         <li class="series-card bookmark-card">
           <a :href="seriesUrl(item)" class="series-card__cover" tabindex="-1" aria-hidden="true">
             <img :src="cover(item)" :data-veil="item.coverVeil === 'blur' ? 'blur' : null" alt="" width="300" height="400" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
@@ -83,6 +102,7 @@
           <div class="series-card__body">
             <h2 class="series-card__title"><a :href="seriesUrl(item)" x-text="item.title"></a></h2>
             <p class="series-card__meta">
+              <span class="bookmark-card__status" x-text="statusLabel(item)"></span>
               <span x-text="progressText(item)"></span>
               <span x-show="hasNew(item)" class="sr-only">, yeni bölüm var</span>
             </p>

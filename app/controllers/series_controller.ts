@@ -2,6 +2,7 @@ import { buildPaginationPages, pageNumber, filterValues, searchText } from '#ser
 import type { HttpContext } from '@adonisjs/core/http'
 import seriesService from '#services/series_service'
 import library from '#services/library_service'
+import readingList from '#services/reading_list_service'
 import reviews, { ratingLabels } from '#services/review_service'
 import Author from '#models/author'
 import Artist from '#models/artist'
@@ -129,6 +130,7 @@ export default class SeriesController {
       similar,
       reading,
       savers,
+      markable: readingList.markable(auth.user, series, chapters),
       commentThread: { seriesId: series.id, chapterId: null },
       teamCredits: await teamService.seriesCredits(series.id),
       reviewConfig: {

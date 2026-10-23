@@ -34,16 +34,33 @@ export function readLocal(type, slug) {
   }
 }
 
-export function markLocal(type, slug, number) {
+/** Adds chapters to the local history in the given order (the last one becomes the latest). */
+export function markLocal(type, slug, ...numbers) {
   try {
-    const chapters = readLocal(type, slug).chapters.filter((item) => item !== number)
-    chapters.push(number)
+    const chapters = readLocal(type, slug).chapters.filter((item) => !numbers.includes(item))
+    chapters.push(...numbers)
     window.localStorage.setItem(
       readKey(type, slug),
       JSON.stringify({ chapters: chapters.slice(-5000), at: Date.now() })
     )
+    return true
   } catch {
     /* Storage may be disabled by the browser. */
+    return false
+  }
+}
+
+/** "Okunmadı olarak işaretle" for guests. */
+export function unmarkLocal(type, slug, number) {
+  try {
+    const chapters = readLocal(type, slug).chapters.filter((item) => item !== number)
+    window.localStorage.setItem(
+      readKey(type, slug),
+      JSON.stringify({ chapters, at: Date.now() })
+    )
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -58,7 +75,10 @@ export function readingTracker() {
   }
 }
 
-/** "Okumaya devam et" button on the series page. */
+/**
+ * "Okumaya devam et" button on the series page. Follows `reading-changed` ({ last }) from the
+ * chapter list when chapters are marked read or unread there.
+ */
 export function continueReading() {
   return {
     last: null,
@@ -69,10 +89,28 @@ export function continueReading() {
       Object.assign(this, { type: config.type, slug: config.slug })
       this.last = isAccount() ? config.last : readLocal(config.type, config.slug).last
       if (this.last !== null && !config.chapters.includes(this.last)) this.last = null
+      this.onChange = (event) => {
+        const last = event.detail?.last ?? null
+        this.last = last !== null && config.chapters.includes(last) ? last : null
+      }
+      window.addEventListener('reading-changed', this.onChange)
+    },
+    destroy() {
+      window.removeEventListener('reading-changed', this.onChange)
     },
     get href() {
       return `/series/${encodeURIComponent(this.type)}/${encodeURIComponent(this.slug)}/${this.last}`
     },
+  }
+}
+
+/** Reading status saved with a guest bookmark (bookmarks.js); older copies have none. */
+function storedStatus(key) {
+  try {
+    const status = JSON.parse(window.localStorage.getItem(key))?.status
+    return typeof status === 'string' ? status : 'reading'
+  } catch {
+    return 'reading'
   }
 }
 
@@ -88,7 +126,7 @@ export function librarySync() {
           const key = window.localStorage.key(i)
           const [prefix, type, slug] = key?.split(':') || []
           if (!type || !slug) continue
-          if (prefix === 'bookmark') bookmarks.push({ type, slug })
+          if (prefix === 'bookmark') bookmarks.push({ type, slug, status: storedStatus(key) })
           else if (prefix === 'read') {
             const { chapters } = readLocal(type, slug)
             if (chapters.length) reads.push({ type, slug, chapters: chapters.slice(-5000) })

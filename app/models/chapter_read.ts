@@ -19,4 +19,8 @@ export default class ChapterRead extends BaseModel {
   /** Page last seen in the chapter (1-based); null when unknown. */
   @column()
   declare lastPage: number | null
+
+  /** Marked read by hand (not opened); see migration 0025. */
+  @column({ consume: (value) => Boolean(value) })
+  declare marked: boolean
 }

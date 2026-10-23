@@ -7,6 +7,8 @@ import ContentType from '#models/content_type'
 import { now } from '#services/input_service'
 import { coverView, type CoverSource } from '#services/cover_policy_service'
 import access from '#services/access_service'
+import readingList from '#services/reading_list_service'
+import type { LibraryStatus } from '#config/site'
 
 /** Most chapters one library hand-over may write (see importLocal). */
 const importLimit = 5000
@@ -26,12 +28,15 @@ function veiled(series: CoverSource) {
 
 export interface ReadingState {
   bookmarked: boolean
+  /** Reading status of the bookmark (config/site.ts → libraryStatuses), null when not saved. */
+  status: LibraryStatus | null
   read: number[]
   last: number | null
 }
 
 export interface LibraryImport {
-  bookmarks?: { type: string; slug: string }[]
+  /** `status` is checked here; anything unknown becomes "reading". */
+  bookmarks?: { type: string; slug: string; status?: string }[]
   reads?: { type: string; slug: string; chapters: number[] }[]
 }
 
@@ -62,25 +67,36 @@ class LibraryService {
         .select('chapters.number'),
     ])
     const read = reads.map((row) => Number(row.number))
-    return { bookmarked: Boolean(bookmark), read, last: read[0] ?? null }
+    return {
+      bookmarked: Boolean(bookmark),
+      status: bookmark?.status ?? null,
+      read,
+      last: read[0] ?? null,
+    }
   }
 
-  /** Returns true when this is the reader's first visit to the chapter. */
+  /**
+   * Returns true when this is the reader's first visit to the chapter (it earns the read
+   * reward). A chapter only marked read by hand counts as unvisited until it is opened; one
+   * opened before and marked unread later never counts again (reading_list_service).
+   */
   async recordRead(userId: number, seriesId: number, chapterId: number) {
     const readAt = now()
     const existing = await ChapterRead.query().where({ userId, chapterId }).first()
     if (existing) {
-      existing.merge({ seriesId, readAt })
+      const handMarked = existing.marked
+      existing.merge({ seriesId, readAt, marked: false })
       await existing.save()
-      return false
+      if (!handMarked) return false
+    } else {
+      try {
+        await ChapterRead.create({ userId, chapterId, seriesId, readAt })
+      } catch {
+        // A parallel request inserted the same row first; the unique index already holds it.
+        return false
+      }
     }
-    try {
-      await ChapterRead.create({ userId, chapterId, seriesId, readAt })
-      return true
-    } catch {
-      // A parallel request inserted the same row first; the unique index already holds it.
-      return false
-    }
+    return !(await readingList.wasUnmarked(userId, chapterId))
   }
 
   /** Reading history: one row per series, most recently read first. */
@@ -177,8 +193,9 @@ class LibraryService {
       for (const row of rows)
         if (!lastRead.has(row.series_id)) lastRead.set(row.series_id, Number(row.number))
     }
-    return bookmarks.map(({ series }) => ({
+    return bookmarks.map(({ series, status }) => ({
       key: `bookmark:${series.contentType.slug}:${series.slug}`,
+      status,
       type: series.contentType.slug,
       slug: series.slug,
       title: series.title,
@@ -254,19 +271,26 @@ class LibraryService {
         )
         .select('series_id')
       const saved = new Set(savedRows.map((row) => row.series_id as number))
+      // A series the account saved already keeps its own status.
       const newBookmarks = (data.bookmarks || [])
-        .map((item) => find(item.type, item.slug)?.id)
-        .filter((id): id is number => {
-          if (!id || saved.has(id)) return false
-          saved.add(id)
+        .map((item) => ({
+          id: find(item.type, item.slug)?.id,
+          status: readingList.isStatus(item.status) ? item.status : 'reading',
+        }))
+        .filter((item): item is { id: number; status: LibraryStatus } => {
+          if (!item.id || saved.has(item.id)) return false
+          saved.add(item.id)
           return true
         })
       if (newBookmarks.length) {
-        await trx
-          .table('bookmarks')
-          .insert(
-            newBookmarks.map((id) => ({ user_id: userId, series_id: id, created_at: timestamp }))
-          )
+        await trx.table('bookmarks').insert(
+          newBookmarks.map(({ id, status }) => ({
+            user_id: userId,
+            series_id: id,
+            status,
+            created_at: timestamp,
+          }))
+        )
         bookmarks = newBookmarks.length
       }
 
@@ -303,6 +327,9 @@ class LibraryService {
           series_id: target.id,
           chapter_id: chapter.id,
           read_at: new Date(base + index * 1000).toISOString().slice(0, 19).replace('T', ' '),
+          // The browser's list cannot be verified (and guests can mark chapters by hand), so
+          // imported chapters count like hand-made marks: no badges until they are opened.
+          marked: true,
         }))
         for (let start = 0; start < rows.length; start += 200)
           await trx.table('chapter_reads').insert(rows.slice(start, start + 200))

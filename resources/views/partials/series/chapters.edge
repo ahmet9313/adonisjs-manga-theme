@@ -2,15 +2,19 @@
   Chapter list. Rows are rendered on the server (newest first, the first 10 visible) so the list
   works before JavaScript; chapterList (chapter_list.js) searches, flips the order, expands the
   list and marks read (video series: watched) chapters (account: data-progress, guest: localStorage).
+  The check button of a row and "Tümünü okundu işaretle" (partials/series/mark_all) mark chapters
+  by hand; only `markable` chapters (published, open to the visitor) get them.
 --}}
 @let(latestChapter = chapters.length ? chapters[0] : null)
 @let(oldestChapter = chapters.length ? chapters[chapters.length - 1] : null)
 @let(readNumbers = reading && reading.read ? reading.read : [])
 @let(lastRead = reading ? reading.last : null)
 @let(freshSince = Date.now() - 7 * 86400000)
+@let(markableSet = new Set(markable || []))
 <section id="bolumler" class="section" aria-labelledby="bolumler-title"
   x-data="chapterList"
-  data-progress="{{ JSON.stringify({ type: series.type, slug: series.slug, read: reading ? reading.read : null }) }}"
+  data-progress="{{ JSON.stringify({ type: series.type, slug: series.slug, read: reading ? reading.read : null, markable: markable || [] }) }}"
+  data-mark-labels="{{ JSON.stringify(isVideo ? { mark: 'İzlendi işaretle', unmark: 'İzlenmedi olarak işaretle', done: 'bölüm izlendi olarak işaretlendi.', failed: 'İşaretlenemedi. Bağlantını kontrol edip tekrar dene.' } : { mark: 'Okundu işaretle', unmark: 'Okunmadı olarak işaretle', done: 'bölüm okundu olarak işaretlendi.', failed: 'İşaretlenemedi. Bağlantını kontrol edip tekrar dene.' }) }}"
   data-chapters="{{ JSON.stringify(chapters.map(c => ({ number: c.number, title: c.title ? 'Bölüm ' + c.number + ' - ' + c.title : 'Bölüm ' + c.number, timeAgo: c.timeAgo }))) }}">
   <div class="section-head">
     <div class="min-w-0">
@@ -23,8 +27,8 @@
       <p class="section-head__desc">Son bölüm: Bölüm {{ latestChapter.number }} · {{ latestChapter.timeAgo }}</p>
       @end
     </div>
-    @if(chapters.length > 1)
     <div class="flex flex-wrap gap-1.5">
+      @if(chapters.length > 1)
       <a href="{{ seriesUrl }}/{{ oldestChapter.number }}" class="btn btn--ghost btn--sm">
         @!component('components/icon', { name: 'arrow-left', class: 'btn__icon' })
         <span>İlk bölüm</span>
@@ -33,8 +37,9 @@
         <span>Son bölüm</span>
         @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
       </a>
+      @end
+      @include('partials/series/mark_all')
     </div>
-    @end
   </div>
 
   @if(chapters.length)
@@ -97,6 +102,13 @@
           @end
           <span class="chapter-row__time">{{ chapter.timeAgo }}</span>
         </a>
+        @if(markableSet.has(chapter.number))
+        <button type="button" class="chapter-row__toggle" x-cloak @click="toggleRead({{ index }})"
+          aria-pressed="{{ rowState ? 'true' : 'false' }}" :aria-pressed="isRead(allChapters[{{ index }}]).toString()"
+          aria-label="Bölüm {{ chapter.number }} {{ isVideo ? 'izlendi' : 'okundu' }}" :title="markLabel({{ index }})">
+          @!component('components/icon', { name: 'check-circle', stroke: 2 })
+        </button>
+        @end
       </li>
       @end
     </ol>
