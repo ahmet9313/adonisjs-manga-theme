@@ -1,0 +1,52 @@
+{{--
+  Setup wizard layout (/kurulum, install_controller). The database may not have any tables yet,
+  so nothing here reads settings, the session user or async globals; flash messages are shown
+  at the top of the card. Props: title, steps and current (the progress list). Slot: main (the
+  step's card body).
+--}}
+@let(scheme = schemeOf(request))
+<!DOCTYPE html>
+<html lang="{{ site.language }}" data-theme="{{ scheme }}"{{{ themeAttrs() }}}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <meta name="csrf-token" content="{{ csrfToken || '' }}">
+  <title>{{ title }} — {{ site.name }}</title>
+  {{{ themeMeta(scheme) }}}
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="site-bg install-page">
+  <a href="#main" class="skip-link">İçeriğe atla</a>
+  <main id="main" class="install">
+    <header class="install__brand">
+      <span class="logo__mark" aria-hidden="true">{{ site.name.charAt(0).toUpperCase() }}</span>
+      <div>
+        <p class="install__name">{{ site.name }}</p>
+        <p class="install__tag">Kurulum sihirbazı</p>
+      </div>
+    </header>
+
+    @include('partials/install/steps')
+
+    <section class="panel install__card">
+      @if(flashMessages.has('success'))
+      @component('components/ui/alert', { tone: 'success', title: flashMessages.get('success'), class: 'mb-5' })
+      @end
+      @end
+      @if(flashMessages.has('error'))
+      @component('components/ui/alert', { tone: 'danger', title: flashMessages.get('error'), class: 'mb-5' })
+      @end
+      @end
+      @if(flashMessages.has('errorsBag.E_VALIDATION_ERROR') || flashMessages.has('inputErrorsBag'))
+      @component('components/ui/alert', { tone: 'danger', title: 'Formda düzeltilmesi gereken alanlar var.', class: 'mb-5' })
+      @end
+      @end
+      {{{ await $slots.main() }}}
+    </section>
+
+    <p class="install__foot">Kurulum bitince bu sayfa kapanır; ayarların hepsi sonradan Yönetim panelinden değiştirilebilir.</p>
+  </main>
+</body>
+</html>

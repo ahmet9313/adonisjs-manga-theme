@@ -1209,10 +1209,11 @@ export default class SeriesSeeder extends BaseSeeder {
     }
 
     // 1. Seed content types
+    // Looked up by slug (unique): the setup wizard may have created "Manga" etc. already.
     const contentTypeMap = new Map<string, ContentType>()
     for (const name of ['manga', 'manhwa', 'manhua', 'novel', 'webtoon']) {
       const ct = await ContentType.firstOrCreate(
-        { name },
+        { slug: name },
         { name, slug: name, format: suggestedFormat(name) }
       )
       contentTypeMap.set(name, ct)
@@ -1225,10 +1226,11 @@ export default class SeriesSeeder extends BaseSeeder {
       for (const g of s.genres) allGenres.add(g)
     }
     for (const name of allGenres) {
-      const genre = await Genre.firstOrCreate(
-        { name },
-        { name, slug: slugify(name) || name.toLowerCase() }
-      )
+      // The setup wizard may have created the genre already, with a Turkish-aware slug.
+      const slug = slugify(name) || name.toLowerCase()
+      const genre =
+        (await Genre.query().where('name', name).orWhere('slug', slug).first()) ??
+        (await Genre.create({ name, slug }))
       genreMap.set(name, genre)
     }
 

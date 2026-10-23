@@ -32,4 +32,5 @@
 @import './pages/report.css';
 @import './pages/content.css';
 @import './pages/library.css';
+@import './pages/install.css';
 /* Admin panel styles are a separate file (resources/css/admin.css, layout/admin only). */

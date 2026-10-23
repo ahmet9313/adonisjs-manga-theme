@@ -1,0 +1,76 @@
+{{--
+  Wizard step 1 (/kurulum): system checks, the setup key (only from another machine) and the
+  database (pending migrations are applied with one button). Data: checks, blocked, allowed,
+  pending (migration names), migrationError.
+--}}
+@component('components/layout/install', { title, steps, current })
+
+@slot('main')
+  <h1 class="t-h1">Hoş geldin!</h1>
+  <p class="install__lead">Birkaç adımda siteni kuralım: sistem kontrolü, site bilgileri, yönetici hesabı ve istersen örnek içerik.</p>
+
+  <h2 class="install__section">Sistem kontrolü</h2>
+  <ul class="install-checks">
+    @each(check in checks)
+    <li class="install-checks__item" data-status="{{ check.status }}">
+      <span class="install-checks__icon" aria-hidden="true">
+        @!component('components/icon', { name: check.status === 'ok' ? 'check-circle' : check.status === 'warn' ? 'exclamation' : 'x-circle', class: 'h-5 w-5' })
+      </span>
+      <span class="install-checks__text">
+        <span class="install-checks__label">{{ check.label }}<span class="sr-only">: {{ check.status === 'ok' ? 'uygun' : check.status === 'warn' ? 'uyarı' : 'sorun' }}</span></span>
+        <span class="install-checks__detail">{{ check.detail }}</span>
+      </span>
+    </li>
+    @end
+  </ul>
+
+  @if(!allowed)
+  <h2 class="install__section">Kurulum anahtarı</h2>
+  <p class="install__hint">Siteyi sunucunun dışından açıyorsun. Sunucuyu başlattığın terminalde yazan 8 karakterlik anahtarı gir; böylece kurulumu yalnız sunucunun sahibi yapabilir.</p>
+  <form action="/kurulum/anahtar" method="POST" class="install__inline" data-submit-once>
+    {{ csrfField() }}
+    @!component('components/ui/field', { name: 'key', label: 'Kurulum anahtarı', required: true, maxlength: 16, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', class: 'flex-1', 'data-autofocus': true })
+    <button type="submit" class="btn btn--primary btn--md">Doğrula</button>
+  </form>
+  @else
+  <h2 class="install__section">Veritabanı</h2>
+  @if(migrationError)
+  @component('components/ui/alert', { tone: 'danger', title: 'Veritabanı durumu okunamadı' })
+    <p>{{ migrationError }}</p>
+  @end
+  @elseif(pending.length)
+  <p class="install__hint">Veritabanında {{ pending.length }} hazırlık adımı (migration) bekliyor. Mevcut veriler silinmez; yalnız eksik tablolar ve sütunlar eklenir.</p>
+  <form action="/kurulum/veritabani" method="POST" data-submit-once>
+    {{ csrfField() }}
+    <button type="submit" class="btn btn--secondary btn--md" {{ blocked ? 'disabled' : '' }}>
+      @!component('components/icon', { name: 'server', class: 'btn__icon' })
+      <span>Veritabanını hazırla</span>
+    </button>
+  </form>
+  @else
+  <p class="install__ok">
+    @!component('components/icon', { name: 'check-circle', class: 'h-5 w-5' })
+    <span>Veritabanı hazır.</span>
+  </p>
+  @end
+  @end
+
+  <div class="install__actions">
+    @if(allowed && !blocked && !pending.length && !migrationError)
+    <a href="/kurulum/site" class="btn btn--primary btn--lg">
+      <span>Devam et</span>
+      @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+    </a>
+    @else
+    <button type="button" class="btn btn--primary btn--lg" disabled>
+      <span>Devam et</span>
+      @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+    </button>
+    @end
+  </div>
+  @if(blocked)
+  <p class="install__hint">Kırmızı işaretli sorunlar giderilmeden kuruluma devam edilemez. Düzelttikten sonra sayfayı yenile.</p>
+  @end
+@end
+
+@end

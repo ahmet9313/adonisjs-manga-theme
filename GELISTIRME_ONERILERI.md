@@ -15,7 +15,8 @@ Site genelindeki tasarım sistemi (ilk plandaki merlintoon tarzı cam tema yerin
 | Yedekleme ve geri yükleme prosedürü | `npm run db:backup` tutarlı SQLite yedeği alır; görseller ve ortam anahtarı ayrıca korunmalı. | Otomatik zamanlanmış yedek (görseller dahil), geri yükleme provası, saklama süresi ve başarısızlık bildirimi. |
 | Üretim dağıtım tarifi | HTTPS, süreç yöneticisi ve kalıcı CONTENT_ROOT işletime göre ayarlanmalı. | Yeniden derleme/yeniden başlatma sonrası yüklemeler ve oturum akışı doğrulanmalı; kurulum sağlık kontrolü belgelenmeli. |
 | Windows/Linux + SQLite/MySQL CI matrisi | Doğrulamalar Linux/SQLite'ta yapılıyor; `start.ps1` ve MySQL düzenli denenmiyor (MySQL için `dateStrings`, `utf8mb4` ve imzalı oy sıralaması kodda düzeltildi ama çalıştırılmadı). | Her iki başlatıcıda `--check` eşdeğeri; MySQL 8 üzerinde migration, transaction, toplu bölüm, JSON araması ve uzun açıklama (`text` 64 KB sınırı) testleri. |
-| Boş kurulum tarayıcı senaryosu | Mevcut UI kontrolü demo Naruto ve novel verisine dayanıyor. | Sıfır serili ana sayfa, boş filtre sonuçları ve ilk seri/bölüm oluşturma ayrı fixture ile test edilmeli. |
+| Boş kurulum tarayıcı senaryosu | Kurulum sihirbazı (`/kurulum`) boş veritabanından yönetim paneline kadar elle ve işlevsel testlerle denendi. Otomatik tarayıcı testi (`test:ui`) hâlâ demo veriye dayanıyor. | Sihirbazın baştan sona ve sıfır serili ana sayfanın ayrı fixture ile otomatik tarayıcı testi. |
+| Kurulum sihirbazının devamı | Veritabanı türü (SQLite/MySQL) ve SMTP ayarı `.env` dosyasından okunur; sihirbaz bunları gösterir ama yazmaz. Örnek içerik işi süreç belleğinde çalışır. | `.env`'yi güvenle yazan bir "veritabanı ve e-posta" adımı ve ardından yeniden başlatma; örnek içerik işinin yeniden başlatmaya dayanıklı olması. |
 
 ## Öncelik 2 — Fansub iş akışı ve veri modeli
 

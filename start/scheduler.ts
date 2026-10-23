@@ -20,6 +20,9 @@ async function tick() {
   if (running) return
   running = true
   try {
+    // A site still in the setup wizard may have no tables yet.
+    const { default: install } = await import('#services/install_service')
+    if (!(await install.isInstalled())) return
     const { default: publishing } = await import('#services/publishing_service')
     await publishing.publishDue(new Date())
   } catch (error) {

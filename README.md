@@ -165,6 +165,20 @@ Başlatıcı Node.js sürümünü kontrol eder; desteklenen sistemlerde kurar, n
 
 Varsayılan adresler: [site](http://localhost:3333), [giriş](http://localhost:3333/giris), [kayıt](http://localhost:3333/kayit), [yönetim paneli](http://localhost:3333/admin). Port `.env` içindeki `PORT` ile değişir.
 
+### Kurulum sihirbazı (ilk açılış)
+
+Site ilk kez açıldığında, henüz yönetici hesabı yokken, WordPress'teki gibi kurulum sihirbazı başlar: bütün sayfalar `/kurulum` adresine yönlenir ve sunucu konsolu sihirbazın adresini yazar. Adımlar:
+
+1. **Başlangıç:** Node.js sürümü, veritabanı bağlantısı, içerik ve geçici klasörün yazılabilirliği, `sharp` ve e-posta ayarı denetlenir. Bekleyen migration varsa "Veritabanını hazırla" düğmesi onları uygular (veri silmez). Başlatıcı (`start.sh` / `start.ps1`) migration'ları zaten uyguladığı için genelde "Veritabanı hazır" yazar.
+2. **Site bilgileri:** Site adı, kısa açıklama, isteğe bağlı site adresi (alan adı belliyse) ve varsayılan renk şeması. Tema → Genel ile aynı ayarlardır.
+3. **Yönetici hesabı:** İlk yönetici oluşturulur (e-postası doğrulanmış sayılır) ve oturum açılır. Sihirbaz yalnız bir yönetici oluşturur; diğerleri Yönetim → Kullanıcılar'dan atanır.
+4. **İçerik:** "Temel içerik türleri ve türler" (Manga, Manhwa, Manhua, Webtoon, Novel, Anime ve 20 tür; önerilir, `config/install.ts`). Geliştirme modunda isteğe bağlı olarak örnek seriler ve demo topluluk arka planda yüklenir; ilerleme sayfada görünür.
+5. **Bitir:** Kurulum tamamlanır (`settings` → `installed_at`), sihirbaz kapanır ve yönetim paneli açılır.
+
+Sihirbaza sunucunun kendisinden (`localhost`, arada vekil sunucu olmadan) girilirse bir şey sorulmaz. Başka bir bilgisayardan ya da bir ters vekil (nginx vb.) üzerinden açılırsa, sunucu konsolunda yazan 8 karakterlik **kurulum anahtarı** istenir; böylece internete açık yeni bir sunucuyu sahibinden önce başkası kuramaz. Anahtar her sunucu başlangıcında yenilenir.
+
+Yöneticisi zaten olan bir veritabanı (bu sürümden önce kurulmuş siteler, `--seed` ile gelen demo yönetici) ilk istekte kendiliğinden "kurulu" sayılır; sihirbaz hiç görünmez. Sihirbaz kurulumdan sonra açılmaz (`/kurulum` ana sayfaya yönlenir). Kurulum durumu `app/services/install_service.ts`, yönlendirme `app/middleware/install_gate_middleware.ts` içindedir.
+
 Sistemde daha eski Node.js varsa terminalde `npm` komutlarını çalıştırmadan önce Node.js 24+ seçin. Windows taşınabilir kurulumunu mevcut terminalde kullanmak için:
 
 ```powershell

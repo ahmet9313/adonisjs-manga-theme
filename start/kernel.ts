@@ -37,6 +37,9 @@ server.use([
  * requests with a registered route.
  */
 router.use([
+  // Before installation every page leads to the setup wizard (/kurulum), and after it the
+  // wizard is gone; it needs no session or database, so it runs first.
+  () => import('#middleware/install_gate_middleware'),
   // Session and auth come first so `upload_gate` can refuse multipart bodies from guests
   // before the body parser writes them to disk; shield (CSRF) still needs the parsed body.
   () => import('@adonisjs/session/session_middleware'),

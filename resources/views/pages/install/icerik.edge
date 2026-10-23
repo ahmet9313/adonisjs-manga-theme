@@ -1,0 +1,72 @@
+{{--
+  Wizard step 4 (/kurulum/icerik): default content types and genres (recommended) and, outside
+  production, the sample series and the demo community. Sample data loads in the background;
+  installSeed (install.js) polls /kurulum/icerik/durum and reloads when it is done.
+  Data: canSeed, job (install_service.seedStatus()).
+--}}
+@component('components/layout/install', { title, steps, current })
+
+@slot('main')
+  <h1 class="t-h1">İçerik</h1>
+
+  @if(job.state === 'running')
+  <div class="install-job" x-data="installSeed" data-url="/kurulum/icerik/durum" role="status" aria-live="polite">
+    <span class="install-job__spinner" aria-hidden="true"></span>
+    <div>
+      <p class="install-job__title">Örnek içerik yükleniyor…</p>
+      <p class="install-job__step" x-text="step">{{ job.step }}</p>
+      <p class="install__hint">Bu bir iki dakika sürebilir; sayfa bitince kendiliğinden ilerler.</p>
+    </div>
+  </div>
+  @else
+  @if(job.state === 'done')
+  @component('components/ui/alert', { tone: 'success', title: 'Örnek içerik yüklendi.', class: 'mb-5' })
+  @end
+  @elseif(job.state === 'error')
+  @component('components/ui/alert', { tone: 'danger', title: 'Örnek içerik yüklenemedi', class: 'mb-5' })
+    <p>{{ job.error }}</p>
+  @end
+  @end
+  <p class="install__lead">Yönetim panelinden seri ekleyebilmek için en az bir içerik türü gerekir. İstersen siteyi denemek için örnek içerik de yükleyebilirsin.</p>
+
+  <form action="/kurulum/icerik" method="POST" class="install__form" data-submit-once>
+    {{ csrfField() }}
+    <label class="install-option">
+      <input type="checkbox" name="basics" value="on" checked>
+      <span>
+        <span class="install-option__title">Temel içerik türleri ve türler <span class="badge badge--sm" data-tone="accent">Önerilir</span></span>
+        <span class="install-option__text">Manga, Manhwa, Manhua, Webtoon, Novel ve Anime içerik türleri ile Aksiyon, Macera, Komedi, Dram, Fantastik gibi 20 tür.</span>
+      </span>
+    </label>
+
+    @if(canSeed)
+    <label class="install-option">
+      <input type="checkbox" name="series" value="on">
+      <span>
+        <span class="install-option__title">Örnek seriler</span>
+        <span class="install-option__text">Yer tutucu görselli 50'yi aşkın seri ve bölümleri. Yalnız denemek içindir; içerik klasörü boşken yüklenir.</span>
+      </span>
+    </label>
+    <label class="install-option">
+      <input type="checkbox" name="community" value="on">
+      <span>
+        <span class="install-option__title">Demo topluluk</span>
+        <span class="install-option__text">Örnek serilerle birlikte: 77 deneme hesabı, yorumlar, puanlar ve incelemeler (parola demo1234).</span>
+      </span>
+    </label>
+    @else
+    <p class="install__hint">Örnek içerik yalnız geliştirme modunda yüklenebilir; üretim sunucusunda gerçek içeriğini Yönetim panelinden eklersin.</p>
+    @end
+
+    <div class="install__actions">
+      <a href="/kurulum/yonetici" class="btn btn--ghost btn--lg">Geri</a>
+      <button type="submit" class="btn btn--primary btn--lg">
+        <span>Devam et</span>
+        @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+      </button>
+    </div>
+  </form>
+  @end
+@end
+
+@end

@@ -8,6 +8,7 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 
 const HomeController = () => import('#controllers/home_controller')
+const InstallController = () => import('#controllers/install_controller')
 const SeriesController = () => import('#controllers/series_controller')
 const AgeController = () => import('#controllers/age_controller')
 const ChapterController = () => import('#controllers/chapter_controller')
@@ -15,6 +16,24 @@ const MediaController = () => import('#controllers/media_controller')
 
 // Public routes
 router.get('/content/*', [MediaController, 'show']).as('content.show')
+// First-run setup wizard (config/install.ts); install_gate_middleware closes it once installed
+router
+  .group(() => {
+    router.get('/', [InstallController, 'welcome']).as('install.welcome')
+    router.post('/anahtar', [InstallController, 'verifyKey']).as('install.key')
+    router.post('/veritabani', [InstallController, 'migrate']).as('install.migrate')
+    router.get('/site', [InstallController, 'site']).as('install.site')
+    router.post('/site', [InstallController, 'saveSite']).as('install.site.save')
+    router.get('/yonetici', [InstallController, 'admin']).as('install.admin')
+    router.post('/yonetici', [InstallController, 'saveAdmin']).as('install.admin.save')
+    router.get('/icerik', [InstallController, 'content']).as('install.content')
+    router.post('/icerik', [InstallController, 'saveContent']).as('install.content.save')
+    router.get('/icerik/durum', [InstallController, 'seedStatus']).as('install.content.status')
+    router.get('/bitir', [InstallController, 'finish']).as('install.finish')
+    router.post('/bitir', [InstallController, 'complete']).as('install.complete')
+  })
+  .prefix('/kurulum')
+
 router.get('/', [HomeController, 'index']).as('home')
 router.get('/seriler', [SeriesController, 'index']).as('series.index')
 router.get('/ara', [SeriesController, 'search']).as('series.search')

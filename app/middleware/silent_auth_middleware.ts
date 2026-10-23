@@ -7,14 +7,17 @@ import progress from '#services/progress_service'
 import { now } from '#services/input_service'
 import { isRecent } from '#services/level'
 import { SESSION_STAMP, sessionStamp } from '#services/account_service'
+import { isWizardPath } from '#middleware/install_gate_middleware'
 
 /**
  * Loads the signed-in user (if any) so public pages can render the account menu, keeps the
  * "online" timestamp fresh and shares the menu summary with HTML pages. Banned accounts and
- * sessions from before a password/e-mail change are signed out.
+ * sessions from before a password/e-mail change are signed out. The setup wizard is skipped: its
+ * database may not have any tables yet.
  */
 export default class SilentAuthMiddleware {
   async handle(ctx: HttpContext, next: NextFn) {
+    if (isWizardPath(ctx.request.url())) return next()
     await Promise.all([cosmetics.ready(), settings.ready()])
     if (await ctx.auth.check()) {
       const user = ctx.auth.user!

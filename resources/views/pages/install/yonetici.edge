@@ -1,0 +1,40 @@
+{{--
+  Wizard step 3 (/kurulum/yonetici): the first administrator (same rules as registration; the
+  address counts as verified). Creating it signs the visitor in. Data: existing (user name of an
+  administrator made earlier, then the form is replaced by a note).
+--}}
+@component('components/layout/install', { title, steps, current })
+
+@slot('main')
+  <h1 class="t-h1">Yönetici hesabı</h1>
+  @if(existing)
+  <p class="install__lead">Yönetici hesabı hazır: <strong>{{ existing }}</strong>. Başka yöneticileri kurulumdan sonra Yönetim → Kullanıcılar'dan atayabilirsin.</p>
+  <div class="install__actions">
+    <a href="/kurulum/site" class="btn btn--ghost btn--lg">Geri</a>
+    <a href="/kurulum/icerik" class="btn btn--primary btn--lg">
+      <span>Devam et</span>
+      @!component('components/icon', { name: 'arrow-right', class: 'btn__icon' })
+    </a>
+  </div>
+  @else
+  <p class="install__lead">Siteyi yönetecek ilk hesabı oluştur. Bu hesapla yönetim paneline girer, seri ve bölüm ekler, diğer üyelere rol verirsin.</p>
+
+  <form action="/kurulum/yonetici" method="POST" class="install__form" data-submit-once>
+    {{ csrfField() }}
+    @!component('components/ui/field', { name: 'username', label: 'Kullanıcı adı', required: true, maxlength: 20, autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', placeholder: 'yonetici', hint: '3–20 karakter: harf, rakam ve alt çizgi. Profil adresin olur: /uye/kullanici-adi', 'data-autofocus': true })
+    @!component('components/ui/field', { name: 'email', type: 'email', label: 'E-posta adresi', required: true, maxlength: 255, autocomplete: 'email', autocapitalize: 'none', spellcheck: 'false', hint: 'Şifreni unutursan sıfırlama bağlantısı buraya gelir.' })
+    @!component('components/auth/password', { id: 'install-password', name: 'password', label: 'Parola', autocomplete: 'new-password', hint: 'En az 8 karakter. Tahmin edilmesi zor bir parola seç.' })
+    @!component('components/auth/password', { id: 'install-password-confirmation', name: 'password_confirmation', label: 'Parola (tekrar)', autocomplete: 'new-password' })
+
+    <div class="install__actions">
+      <a href="/kurulum/site" class="btn btn--ghost btn--lg">Geri</a>
+      <button type="submit" class="btn btn--primary btn--lg">
+        @!component('components/icon', { name: 'user-plus', class: 'btn__icon' })
+        <span>Hesabı oluştur</span>
+      </button>
+    </div>
+  </form>
+  @end
+@end
+
+@end

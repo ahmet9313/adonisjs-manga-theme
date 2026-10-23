@@ -1,0 +1,32 @@
+{{--
+  Wizard step 5 (/kurulum/bitir): summary and next steps; "Kurulumu tamamla" marks the site
+  installed and opens the admin panel. Data: siteName, job (sample content still loading blocks
+  the button).
+--}}
+@component('components/layout/install', { title, steps, current })
+
+@slot('main')
+  <h1 class="t-h1">Her şey hazır</h1>
+  <p class="install__lead"><strong>{{ siteName }}</strong> kurulmak üzere. Tamamladıktan sonra yönetim paneline yönlendirileceksin.</p>
+
+  <h2 class="install__section">Sonra yapabileceklerin</h2>
+  <ul class="install-next">
+    <li>Yönetim → Seriler'den ilk serini ekle; "Otomatik doldur" kapak ve bilgileri internetten getirir.</li>
+    <li>Yönetim → İçerik → Sayfalar'daki Hakkımızda, Gizlilik Politikası ve DMCA metinlerini kendi sitene göre düzenle.</li>
+    <li>Yönetim → Tema'dan logo, renkler ve sosyal bağlantıları (Discord…) ayarla.</li>
+    <li>E-postaların gerçekten gitmesi için <code>.env</code> dosyasına SMTP ayarlarını (<code>SMTP_HOST</code> …) ekle.</li>
+  </ul>
+
+  <form action="/kurulum/bitir" method="POST" data-submit-once>
+    {{ csrfField() }}
+    <div class="install__actions">
+      <a href="/kurulum/icerik" class="btn btn--ghost btn--lg">Geri</a>
+      <button type="submit" class="btn btn--primary btn--lg" {{ job.state === 'running' ? 'disabled' : '' }}>
+        @!component('components/icon', { name: 'check-circle', class: 'btn__icon' })
+        <span>Kurulumu tamamla</span>
+      </button>
+    </div>
+  </form>
+@end
+
+@end

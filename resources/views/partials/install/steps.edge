@@ -1,0 +1,19 @@
+{{--
+  Progress list of the setup wizard: `steps` ({ key, label }) and the `current` key from
+  install_controller. Earlier steps are marked done; the list is informative, not a menu.
+--}}
+@let(index = steps.findIndex((step) => step.key === current))
+<ol class="install-steps" aria-label="Kurulum adımları">
+  @each((step, i) in steps)
+  <li class="install-steps__item" data-state="{{ i < index ? 'done' : i === index ? 'current' : 'next' }}" {{{ i === index ? 'aria-current="step"' : '' }}}>
+    <span class="install-steps__dot" aria-hidden="true">
+      @if(i < index)
+      @!component('components/icon', { name: 'check', class: 'h-3.5 w-3.5' })
+      @else
+      {{ i + 1 }}
+      @end
+    </span>
+    <span class="install-steps__label">{{ step.label }}</span>
+  </li>
+  @end
+</ol>
