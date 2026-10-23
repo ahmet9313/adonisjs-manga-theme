@@ -354,6 +354,13 @@ export const flags: Flag[] = [
     default: true,
     hint: 'Kapalıyken herkes Renkler sayfasındaki varsayılan şemayı görür.',
   },
+  {
+    key: 'mobile_bottom_nav',
+    label: 'Telefonda alt gezinme çubuğu',
+    group: 'header',
+    default: true,
+    hint: '1024 px altında Ana Sayfa, Seriler, Kaydedilenler, Bildirimler ve Menü kısayolları.',
+  },
 
   { key: 'home_hero', label: 'Öne çıkan seri bannerı', group: 'home', default: true },
   { key: 'home_updates', label: '"Son Güncellenenler" listesi', group: 'home', default: true },
@@ -391,6 +398,12 @@ export const flags: Flag[] = [
   {
     key: 'team_credits',
     label: 'Çeviri ekibi (okuyucu başlığı, bölüm listesi, seri bilgileri)',
+    group: 'series',
+    default: true,
+  },
+  {
+    key: 'chapter_reactions',
+    label: '"Bölüm nasıldı?" tepkileri (bölüm sonunda)',
     group: 'series',
     default: true,
   },

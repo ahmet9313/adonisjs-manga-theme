@@ -8,6 +8,7 @@ import views from '#services/view_service'
 import teamService from '#services/team_service'
 import seo from '#services/seo_service'
 import readerService from '#services/reader_service'
+import reactions from '#services/reaction_service'
 
 export default class ChapterController {
   async show({ view, params, request, response, auth }: HttpContext) {
@@ -96,6 +97,7 @@ export default class ChapterController {
       readerAccount: accountPrefs,
       // "Kaldığın yer" only between the first and the last page.
       resumePage: resumePage && resumePage > 1 && resumePage < pageCount ? resumePage : null,
+      reactions: await reactions.summary(chapter.id, auth.user?.id ?? null),
       reward: reward
         ? {
             exp: reward.exp,
