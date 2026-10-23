@@ -78,6 +78,12 @@
       </div>
       @end
 
+      @if(ui('nav_discover'))
+      <a href="/rastgele" class="btn btn--ghost btn--md btn--icon max-lg:hidden" aria-label="Rastgele seri" title="Rastgele seri">
+        @!component('components/icon', { name: 'shuffle', class: 'btn__icon' })
+      </a>
+      @end
+
       @if(ui('scheme_switch'))
       <div class="hidden lg:block">
         @!component('components/ui/theme_switch')
@@ -115,10 +121,10 @@
       </div>
       @end
 
-      @if(links.length || site.recruitmentUrl)
+      @if(links.length || site.recruitmentUrl || ui('nav_discover'))
       <nav aria-label="Mobil menü">
         <ul class="grid gap-1">
-          @each(link in links)
+          @each(link in [...links, ...(ui('nav_discover') ? [{ href: '/seriler/a-z', label: 'A–Z Liste', icon: 'list', active: path.startsWith('/seriler/a-z') }, { href: '/rastgele', label: 'Rastgele Seri', icon: 'shuffle', active: false }] : [])])
           <li>
             <a href="{{ link.href }}" class="mobile-link" {{ link.active ? 'aria-current=page' : '' }} @click="mobileOpen = false">
               @!component('components/icon', { name: link.icon })

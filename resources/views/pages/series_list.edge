@@ -6,8 +6,9 @@
   arrow keys, a genre search that ignores diacritics and clean URLs. Its initial state comes from
   `data-config`.
   Contracts (tests): "<N> seri bulundu"; author/artist chips "<span …>Yazar:</span> <name>" with
-  people[].removeUrl; ids #filter-genre, #filter-status, #filter-type, #filter-sort; no
-  /series/<type>/<slug> link before the result grid (sort tests read the first occurrence).
+  people[].removeUrl; ids #filter-genre, #filter-status, #filter-type, #filter-more, #filter-sort;
+  no /series/<type>/<slug> link before the result grid (sort tests read the first occurrence).
+  Genre include/exclude, year range and minimum chapters: partials/catalog/* (discovery_service).
 --}}
 @component('components/layout/main', { title })
 
@@ -31,33 +32,49 @@
     type: filters.types,
     author: filters.authors,
     artist: filters.artists,
+    xgenre: filters.excludedGenres,
+    genre_mode: filters.genreMode === 'all' ? ['all'] : [],
+    year_from: filters.yearFrom ? [String(filters.yearFrom)] : [],
+    year_to: filters.yearTo ? [String(filters.yearTo)] : [],
+    min_chapters: filters.minChapters ? [String(filters.minChapters)] : [],
     order: currentSort.value ? [currentSort.value] : [],
   })
   @let(urlWith = (changes) => ((text) => text ? '/seriler?' + text : '/seriler')(new URLSearchParams(Object.entries(Object.assign({}, query, changes)).flatMap((entry) => entry[1].map((value) => [entry[0], value]))).toString()))
   @let(without = (key, value) => urlWith({ [key]: query[key].filter((item) => item !== value) }))
-  @let(clearUrl = urlWith({ search: [], genre: [], status: [], type: [], author: [], artist: [] }))
-  @let(hasFilters = Boolean(filters.search) || filters.genres.length + filters.statuses.length + filters.types.length + filters.authors.length + filters.artists.length > 0)
+  @let(clearUrl = urlWith({ search: [], genre: [], status: [], type: [], author: [], artist: [], xgenre: [], genre_mode: [], year_from: [], year_to: [], min_chapters: [] }))
+  @let(hasFilters = Boolean(filters.search || filters.yearFrom || filters.yearTo || filters.minChapters) || filters.genres.length + filters.excludedGenres.length + filters.statuses.length + filters.types.length + filters.authors.length + filters.artists.length > 0)
   @let(missingPeople = [
     ...filters.authors.filter((slug) => !people.some((person) => person.field === 'author' && person.slug === slug)).map((slug) => ({ label: 'Yazar', name: slug, href: without('author', slug) })),
     ...filters.artists.filter((slug) => !people.some((person) => person.field === 'artist' && person.slug === slug)).map((slug) => ({ label: 'Sanatçı', name: slug, href: without('artist', slug) })),
   ])
+  @let(yearChip = filters.yearFrom && filters.yearTo ? (filters.yearFrom === filters.yearTo ? String(filters.yearFrom) : filters.yearFrom + '–' + filters.yearTo) : filters.yearFrom ? filters.yearFrom + ' ve sonrası' : filters.yearTo + ' ve öncesi')
   @let(chips = [
     ...filters.genres.map((genre) => ({ label: 'Tür', name: genre, href: without('genre', genre) })),
+    ...(filters.genres.length > 1 && filters.genreMode === 'all' ? [{ label: 'Türler', name: 'hepsi birden (VE)', href: urlWith({ genre_mode: [] }) }] : []),
+    ...filters.excludedGenres.map((genre) => ({ label: 'Hariç', name: genre, href: without('xgenre', genre), exclude: true })),
+    ...(filters.yearFrom || filters.yearTo ? [{ label: 'Yıl', name: yearChip, href: urlWith({ year_from: [], year_to: [] }) }] : []),
+    ...(filters.minChapters ? [{ label: 'Bölüm', name: 'en az ' + filters.minChapters, href: urlWith({ min_chapters: [] }) }] : []),
     ...filters.statuses.map((status) => ({ label: 'Durum', name: status, href: without('status', status) })),
     ...filters.types.map((type) => ({ label: 'İçerik türü', name: typeLabel(type), href: without('type', type) })),
   ])
   @let(config = {
     genres: filters.genres,
+    excludedGenres: filters.excludedGenres,
+    genreMode: filters.genreMode === 'all' ? 'all' : '',
     statuses: filters.statuses,
     types: filters.types,
     order: currentSort.value,
     sorts: Object.fromEntries(sortOptions.map((option) => [option.value, option.label])),
   })
 
-  @!component('components/ui/page_header', {
+  @component('components/ui/page_header', {
     title: 'Seriler',
     description: Number(totalResults || 0).toLocaleString('tr-TR') + ' seri bulundu' + (totalPages > 1 && results.length ? ' · Sayfa ' + currentPage + ' / ' + totalPages : ''),
   })
+    @slot('actions')
+      @include('partials/catalog/header_links')
+    @end
+  @end
 
   <form method="GET" action="/seriler" role="search" aria-label="Serileri ara ve filtrele" class="catalog-filters"
         x-data="filterBar()" data-config="{{ JSON.stringify(config) }}"
@@ -79,41 +96,8 @@
       </div>
 
       <div class="catalog-toolbar__filters">
-        {{-- Tür (genre): multiple choice with its own search box. --}}
-        <details class="catalog-filter" data-menu="openGenre" :open="openGenre" @toggle="sync('openGenre', $el.open)" @click.outside="openGenre = false">
-          <summary class="catalog-filter__trigger" data-active="{{ filters.genres.length ? 'true' : 'false' }}" :data-active="String(selectedGenres.length > 0)">
-            @!component('components/icon', { name: 'tag', class: 'catalog-filter__icon' })
-            <span class="catalog-filter__name">Tür</span>
-            <span class="count" x-show="selectedGenres.length"
-              @if(!filters.genres.length)
-              style="display: none"
-              @end
-              ><span x-text="selectedGenres.length">{{ filters.genres.length }}</span><span class="sr-only"> seçili</span></span>
-            @!component('components/icon', { name: 'chevron-down', class: 'catalog-filter__chevron' })
-          </summary>
-          <div id="filter-genre" class="catalog-filter__panel catalog-filter__panel--wide">
-            <div class="catalog-filter__search" x-cloak>
-              <div class="control control--sm control--icon">
-                @!component('components/icon', { name: 'search' })
-                <input type="search" x-model="genreSearch" aria-label="Türlerde ara" placeholder="Tür ara" autocomplete="off" @keydown.enter.prevent>
-              </div>
-            </div>
-            <div role="group" aria-label="Türler" class="catalog-filter__options catalog-filter__options--grid">
-              @each(genre in genres)
-              <label class="catalog-option" data-genre="{{ genre }}" x-show="genreMatches($el.dataset.genre)">
-                <input type="checkbox" name="genre" value="{{ genre }}" x-model="selectedGenres" {{ filters.genres.includes(genre) ? 'checked' : '' }}>
-                <span>{{ genre }}</span>
-              </label>
-              @end
-            </div>
-            <p class="catalog-filter__empty" x-cloak x-show="!hasGenreMatch()">Eşleşen tür yok.</p>
-            <div class="catalog-filter__foot">
-              <span class="catalog-filter__picked" x-cloak x-show="selectedGenres.length"><span x-text="selectedGenres.length"></span> seçili</span>
-              <button type="button" class="btn btn--ghost btn--sm" x-cloak @click="selectedGenres = []" :disabled="!selectedGenres.length">Temizle</button>
-              <button type="submit" class="btn btn--primary btn--sm">Uygula</button>
-            </div>
-          </div>
-        </details>
+        {{-- Tür (genre): include / exclude chips with their own search box. --}}
+        @include('partials/catalog/genre_filter')
 
         {{-- Durum (status) --}}
         <details class="catalog-filter" data-menu="openStatus" :open="openStatus" @toggle="sync('openStatus', $el.open)" @click.outside="openStatus = false">
@@ -173,8 +157,11 @@
           </div>
         </details>
 
+        {{-- Yayın yılı, en az bölüm --}}
+        @include('partials/catalog/more_filters')
+
         {{-- Sırala: links, so a choice applies at once and keeps the other filters. --}}
-        <details class="catalog-filter" data-menu="openSort" :open="openSort" @toggle="sync('openSort', $el.open)" @click.outside="openSort = false">
+        <details class="catalog-filter catalog-filter--sort" data-menu="openSort" :open="openSort" @toggle="sync('openSort', $el.open)" @click.outside="openSort = false">
           <summary class="catalog-filter__trigger">
             @!component('components/icon', { name: 'sort', class: 'catalog-filter__icon' })
             <span class="sr-only">Sıralama:</span>
@@ -230,7 +217,7 @@
         @end
         @each(chip in [...missingPeople, ...chips])
         <li>
-          <a href="{{ chip.href }}" class="chip catalog-chip">
+          <a href="{{ chip.href }}" class="chip catalog-chip {{ chip.exclude ? 'catalog-chip--exclude' : '' }}">
             <span class="catalog-chip__key">{{ chip.label }}:</span> {{ chip.name }}
             <span class="chip__remove" aria-hidden="true">
               @!component('components/icon', { name: 'x', class: 'h-3.5 w-3.5' })

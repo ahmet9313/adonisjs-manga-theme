@@ -3,6 +3,7 @@ import { now, slugify, pageNumber, pageSize, searchText } from '#services/input_
 import type { HttpContext } from '@adonisjs/core/http'
 import Artist from '#models/artist'
 import vine from '@vinejs/vine'
+import { refreshSearchText, seriesOfPerson } from '#services/search_index_service'
 
 const artistValidator = vine.compile(
   vine.object({ name: vine.string().trim().minLength(1).maxLength(255) })
@@ -106,6 +107,7 @@ export default class ArtistController {
     artist.slug = slugify(data.name)
     artist.updatedAt = now()
     await artist.save()
+    await refreshSearchText(await seriesOfPerson('artist', artist.id))
     session.flash('success', 'Çizer güncellendi')
     return response.redirect('/admin/cizerler')
   }
@@ -113,7 +115,9 @@ export default class ArtistController {
   async destroy({ params, session, response }: HttpContext) {
     const artist = await Artist.findOrFail(params.id)
     try {
+      const series = await seriesOfPerson('artist', artist.id)
       await artist.delete()
+      await refreshSearchText(series)
       session.flash('success', 'Çizer silindi')
     } catch {
       session.flash('error', 'Bu çizer serilere bağlı olduğu için silinemez')

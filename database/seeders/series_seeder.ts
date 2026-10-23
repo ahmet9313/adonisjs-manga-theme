@@ -10,6 +10,7 @@ import Artist from '#models/artist'
 import SeriesModel from '#models/series'
 import contentConfig from '#config/content'
 import { suggestedFormat } from '#config/site'
+import { refreshSearchText } from '#services/search_index_service'
 
 // ---------- DATA from generate-data.mjs ----------
 
@@ -1375,6 +1376,7 @@ export default class SeriesSeeder extends BaseSeeder {
         await trx
           .table('series_artists')
           .insert({ series_id: seriesRecord.id, artist_id: artist.id })
+        await refreshSearchText([seriesRecord.id], trx)
 
         // Insert chapters in batches of 50
         for (let b = 0; b < chapterRows.length; b += 50) {

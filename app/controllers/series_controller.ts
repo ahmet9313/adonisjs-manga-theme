@@ -1,4 +1,3 @@
-import { variantUrl } from '#services/media_service'
 import { buildPaginationPages, pageNumber, filterValues, searchText } from '#services/input_service'
 import type { HttpContext } from '@adonisjs/core/http'
 import seriesService from '#services/series_service'
@@ -8,13 +7,15 @@ import Author from '#models/author'
 import Artist from '#models/artist'
 import ContentType from '#models/content_type'
 import access, { AGE_COOKIE } from '#services/access_service'
+import { parseDiscoveryFilters, suggest } from '#services/discovery_service'
 
 export default class SeriesController {
   async index({ view, request }: HttpContext) {
     const qs = request.qs()
 
     const filters = {
-      genres: filterValues(qs.genre),
+      // genres, excludedGenres, genreMode, yearFrom, yearTo, minChapters
+      ...parseDiscoveryFilters(qs),
       statuses: filterValues(qs.status),
       types: filterValues(qs.type),
       authors: filterValues(qs.author),
@@ -132,18 +133,7 @@ export default class SeriesController {
   }
 
   async search({ request, response }: HttpContext) {
-    const query = searchText(request.input('q'))
-    const results = await seriesService.searchSeries(query)
-    return response.json(
-      results.map((s) => ({
-        title: s.title,
-        slug: s.slug,
-        type: s.type,
-        coverImage: s.coverImage,
-        thumb: variantUrl(s.coverImage, 160),
-        coverVeil: s.coverVeil,
-        genres: s.genres.slice(0, 3),
-      }))
-    )
+    // Cover, type, latest chapter and the alternative title that matched (discovery_service).
+    return response.json(await suggest(searchText(request.input('q'))))
   }
 }

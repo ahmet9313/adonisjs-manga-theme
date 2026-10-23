@@ -1,4 +1,4 @@
-import { BaseModel, column, belongsTo, hasMany, manyToMany } from '@adonisjs/lucid/orm'
+import { BaseModel, beforeSave, column, belongsTo, hasMany, manyToMany } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
 import ContentType from '#models/content_type'
 import Genre from '#models/genre'
@@ -6,6 +6,7 @@ import Author from '#models/author'
 import Artist from '#models/artist'
 import Chapter from '#models/chapter'
 import type { AccessLevel, SeriesCoverMode } from '#config/site'
+import { searchTextFor } from '#services/search_index_service'
 
 export default class Series extends BaseModel {
   @column({ isPrimary: true })
@@ -81,11 +82,31 @@ export default class Series extends BaseModel {
   @column()
   declare reviewCount: number
 
+  /** Folded names for Turkish-aware search (search_index_service); never shown. */
+  @column({ serializeAs: null })
+  declare searchText: string | null
+
   @column()
   declare createdAt: string
 
   @column()
   declare updatedAt: string
+
+  /** Keeps `search_text` in step with the names; authors/artists refresh it after a sync. */
+  @beforeSave()
+  static async indexSearchText(series: Series) {
+    const dirty = series.$dirty
+    if (!('title' in dirty || 'slug' in dirty || 'alternativeTitles' in dirty)) return
+    series.searchText = await searchTextFor(
+      {
+        id: series.$isPersisted ? series.id : undefined,
+        title: series.title,
+        slug: series.slug,
+        alternativeTitles: series.alternativeTitles,
+      },
+      series.$trx
+    )
+  }
 
   @belongsTo(() => ContentType)
   declare contentType: BelongsTo<typeof ContentType>

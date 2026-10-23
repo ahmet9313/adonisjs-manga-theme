@@ -6,6 +6,8 @@ import Chapter from '#models/chapter'
 import { serializeSeries, serializeChapter, calculateTimeAgo } from '#services/series_presenter'
 import type { SeriesInfo, ChapterInfo, ChapterWithPages } from '#services/series_presenter'
 import { episodeVideo } from '#services/video_service'
+import { applyDiscoveryFilters, orderByMatch, whereMatches } from '#services/discovery_service'
+import type { DiscoveryFilters } from '#services/discovery_service'
 
 /**
  * Published series with their relations; `drafts` (staff previews) also finds drafts. Authors
@@ -132,7 +134,7 @@ class SeriesService {
   }
 
   async filterSeries(
-    filters: {
+    filters: Partial<DiscoveryFilters> & {
       genres?: string[]
       statuses?: string[]
       types?: string[]
@@ -146,9 +148,8 @@ class SeriesService {
   ) {
     const query = baseSeriesQuery()
 
-    if (filters.genres && filters.genres.length > 0) {
-      query.whereHas('genres', (genres) => genres.whereIn('name', filters.genres!))
-    }
+    // Genres (include/exclude, VE/VEYA), years, minimum chapters and the text search.
+    applyDiscoveryFilters(query, filters)
     if (filters.statuses && filters.statuses.length > 0) {
       query.whereIn('status', filters.statuses)
     }
@@ -165,13 +166,6 @@ class SeriesService {
     if (filters.artists && filters.artists.length > 0) {
       query.whereHas('artists', (artists) => artists.whereIn('slug', filters.artists!))
     }
-    if (filters.search) {
-      const q = `%${filters.search}%`
-      query.where((builder) => {
-        builder.whereILike('title', q).orWhereILike('alternativeTitles', q)
-      })
-    }
-
     if (filters.orderBy === 'title') {
       query.orderBy('title', 'asc')
     } else if (filters.orderBy === 'title-desc') {
@@ -208,12 +202,7 @@ class SeriesService {
 
   async searchSeries(query: string): Promise<SeriesInfo[]> {
     if (!query || query.length < 2) return []
-    const q = `%${query}%`
-    const results = await baseSeriesQuery()
-      .where((builder) => {
-        builder.whereILike('title', q).orWhereILike('slug', q).orWhereILike('alternativeTitles', q)
-      })
-      .limit(10)
+    const results = await orderByMatch(whereMatches(baseSeriesQuery(), query), query).limit(10)
 
     return results.map(serializeSeries)
   }
