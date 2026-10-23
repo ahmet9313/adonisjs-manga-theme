@@ -12,6 +12,11 @@
 @let(last = Math.min(chapters.currentPage * chapters.perPage, chapters.total))
 @component('components/layout/admin', { title, description: current ? current.title + ' serisinin bölümleri. Yeni eklenen önce.' : 'Tüm serilerin bölümleri, yeni eklenen önce. Bir seri seçerek listeyi daraltın.' })
   @slot('actions')
+    @if(!current || !current.contentType || current.contentType.format === 'image')
+    @component('components/ui/button', { href: '/admin/toplu-yukle' + (current ? '?series_id=' + current.id : ''), icon: 'archive' })
+      Toplu yükle
+    @end
+    @end
     @component('components/ui/button', { variant: 'primary', href: addUrl, icon: 'plus' })
       Yeni bölüm
     @end

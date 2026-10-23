@@ -81,6 +81,9 @@
                     @if(series.featured)
                     @!component('components/ui/badge', { kind: 'accent', text: 'Öne çıkan', size: 'sm', title: 'Ana sayfa vitrininde' })
                     @end
+                    @if(series.pinned)
+                    @!component('components/ui/badge', { kind: 'info', text: 'Sabit', size: 'sm', title: 'Son Güncellenenler listesinin başında' })
+                    @end
                     <span class="admin-mono truncate max-lg:hidden">/{{ series.slug }}</span>
                   </div>
                   <p class="admin-cell__meta md:hidden">Çeviri: {{ series.translationStatus }} · {{ number(chapterCount) }} bölüm · {{ agoOf(series.updatedAt) }}</p>

@@ -140,6 +140,8 @@ const AdminCosmeticController = () => import('#controllers/admin/cosmetic_contro
 const AdminCardController = () => import('#controllers/admin/card_controller')
 const AdminRoleController = () => import('#controllers/admin/role_controller')
 const AdminThemeController = () => import('#controllers/admin/theme_controller')
+const AdminBulkUploadController = () => import('#controllers/admin/bulk_upload_controller')
+const AdminToolsController = () => import('#controllers/admin/admin_tools_controller')
 
 router
   .group(() => {
@@ -242,6 +244,22 @@ router
     router
       .post('/bolumler/:id/sil', [AdminChapterController, 'destroy'])
       .as('admin.chapters.destroy')
+
+    // Bulk chapter upload from a ZIP (archive streamed; see config/bodyparser.ts `processManually`)
+    router.get('/toplu-yukle', [AdminBulkUploadController, 'show']).as('admin.bulk.show')
+    router.post('/toplu-yukle/arsiv', [AdminBulkUploadController, 'upload']).as('admin.bulk.upload')
+    router
+      .post('/toplu-yukle/ice-aktar', [AdminBulkUploadController, 'import'])
+      .as('admin.bulk.import')
+    router.post('/toplu-yukle/iptal', [AdminBulkUploadController, 'cancel']).as('admin.bulk.cancel')
+
+    // File checker and activity log (administrators only)
+    router
+      .group(() => {
+        router.get('/dosya-denetimi', [AdminToolsController, 'files']).as('admin.tools.files')
+        router.get('/etkinlik', [AdminToolsController, 'activity']).as('admin.tools.activity')
+      })
+      .use(middleware.role(['admin']))
 
     // Genres CRUD
     router.get('/turler', [AdminGenreController, 'index']).as('admin.genres.index')

@@ -1,0 +1,289 @@
+{{--
+  Admin → Toplu Yükle: one ZIP becomes one or many chapters of an image series, driven by
+  `bulkUpload` (resources/js/components/bulk_upload.js) in three steps:
+  1. series + archive → POST /admin/toplu-yukle/arsiv (XMLHttpRequest with upload progress);
+  2. preview of the chapters found (number, title, pages, conflicts) with the import options;
+  3. POST /admin/toplu-yukle/ice-aktar (JSON) → summary.
+  Without JavaScript the page only explains that the tool needs it.
+--}}
+@let(seriesOptions = [{ value: '', label: 'Seri seçin' }].concat(seriesList.map((s) => ({ value: s.id, label: s.title + ' (' + (s.contentType ? s.contentType.name : '') + ')' }))))
+@let(mb = (bytes) => Math.round(bytes / 1024 / 1024).toLocaleString('tr-TR'))
+@let(config = { seriesId: selectedSeriesId || '', maxZipBytes: limits.maxZipBytes })
+@component('components/layout/admin', {
+  title,
+  description: 'Bir ZIP arşivinden tek seferde bir ya da birçok bölüm ekleyin: her klasör bir bölüm, klasör adı bölüm numarası ve başlığı olur.',
+  crumbs: [{ label: 'Bölümler', href: '/admin/bolumler' }, { label: 'Toplu Yükle' }]
+})
+  @slot('actions')
+    @component('components/ui/button', { href: '/admin/bolumler' + (selectedSeriesId ? '?series_id=' + selectedSeriesId : ''), icon: 'list' })
+      Bölümler
+    @end
+  @end
+
+  @slot('main')
+    <noscript>
+      @component('components/ui/alert', { tone: 'warning', title: 'JavaScript gerekli' })
+        <p>Toplu yükleme arşivi tarayıcıda yükleyip önizleme gösterir; JavaScript'i açın ya da bölümleri tek tek ekleyin.</p>
+      @end
+    </noscript>
+
+    <div class="bulk" x-data="bulkUpload" data-config="{{ JSON.stringify(config) }}" x-cloak>
+      <p class="sr-only" aria-live="polite" x-text="announcement"></p>
+
+      {{-- 1. Archive --}}
+      <section class="panel" aria-labelledby="bulk-pick-title" x-show="step === 'pick' || step === 'uploading'">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="bulk-pick-title" class="panel__title">Seri ve arşiv</h2>
+            <p class="panel__desc">Yalnız görsel sayfalı seriler (manga, manhwa, webtoon …) listelenir.</p>
+          </div>
+        </div>
+
+        @if(seriesList.length)
+        <div class="bulk-pick">
+          <div class="admin-fields">
+            @!component('components/ui/field', { name: 'series_id', id: 'bulk-series', label: 'Seri', type: 'select', value: selectedSeriesId || '', options: seriesOptions, required: true, 'x-model': 'seriesId', ':disabled': "step === 'uploading'" })
+
+            <div class="field">
+              <span id="bulk-file-label" class="field__label">ZIP arşivi <span class="field__req" aria-hidden="true">*</span></span>
+              <label class="dropzone" :class="{ 'is-over': dragging }"
+                     @dragover.prevent="dragging = true" @dragleave="if (!$el.contains($event.relatedTarget)) dragging = false"
+                     @drop.prevent="dragging = false; choose($event.dataTransfer.files[0])">
+                <input type="file" accept=".zip,application/zip" class="sr-only" x-ref="file" aria-labelledby="bulk-file-label" aria-describedby="bulk-file-hint"
+                       :disabled="step === 'uploading'" @change="choose($event.target.files[0])">
+                @!component('components/icon', { name: 'archive', class: 'h-7 w-7 text-accent' })
+                <span class="bulk-file text-sm font-bold text-ink">
+                  <span x-show="!file">ZIP dosyasını seçin veya buraya sürükleyin</span>
+                  <span x-show="file" x-text="file ? file.name : ''"></span>
+                </span>
+                <span id="bulk-file-hint">
+                  <span x-show="!file">En fazla {{ mb(limits.maxZipBytes) }} MB · JPG, PNG veya WebP sayfalar</span>
+                  <span x-show="file" x-text="file ? sizeText(file.size) : ''"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <details class="bulk-help">
+            <summary>Arşiv nasıl hazırlanır?</summary>
+            <div class="bulk-help__body">
+              <p>Her bölüm için bir klasör açın; klasör adındaki sayı bölüm numarası, sonrası başlık olur. Sayfalar dosya adına göre doğal sırayla dizilir (1, 2, 10).</p>
+              <pre class="bulk-tree" aria-label="Örnek klasör yapısı">arsiv.zip
+├─ Bölüm 12 - Yeni Başlangıç/
+│  ├─ 01.jpg
+│  ├─ 02.jpg
+│  └─ 10.jpg
+├─ 13/
+│  └─ …
+└─ Chapter 14/
+   └─ …</pre>
+              <p>Klasörsüz bir arşiv tek bölüm sayılır; numarasını önizlemede siz verirsiniz. Ondalıklı numaralar (12.5) desteklenmez. __MACOSX, gizli dosyalar ve Thumbs.db yok sayılır.</p>
+              <p>Sınırlar: en fazla {{ limits.maxChapters }} bölüm, bölüm başına {{ limits.maxPagesPerChapter }} sayfa, sayfa başına {{ mb(limits.maxImageBytes) }} MB, arşivde {{ limits.maxEntries.toLocaleString('tr-TR') }} dosya.</p>
+            </div>
+          </details>
+
+          <div x-show="error" class="alert" data-tone="danger" role="alert">
+            @!component('components/icon', { name: 'exclamation' })
+            <div class="min-w-0 flex-1">
+              <p class="alert__title">Arşiv yüklenemedi</p>
+              <p x-text="error"></p>
+            </div>
+          </div>
+
+          <div class="bulk-actions">
+            <template x-if="step === 'uploading'">
+              <div class="bulk-progress">
+                <div class="progress" role="progressbar" aria-label="Yükleme ilerlemesi" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progress" data-tone="accent">
+                  <div class="progress__bar" :style="{ width: progress + '%' }"></div>
+                </div>
+                <span class="t-num text-xs font-semibold text-body" x-text="progressText"></span>
+              </div>
+            </template>
+            <button type="button" class="btn btn--ghost btn--md" x-show="step === 'uploading' && progress < 100" @click="abort()">İptal</button>
+            @component('components/ui/button', { variant: 'primary', icon: 'upload', '@click': 'upload()', ':disabled': "!file || !seriesId || step === 'uploading'", ':aria-busy': "step === 'uploading' ? 'true' : null" })
+              Yükle ve incele
+            @end
+          </div>
+        </div>
+        @else
+        @component('components/ui/empty_state', { icon: 'book-open', title: 'Görsel sayfalı seri yok', description: 'Toplu yükleme manga, manhwa, webtoon gibi görsel biçimli serilerde çalışır. Önce bir seri ekleyin.' })
+          @component('components/ui/button', { variant: 'primary', href: '/admin/seriler/ekle', icon: 'plus' })
+            Seri ekle
+          @end
+        @end
+        @end
+      </section>
+
+      {{-- 2. Preview --}}
+      <template x-if="preview">
+        <section class="panel" aria-labelledby="bulk-preview-title" x-show="step === 'preview' || step === 'importing'">
+          <div class="panel__head">
+            <div class="min-w-0">
+              <h2 id="bulk-preview-title" class="panel__title" tabindex="-1" x-ref="previewTitle">Önizleme</h2>
+              <p class="panel__desc">
+                <span x-text="preview.fileName"></span> ·
+                <span x-text="preview.chapters.length + ' bölüm bulundu'"></span><span x-show="conflictCount" x-text="' · ' + conflictCount + ' numara seride zaten var'"></span><span x-show="preview.ignored" x-text="' · ' + preview.ignored + ' sistem dosyası yok sayıldı'"></span>
+              </p>
+            </div>
+          </div>
+
+          <div x-show="preview.warnings.length" class="alert mb-4" data-tone="warning" role="status">
+            @!component('components/icon', { name: 'exclamation' })
+            <div class="min-w-0 flex-1">
+              <p class="alert__title" x-text="preview.warnings.length + ' dosya atlandı'"></p>
+              <ul class="bulk-warnings">
+                <template x-for="(message, index) in preview.warnings" :key="index">
+                  <li x-text="message"></li>
+                </template>
+              </ul>
+            </div>
+          </div>
+
+          <div class="bulk-options">
+            <fieldset class="field">
+              <legend class="field__label">Yayın</legend>
+              <div class="ac-choices">
+                <label class="ac-choice">
+                  <input type="radio" name="bulk_mode" value="publish" class="ac-choice__input" x-model="mode">
+                  <span class="ac-choice__text">
+                    <span class="ac-choice__label">Yayınla</span>
+                    <span class="ac-choice__hint">Bölümler hemen okunabilir.</span>
+                  </span>
+                </label>
+                <label class="ac-choice">
+                  <input type="radio" name="bulk_mode" value="draft" class="ac-choice__input" x-model="mode">
+                  <span class="ac-choice__text">
+                    <span class="ac-choice__label">Taslak olarak ekle</span>
+                    <span class="ac-choice__hint">Yalnız yönetim görür; sonra tek tek yayınlarsın.</span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+            <fieldset class="field">
+              <legend class="field__label">Seride zaten olan numaralar</legend>
+              <div class="ac-choices">
+                <label class="ac-choice">
+                  <input type="radio" name="bulk_conflict" value="skip" class="ac-choice__input" x-model="conflict">
+                  <span class="ac-choice__text">
+                    <span class="ac-choice__label">Atla</span>
+                    <span class="ac-choice__hint">Var olan bölüm olduğu gibi kalır.</span>
+                  </span>
+                </label>
+                <label class="ac-choice">
+                  <input type="radio" name="bulk_conflict" value="overwrite" class="ac-choice__input" x-model="conflict">
+                  <span class="ac-choice__text">
+                    <span class="ac-choice__label">Üzerine yaz</span>
+                    <span class="ac-choice__hint">Sayfalar değişir; yorumlar ve yayın durumu kalır.</span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+            <div class="bulk-switches">
+              <label class="check">
+                <input type="checkbox" class="switch" x-model="bump">
+                <span>Seriyi Son Güncellenenler'de yukarı taşı</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" class="switch" x-model="notify">
+                <span>Kaydedenlere bildirim gönder <span class="text-muted">(yalnız yayınlanan bölümler için, tek bildirim)</span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="table-wrap mt-5">
+            <table class="table table--stack admin-table bulk-table">
+              <caption class="sr-only">Arşivde bulunan bölümler</caption>
+              <thead>
+                <tr>
+                  <th scope="col"><span class="sr-only">Ekle</span></th>
+                  <th scope="col">Bölüm no</th>
+                  <th scope="col">Başlık</th>
+                  <th scope="col">Klasör ve sayfalar</th>
+                  <th scope="col">Durum</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(row, index) in rows" :key="row.key">
+                  <tr :class="{ 'is-off': !row.include }">
+                    <td class="bulk-table__pick">
+                      <input type="checkbox" class="bulk-check" x-model="row.include" :aria-label="'Ekle: ' + (row.folder || preview.fileName)">
+                    </td>
+                    <td data-label="Bölüm no">
+                      <input type="number" min="0" step="1" inputmode="numeric" class="control control--sm bulk-number" x-model.number="row.number"
+                             :aria-label="'Bölüm numarası: ' + (row.folder || preview.fileName)" :aria-invalid="row.include && !validNumber(row) ? 'true' : null">
+                    </td>
+                    <td data-label="Başlık">
+                      <input type="text" maxlength="255" class="control control--sm" x-model="row.title" placeholder="İsteğe bağlı"
+                             :aria-label="'Başlık: ' + (row.folder || preview.fileName)">
+                    </td>
+                    <td data-label="Klasör ve sayfalar" class="min-w-0">
+                      <div class="bulk-folder-cell">
+                        <p class="bulk-folder">
+                          <span x-show="row.folder" x-text="row.folder"></span>
+                          <span x-show="!row.folder">Klasörsüz arşiv</span>
+                        </p>
+                        <p class="admin-cell__meta"><span x-text="row.pageCount + ' sayfa · ' + sizeText(row.size)"></span><span class="truncate" x-show="row.firstPage" x-text="row.firstPage + (row.pageCount > 1 ? ' … ' + row.lastPage : '')"></span></p>
+                      </div>
+                    </td>
+                    <td data-label="Durum">
+                      <div class="flex flex-wrap gap-1">
+                        <span class="badge badge--sm" data-tone="danger" x-show="row.include && !validNumber(row)">Numara gerekli</span>
+                        <span class="badge badge--sm" data-tone="danger" x-show="row.include && validNumber(row) && duplicated(row)">Numara tekrarlanıyor</span>
+                        <span class="badge badge--sm" data-tone="warning" x-show="validNumber(row) && exists(row)" x-text="conflict === 'skip' ? 'Var · atlanacak' : 'Var · üzerine yazılacak'"></span>
+                        <span class="badge badge--sm" data-tone="success" x-show="validNumber(row) && !exists(row) && !duplicated(row)">Yeni</span>
+                      </div>
+                      <template x-for="(message, w) in row.warnings" :key="w">
+                        <p class="bulk-row-warning" x-text="message"></p>
+                      </template>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div x-show="error" class="alert mt-4" data-tone="danger" role="alert">
+            @!component('components/icon', { name: 'exclamation' })
+            <div class="min-w-0 flex-1">
+              <p class="alert__title">İçe aktarılamadı</p>
+              <p x-text="error"></p>
+            </div>
+          </div>
+
+          <div class="bulk-actions mt-5">
+            <span class="text-sm text-muted" x-text="summaryText"></span>
+            <button type="button" class="btn btn--ghost btn--md" @click="cancel()" :disabled="step === 'importing'">Vazgeç</button>
+            @component('components/ui/button', { variant: 'primary', icon: 'check', '@click': 'importChapters()', ':disabled': "step === 'importing' || !canImport", ':aria-busy': "step === 'importing' ? 'true' : null" })
+              <span x-text="step === 'importing' ? 'İçe aktarılıyor…' : importLabel"></span>
+            @end
+          </div>
+        </section>
+      </template>
+
+      {{-- 3. Result --}}
+      <template x-if="result">
+        <section class="panel" aria-labelledby="bulk-result-title">
+          <h2 id="bulk-result-title" class="panel__title" tabindex="-1" x-ref="resultTitle">Toplu yükleme tamamlandı</h2>
+          <ul class="bulk-result">
+            <li x-show="result.created.length">
+              @!component('components/icon', { name: 'check-circle', class: 'text-(--t-success)' })
+              <span x-text="result.created.length + ' bölüm eklendi' + (result.draft ? ' (taslak)' : '') + ': ' + result.created.join(', ')"></span>
+            </li>
+            <li x-show="result.overwritten.length">
+              @!component('components/icon', { name: 'refresh' })
+              <span x-text="result.overwritten.length + ' bölümün üzerine yazıldı: ' + result.overwritten.join(', ')"></span>
+            </li>
+            <li x-show="result.skipped.length">
+              @!component('components/icon', { name: 'minus' })
+              <span x-text="result.skipped.length + ' bölüm zaten vardı, atlandı: ' + result.skipped.join(', ')"></span>
+            </li>
+          </ul>
+          <div class="bulk-actions mt-5">
+            <button type="button" class="btn btn--ghost btn--md" @click="reset()">Yeni arşiv yükle</button>
+            <a class="btn btn--primary btn--md" :href="result.listUrl">Bölümlere git</a>
+          </div>
+        </section>
+      </template>
+    </div>
+  @end
+@end

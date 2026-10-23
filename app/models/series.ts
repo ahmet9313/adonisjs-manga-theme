@@ -71,6 +71,10 @@ export default class Series extends BaseModel {
   @column()
   declare featuredDescription: string | null
 
+  /** Kept at the top of the home page "Son Güncellenenler" list (admin series form). */
+  @column({ consume: (value) => Boolean(value) })
+  declare pinned: boolean
+
   /** Denormalised from `series_reviews` (see review_service). */
   @column({ consume: (value) => Number(value) || 0 })
   declare ratingAvg: number

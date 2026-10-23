@@ -21,6 +21,7 @@
       @each((item, index) in recentlyUpdated)
       <li class="home-update">
         @component('components/series/card', { series: item, layout: 'row', priority: !heroOn && index < 3 })
+          @include('partials/home/pinned_badge')
           @if(item.latestChapters.length)
           <ul class="home-chapters" aria-label="{{ item.title }} son bölümleri">
             @each(chapter in item.latestChapters)

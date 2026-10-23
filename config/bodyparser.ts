@@ -43,9 +43,10 @@ const bodyParserConfig = defineConfig({
     convertEmptyStringsToNull: true,
     /**
      * Episode videos (up to `watch.maxUploadBytes`) are streamed straight to the content
-     * directory by the controller instead of the tmp folder, outside the limit below.
+     * directory by the controller instead of the tmp folder, outside the limit below; bulk
+     * chapter ZIPs (`adminTools.bulk.maxZipBytes`) likewise to their temporary folder.
      */
-    processManually: ['/admin/bolumler/video'],
+    processManually: ['/admin/bolumler/video', '/admin/toplu-yukle/arsiv'],
 
     /**
      * Maximum limit of data to parse including all files

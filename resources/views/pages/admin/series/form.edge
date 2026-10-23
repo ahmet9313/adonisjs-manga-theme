@@ -120,6 +120,7 @@
               <div x-show="featured" x-transition.opacity>
                 @!component('components/ui/field', { name: 'featured_description', label: 'Vitrin açıklaması', type: 'textarea', rows: 3, value: isEdit ? (series.featuredDescription || '') : '', hint: 'Vitrinde başlığın altında görünen kısa tanıtım.' })
               </div>
+              @include('partials/admin/series_pin')
             </div>
           @end
 
@@ -146,6 +147,11 @@
             <div class="mt-4 grid gap-2">
               @component('components/ui/button', { href: '/admin/bolumler/ekle?series_id=' + series.id, icon: 'upload', block: true })
                 Bu seriye bölüm ekle
+              @end
+              @if(series.contentType && series.contentType.format === 'image')
+              @component('components/ui/button', { href: '/admin/toplu-yukle?series_id=' + series.id, icon: 'archive', variant: 'ghost', block: true })
+                ZIP'ten toplu yükle
+              @end
               @end
             </div>
           @end

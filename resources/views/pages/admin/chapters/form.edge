@@ -117,6 +117,7 @@
             @!component('components/ui/field', { name: 'draft', label: 'Taslak (yayınlama)', type: 'toggle', value: flashMessages.has('inputErrorsBag') ? flashMessages.has('draft') : (isEdit && chapter.draft), hint: 'Açıkken bölümü yalnız yönetici ve editörler görür.' })
             @!component('components/ui/field', { name: 'access', label: 'Erişim', type: 'select', value: isEdit ? chapter.access : 'public', options: Object.entries(site.accessLevels).map(([value, level]) => ({ value, label: level.chapterLabel })), hint: 'Seri daha kısıtlıysa serinin ayarı geçerlidir. Üyelere özel: giriş gerekir. VIP: yalnız VIP rolündekiler (ve yönetim).' })
             @!component('components/ui/field', { name: 'warning', label: 'Bölüm öncesi uyarı (isteğe bağlı)', type: 'textarea', rows: 3, maxlength: 500, value: isEdit ? (chapter.warning || '') : '', placeholder: 'ör. Bu bölüm şiddet ve kan içeren sahneler barındırır.', hint: 'Doluysa okur bölümü açmadan önce bu metni görür ve “Devam et” der.' })
+            @include('partials/admin/chapter_latest')
           </div>
         @end
 
