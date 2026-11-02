@@ -6,6 +6,18 @@ import { fileURLToPath } from 'node:url'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const args = new Set(process.argv.slice(2))
+// start.sh passes its arguments through and start.ps1 maps its switches to these; a typo
+// (e.g. --prod) must not silently start the development server.
+const known = new Set(['--check', '--production', '--seed', '--skip-install'])
+const unknown = [...args].filter((arg) => !known.has(arg))
+if (unknown.length) {
+  console.error(
+    `[start] HATA: Bilinmeyen seçenek: ${unknown.join(' ')}\n` +
+      '[start] Kullanılabilir: --check, --seed, --production, --skip-install ' +
+      '(Windows: -Check, -Seed, -Production, -SkipInstall)'
+  )
+  process.exit(1)
+}
 const checkOnly = args.has('--check')
 const production = args.has('--production')
 const seed = args.has('--seed')
@@ -183,13 +195,16 @@ async function main() {
     return
   }
 
-  await assertPortAvailable(env.get('HOST') || 'localhost', Number(env.get('PORT') || 3333))
+  const host = env.get('HOST') || 'localhost'
+  const port = Number(env.get('PORT') || 3333)
+  await assertPortAvailable(host, port)
+  const address = `http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`
 
   if (production) {
     step('Üretim paketi hazırlanıyor')
     runNpm(['run', 'build'])
     const buildRoot = resolve(projectRoot, 'build')
-    step('Üretim sunucusu başlatılıyor: http://localhost:3333')
+    step(`Üretim sunucusu başlatılıyor: ${address}`)
     run(process.execPath, ['bin/server.js'], {
       cwd: buildRoot,
       env: {
@@ -201,7 +216,7 @@ async function main() {
       },
     })
   } else {
-    step('Geliştirme sunucusu başlatılıyor: http://localhost:3333')
+    step(`Geliştirme sunucusu başlatılıyor: ${address}`)
     runNpm(['run', 'dev'])
   }
 }

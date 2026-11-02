@@ -2,7 +2,8 @@ import type SeriesModel from '#models/series'
 import type ContentType from '#models/content_type'
 import type Chapter from '#models/chapter'
 import type { VideoSourceKind } from '#config/watch'
-import type { AccessLevel, ContentFormat } from '#config/site'
+import type { AccessLevel, ContentFormat, SeriesCoverMode } from '#config/site'
+import { coverView } from '#services/cover_policy_service'
 
 export interface Person {
   name: string
@@ -30,15 +31,24 @@ export interface SeriesInfo {
   keywords: string[]
   coverImage: string
   bannerImage: string | null
+  /** Hidden cover for this visitor (cover_policy_service): blurred or the default image. */
+  coverVeil: 'blur' | 'placeholder' | null
+  /** The series' own cover rule (`auto` follows its age rating); link previews use it. */
+  coverMode: SeriesCoverMode
   featured: boolean
   featuredDescription: string | null
   /** Only staff ever receive drafts (previews); lists leave them out. */
   draft: boolean
   access: AccessLevel
+  /** Weekday keys of new chapters ("cum,cmt") and a free-text note (series page, /takvim). */
+  releaseDays?: string | null
+  releaseNote?: string | null
   /** Average of 1–10 ratings (0 when nobody rated yet). */
   ratingAverage: number
   ratingCount: number
   reviewCount: number
+  /** All-time views (view_service). */
+  viewCount: number
   createdAt: string
   updatedAt: string
 }
@@ -51,6 +61,8 @@ export interface ChapterInfo {
   /** The chapter's own access (`public` = same as the series) and draft flag (staff only). */
   access?: AccessLevel
   draft?: boolean
+  /** All-time views (view_service); lists that do not select it leave it out. */
+  viewCount?: number
 }
 
 export interface ChapterWithPages extends ChapterInfo {
@@ -98,15 +110,18 @@ export function serializeSeries(s: SeriesModel): SeriesInfo {
     translationStatus: s.translationStatus,
     publicationYear: s.publicationYear,
     ageRating: s.ageRating,
-    coverImage: s.coverImage?.startsWith('/') ? s.coverImage : '/images/no-cover.svg',
-    bannerImage: s.bannerImage,
+    ...coverView(s),
+    coverMode: s.coverMode || 'auto',
     featured: s.featured,
     featuredDescription: s.featuredDescription,
     draft: Boolean(s.draft),
     access: s.access || 'public',
+    releaseDays: s.releaseDays ?? null,
+    releaseNote: s.releaseNote ?? null,
     ratingAverage: Number(s.ratingAvg) || 0,
     ratingCount: s.ratingCount || 0,
     reviewCount: s.reviewCount || 0,
+    viewCount: s.viewCount || 0,
     keywords:
       s.keywords && s.keywords.length > 0
         ? s.keywords
@@ -124,6 +139,7 @@ export function serializeChapter(c: Chapter): ChapterInfo {
     timeAgo: calculateTimeAgo(c.publishedAt),
     access: c.access || 'public',
     draft: Boolean(c.draft),
+    ...(c.viewCount === undefined ? {} : { viewCount: c.viewCount }),
   }
 }
 

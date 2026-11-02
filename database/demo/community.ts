@@ -404,6 +404,8 @@ export async function buildCommunity(options: CommunityOptions): Promise<Communi
         banner: person.hasBanner ? `/content/seed/banners/${person.username}.svg` : null,
         bio: person.bio,
         banned_at: null,
+        // Demo addresses cannot receive mail; the accounts count as confirmed.
+        email_verified_at: stamp(person.createdAt),
         last_login_at: stamp(person.lastSeenAt),
         exp: person.exp,
         streak: person.streak,

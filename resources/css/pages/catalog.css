@@ -59,9 +59,14 @@
     gap: 0.5rem;
   }
 
+  /* Five dropdowns: the sort menu takes a whole row on phones and two columns on tablets. */
+  .catalog-filter--sort {
+    grid-column: span 2;
+  }
+
   @media (width >= 640px) {
     .catalog-toolbar__filters {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
@@ -393,6 +398,231 @@
   .catalog-chip:hover .chip__remove {
     background: color-mix(in oklab, var(--t-accent) 22%, transparent);
     color: var(--t-heading);
+  }
+
+  /* An excluded genre ("Hariç: …"), in the danger tone. */
+  .catalog-chip--exclude.chip {
+    border-color: color-mix(in oklab, var(--t-danger) 45%, transparent);
+    background: var(--t-danger-soft);
+  }
+
+  .catalog-chip--exclude.chip:hover {
+    border-color: var(--t-danger);
+    background: color-mix(in oklab, var(--t-danger) 22%, transparent);
+  }
+
+  .catalog-chip--exclude .catalog-chip__key,
+  .catalog-chip--exclude .chip__remove {
+    color: var(--t-danger);
+  }
+
+  /* ---- Genre chips: include / exclude ------------------------------------------------------- */
+  .genre-tri__hint {
+    padding: 0.125rem 0.5rem 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--t-muted);
+  }
+
+  .genre-tri__hint-in {
+    color: var(--t-accent-text);
+  }
+
+  .genre-tri__hint-out {
+    color: var(--t-danger);
+  }
+
+  .genre-tri__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 0.375rem;
+    padding: 0.25rem;
+  }
+
+  .genre-tri {
+    min-width: 0;
+  }
+
+  .genre-tri__chip {
+    display: inline-flex;
+    min-height: 2.25rem;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid var(--t-border);
+    border-radius: 9999px;
+    background: var(--t-surface-2);
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--t-text-2);
+    transition:
+      background-color var(--dur-1),
+      border-color var(--dur-1),
+      color var(--dur-1);
+  }
+
+  @media (width >= 1024px) {
+    .genre-tri__chip {
+      min-height: 2rem;
+    }
+  }
+
+  .genre-tri__chip:hover {
+    border-color: var(--t-border-strong);
+    background: var(--t-hover);
+    color: var(--t-heading);
+  }
+
+  .genre-tri__chip[data-state='include'] {
+    border-color: var(--t-accent-line);
+    background: var(--t-accent-soft);
+    color: var(--t-accent-text);
+  }
+
+  .genre-tri__chip[data-state='exclude'] {
+    border-color: color-mix(in oklab, var(--t-danger) 45%, transparent);
+    background: var(--t-danger-soft);
+    color: var(--t-danger);
+  }
+
+  .genre-tri__chip[data-state='exclude'] .genre-tri__name {
+    text-decoration: line-through;
+  }
+
+  .genre-tri__mark {
+    display: inline-flex;
+    margin-left: -0.25rem;
+  }
+
+  .genre-tri__mark:empty,
+  .genre-tri__chip[data-state=''] .genre-tri__mark {
+    display: none;
+  }
+
+  .genre-tri__mark svg {
+    height: 0.875rem;
+    width: 0.875rem;
+  }
+
+  .genre-tri__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Without JavaScript: the genre name and two checkboxes per row. */
+  .genre-tri__fallback {
+    display: flex;
+    min-height: 2.25rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--t-text-2);
+  }
+
+  .genre-tri__label {
+    min-width: 7rem;
+    font-weight: 600;
+    color: var(--t-heading);
+  }
+
+  .genre-tri__opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+  }
+
+  /* VEYA / VE switch for the included genres. */
+  .genre-mode {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.375rem 0.75rem;
+    margin: 0.125rem -0.375rem 0;
+    border-top: 1px solid var(--t-border);
+    padding: 0.5rem 0.625rem 0.125rem;
+  }
+
+  .genre-mode__legend {
+    float: left;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--t-muted);
+  }
+
+  .genre-mode__options {
+    display: inline-flex;
+    gap: 2px;
+    border: 1px solid var(--t-border);
+    border-radius: 9999px;
+    background: var(--t-surface-2);
+    padding: 3px;
+  }
+
+  .genre-mode__opt {
+    display: inline-flex;
+    min-height: 2rem;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--t-muted);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-1),
+      color var(--dur-1);
+  }
+
+  .genre-mode__opt:hover {
+    color: var(--t-heading);
+  }
+
+  .genre-mode__opt:has(input:checked) {
+    background: var(--t-surface);
+    color: var(--t-heading);
+    box-shadow: var(--t-shadow-1);
+  }
+
+  .genre-mode__opt:has(input:focus-visible) {
+    box-shadow: var(--t-ring);
+  }
+
+  /* ---- "Diğer": year range and minimum chapters --------------------------------------------- */
+  .catalog-range {
+    display: grid;
+    gap: 0.375rem;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .catalog-range__legend {
+    float: left;
+    margin-bottom: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--t-muted);
+  }
+
+  div.catalog-range > .catalog-range__legend {
+    float: none;
+    margin-bottom: 0;
+  }
+
+  .catalog-range__fields {
+    clear: both;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .catalog-range__dash {
+    color: var(--t-muted);
   }
 
   /* ---- Results ------------------------------------------------------------------------------ */

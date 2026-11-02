@@ -1,0 +1,8 @@
+{{--
+  Chapter form → Yayın ve erişim: "Son Güncellenenler" switches (chapter_controller save()).
+  `latest_controls` tells the server that the form has them; both are on by default.
+--}}
+@let(latestFailed = flashMessages.has('inputErrorsBag'))
+<input type="hidden" name="latest_controls" value="1">
+@!component('components/ui/field', { name: 'bump', label: 'Seriyi Son Güncellenenler\'de yukarı taşı', type: 'toggle', value: latestFailed ? flashMessages.has('bump') : true, hint: 'Kapalıysa seri ana sayfadaki listede yerinde kalır (ör. eski bir bölümü düzeltirken). Taslak bölümler seriyi hiç taşımaz.' })
+@!component('components/ui/field', { name: 'notify', label: 'Kaydedenlere bildirim gönder', type: 'toggle', value: latestFailed ? flashMessages.has('notify') : true, hint: 'Yalnız bölüm ilk kez yayınlandığında gönderilir; taslak serilerde gönderilmez.' })

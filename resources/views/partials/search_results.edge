@@ -8,7 +8,9 @@
 <template x-for="(item, index) in results" :key="item.type + '/' + item.slug">
   <a :href="'/series/' + item.type + '/' + item.slug" :id="prefix + '-result-' + index" role="option"
      :aria-selected="(active === index).toString()" @mouseenter="active = index" class="menu__item">
-    <img :src="item.coverImage" alt="" width="36" height="48" loading="lazy" data-fallback="/images/no-cover.svg" class="h-12 w-9 shrink-0 rounded-md object-cover">
+    <span class="relative h-12 w-9 shrink-0 overflow-hidden rounded-md">
+      <img :src="item.thumb || item.coverImage" :data-veil="item.coverVeil || null" alt="" width="36" height="48" loading="lazy" data-fallback="/images/no-cover.svg" class="h-12 w-9 object-cover">
+    </span>
     <span class="min-w-0 flex-1">
       <span class="block truncate font-semibold text-(--t-heading)" x-text="item.title"></span>
       <span class="block truncate text-xs text-(--t-muted)" x-text="describe(item)"></span>

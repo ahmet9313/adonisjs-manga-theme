@@ -1,4 +1,4 @@
-import { send, toast } from './shared.js'
+import { send, thumb, toast } from './shared.js'
 
 /**
  * Card collection (/kartlar): filters, the card dialog (details, the reveal of a freshly crafted
@@ -98,6 +98,11 @@ export function cardCollection() {
         .reverse()
         .map((rule) => ({ rule, cards: cards.filter((card) => card.rarity === rule.rarity) }))
         .filter((group) => group.cards.length)
+    },
+
+    /** Grid thumbnails are small; the dialog keeps the full image. */
+    thumb(src) {
+      return thumb(src, 320)
     },
 
     cardLabel(card) {

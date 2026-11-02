@@ -5,7 +5,8 @@
   (`a, b, c`), exactly what the controller splits; without JavaScript a plain text field
   (<noscript>) posts the same format.
   Props: name (required), label, value (array of strings), suggestions (array of strings, e.g.
-         popular keywords), popularLabel ('Sık kullanılanlar'), placeholder, hint,
+         popular keywords), popularLabel ('Sık kullanılanlar'), popular (true; false keeps the
+         suggestions for typing only, without the chip row), placeholder, hint,
          id ('f-' + name), class.
   The previous input wins over `value`; the error comes from inputErrorsBag.<name>.
 --}}
@@ -60,7 +61,7 @@
       </template>
     </ul>
   </div>
-  @if(suggestions.length)
+  @if(suggestions.length && $props.get('popular', true))
   <div class="admin-popular" x-show="popular.length > 0" x-cloak>
     <span class="t-caption">{{ $props.get('popularLabel', 'Sık kullanılanlar') }}:</span>
     <template x-for="item in popular" :key="item">

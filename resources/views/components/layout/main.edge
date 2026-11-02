@@ -1,6 +1,8 @@
 {{--
-  Public layout. Props: title, description. Slots: main, banner (full-width content between the
-  header and the page container, e.g. the home hero), meta (extra <head> tags).
+  Public layout. Props: title, description, noindex (gate pages). Slots: main, banner (full-width
+  content between the header and the page container, e.g. the home hero), meta (extra <head> tags).
+  Canonical, robots, Open Graph/Twitter, feed links and JSON-LD come from seoHead (seo_service)
+  with the `seo` details a controller shared.
   The colour scheme is chosen on the server (schemeOf), so the first paint is never wrong.
 --}}
 @let(scheme = schemeOf(request))
@@ -11,6 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title && title !== site.name ? title + ' — ' + site.name : site.name }}</title>
   <meta name="description" content="{{ description ?? site.description }}">
+  {{{ seoHead(request, { title, description, noindex, seo }) }}}
   <meta name="csrf-token" content="{{ csrfToken || '' }}">
   {{{ themeMeta(scheme) }}}
   @if(site.favicon)
@@ -37,6 +40,7 @@
     {{{ await $slots.main() }}}
   </main>
   @include('partials/footer')
+  @include('partials/bottom_nav')
 
   {{-- Dialogs, notifications and background helpers (dialogs are teleported to the end of <body>). --}}
   @if(auth && auth.user)
@@ -48,5 +52,7 @@
   @end
   @include('partials/ui/toast')
   @include('partials/ui/confirm')
+  @include('partials/report/dialog')
+  @include('partials/cookie_notice')
 </body>
 </html>

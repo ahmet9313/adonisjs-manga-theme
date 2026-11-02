@@ -1,6 +1,6 @@
 import { configApp } from '@adonisjs/eslint-config'
 export default configApp(
-  { ignores: ['.tools/**', 'tmp/**', 'public/content/**'] },
+  { ignores: ['.tools/**', '.claude/**', 'tmp/**', 'public/content/**'] },
   {
     files: ['resources/js/**/*.js', 'scripts/**/*.mjs'],
     rules: {

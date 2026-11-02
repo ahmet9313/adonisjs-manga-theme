@@ -388,8 +388,8 @@ test.group('Community: earned progression, inbox, cosmetics and cards', (group) 
     assert.deepInclude(vote, { vote: -1, likeCount: 0, dislikeCount: 1 })
     vote = await jsonOf(second.json(`/yorumlar/${sticker.id}/oy`, { value: -1 }))
     assert.deepInclude(vote, { vote: 0, likeCount: 0, dislikeCount: 0 })
-    // The legacy like endpoint still toggles an up-vote.
-    assert.isTrue(await pick(second.json(`/yorumlar/${sticker.id}/begen`), 'liked'))
+    vote = await jsonOf(second.json(`/yorumlar/${sticker.id}/oy`, { value: 1 }))
+    assert.deepInclude(vote, { vote: 1, likeCount: 1 })
 
     const list = await jsonOf(second.get(`/yorumlar?series=${series.id}&sort=top`))
     const listed = list.items.find((item: any) => item.id === sticker.id)

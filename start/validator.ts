@@ -21,6 +21,8 @@ vine.messagesProvider = new SimpleMessagesProvider(
     'username.regex':
       'Kullanıcı adı 3-20 karakter olmalı; yalnızca harf, rakam ve alt çizgi içermelidir.',
     'password.confirmed': 'Parolalar eşleşmiyor.',
+    'site_url.regex':
+      'Site adresi https://alanadi.com biçiminde olmalı; yol ya da sorgu eklemeyin.',
   },
   {
     // Accounts
@@ -53,6 +55,9 @@ vine.messagesProvider = new SimpleMessagesProvider(
     text_content: 'Bölüm metni',
     page_order: 'Sayfa sırası',
     pages: 'Sayfalar',
+    publish_at: 'Planlı yayın zamanı',
+    release_days: 'Yayın günleri',
+    release_note: 'Yayın notu',
     // Dictionaries, cosmetics, cards, roles and theme settings
     name: 'Ad',
     kind: 'Tür',
@@ -66,8 +71,18 @@ vine.messagesProvider = new SimpleMessagesProvider(
     site_name: 'Site adı',
     site_description: 'Site açıklaması',
     logo_url: 'Logo adresi',
+    site_url: 'Site adresi',
     announcement_text: 'Duyuru metni',
     announcement_url: 'Duyuru bağlantısı',
+    // Pages, announcements and footer links (Admin → İçerik, Tema → Genel)
+    slug: 'Adres',
+    sort: 'Sıra',
+    footer_disclaimer: 'Telif uyarısı',
+    social_discord: 'Discord adresi',
+    social_x: 'X (Twitter) adresi',
+    social_instagram: 'Instagram adresi',
+    social_telegram: 'Telegram adresi',
+    social_youtube: 'YouTube adresi',
     // Comments and reviews
     body: 'Metin',
     rating: 'Puan',

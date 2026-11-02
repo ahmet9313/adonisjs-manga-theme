@@ -1,0 +1,96 @@
+{{--
+  A–Z index (/seriler/a-z, BrowseController.az): letters of the Turkish alphabet (plus Q, W, X)
+  and "#" for digits, symbols and other scripts, each with its number of series; ?harf=<letter>
+  lists one letter, no letter lists all. Titles are sorted by Turkish collation
+  (discovery_service), 60 per page, grouped under their letter.
+  Contracts (tests): letter links href="/seriler/a-z?harf=<encoded letter>" with
+  data-count="<n>"; group headings id="harf-<letter>"; items link /series/<type>/<slug>.
+--}}
+@component('components/layout/main', { title })
+
+@slot('main')
+  @let(letterUrl = (value) => '/seriler/a-z?' + new URLSearchParams({ harf: value }).toString())
+
+  @component('components/ui/page_header', {
+    title: 'A–Z Seri Listesi',
+    description: letter ? '“' + letter + '” harfiyle başlayan ' + Number(total).toLocaleString('tr-TR') + ' seri' + (totalPages > 1 ? ' · Sayfa ' + currentPage + ' / ' + totalPages : '') : Number(all).toLocaleString('tr-TR') + ' seri, Türkçe alfabeye göre' + (totalPages > 1 ? ' · Sayfa ' + currentPage + ' / ' + totalPages : ''),
+  })
+    @slot('actions')
+      @include('partials/catalog/header_links')
+    @end
+  @end
+
+  <nav class="az-letters" aria-label="Harfler">
+    <ul class="az-letters__list">
+      <li>
+        <a href="/seriler/a-z" class="az-letter az-letter--all" data-count="{{ all }}" {{ letter ? '' : 'aria-current=page' }}>Tümü</a>
+      </li>
+      @each(item in letters)
+      <li>
+        @if(item.count)
+        <a href="{{ letterUrl(item.value) }}" class="az-letter" data-count="{{ item.count }}" {{ letter === item.value ? 'aria-current=page' : '' }}
+           title="{{ item.count }} seri">
+          {{ item.value }}<span class="sr-only">: {{ item.count }} seri</span>
+        </a>
+        @else
+        <span class="az-letter" data-count="0" aria-disabled="true">{{ item.value }}<span class="sr-only">: seri yok</span></span>
+        @end
+      </li>
+      @end
+    </ul>
+  </nav>
+
+  <section class="az-results" aria-label="Seriler">
+    @if(groups.length)
+    @each(group in groups)
+    <section class="az-group" aria-labelledby="harf-{{ group.letter }}">
+      <h2 id="harf-{{ group.letter }}" class="az-group__title">{{ group.letter }}</h2>
+      <ul class="az-list">
+        @each(series in group.items)
+        <li>
+          <a href="/series/{{ series.type }}/{{ series.slug }}" class="az-item">
+            <span class="az-item__cover">
+              <img src="{{ thumbOf(series.coverImage, 160) }}" alt="" width="40" height="56" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
+                @if(series.coverVeil)
+                data-veil="{{ series.coverVeil }}"
+                @end
+                >
+            </span>
+            <span class="az-item__body">
+              <span class="az-item__title">{{ series.title }}</span>
+              <span class="az-item__meta">
+                @!component('components/ui/badge', { kind: 'type', value: series.type, size: 'sm' })
+                @if(series.status)
+                @!component('components/ui/badge', { kind: 'status', value: series.status, size: 'sm' })
+                @end
+                @if(series.lastChapter)
+                <span>Bölüm {{ series.lastChapter }}</span>
+                @end
+                @if(series.access && series.access !== 'public')
+                <span class="az-item__lock" title="{{ site.accessLevels[series.access].label }}">
+                  @!component('components/icon', { name: series.access === 'vip' ? 'star' : 'lock', stroke: 2 })
+                  <span class="sr-only">{{ site.accessLevels[series.access].label }}</span>
+                </span>
+                @end
+              </span>
+            </span>
+          </a>
+        </li>
+        @end
+      </ul>
+    </section>
+    @end
+    @!component('components/ui/pagination', { current: currentPage, total: totalPages, label: 'A–Z listesi sayfaları', class: 'mt-10' })
+    @elseif(total > 0)
+    @component('components/ui/empty_state', { icon: 'book-open', title: 'Bu sayfada seri yok', description: 'Liste ' + totalPages + ' sayfa sürüyor.' })
+      @component('components/ui/button', { variant: 'primary', href: letter ? letterUrl(letter) : '/seriler/a-z', icon: 'arrow-left' })
+        İlk sayfaya dön
+      @end
+    @end
+    @else
+    @!component('components/ui/empty_state', { icon: 'library', title: letter ? '“' + letter + '” harfiyle başlayan seri yok' : 'Henüz seri yok', description: 'Başka bir harf seçebilir ya da kataloğu filtreleyebilirsin.' })
+    @end
+  </section>
+@end
+
+@end

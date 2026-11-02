@@ -60,7 +60,7 @@
       <img src="{{ sticker.image }}" alt="{{ sticker.name }} çıkartması" loading="lazy" class="mt-2 h-16 w-16 object-contain">
       @end
       @if(item.image)
-      <img src="{{ item.image }}" alt="" loading="lazy" class="mt-2 max-h-32 rounded-lg border border-(--t-border) object-contain">
+      <img src="{{ thumbOf(item.image, 320) }}" alt="" loading="lazy" class="mt-2 max-h-32 rounded-lg border border-(--t-border) object-contain">
       @end
       @end
       <p class="mt-2 flex flex-wrap gap-3 text-xs text-(--t-muted)">

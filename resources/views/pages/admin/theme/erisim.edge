@@ -2,6 +2,9 @@
   Admin → Tema → Yaş ve Erişim: what happens before a series with an age rating opens
   (age_policy_18, age_policy_16 … → none | warn | members; config/site.ts → agePolicies).
   Props: ratings [{ rating, key, value }] (strictest first), policies [{ key, label }].
+  Second form (part=covers): hidden covers per rating (cover_policy_18 … → show | blur |
+  placeholder; coverRatings, coverModes), cover_reveal (none | age | members | members_age;
+  coverReveals) and cover_placeholder_url (uploadable).
   Members-only / VIP content and drafts are set per series and chapter; the side panel says so.
 --}}
 @let(hints = {
@@ -57,6 +60,83 @@
           @end
           <div class="te-form-foot">
             <p>Kaydettiğinizde bütün seri ve bölüm sayfalarında hemen geçerli olur.</p>
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+              Kaydet
+            @end
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="cover-title">
+        <div class="panel__head">
+          <div class="min-w-0">
+            <h2 id="cover-title" class="panel__title te-title">
+              @!component('components/icon', { name: 'eye-off' })
+              Kapak bulanıklaştırma
+            </h2>
+            <p class="panel__desc">Yaş sınırlı serilerin kapakları katalogda, ana sayfada, aramada, kaydedilenlerde ve seri sayfasında nasıl görünsün? Bir seri kendi formundaki “Kapak görünümü” ile bunu değiştirebilir. Yönetim paneli her zaman asıl kapağı gösterir.</p>
+          </div>
+        </div>
+        <form action="/admin/tema/erisim" method="POST" class="grid gap-6" data-submit-once>
+          {{ csrfField() }}
+          <input type="hidden" name="part" value="covers">
+          @each(item in coverRatings)
+          @let(current = flashMessages.get(item.key) || item.value)
+          <fieldset class="ac-fieldset">
+            <legend class="field__label">
+              @!component('components/ui/badge', { kind: 'age', value: item.rating, size: 'sm' })
+              <span class="ml-1">{{ item.rating }} kapakları</span>
+            </legend>
+            <div class="ac-choices ac-choices--rules">
+              @each(mode in coverModes)
+              <label class="ac-choice">
+                <input type="radio" name="{{ item.key }}" value="{{ mode.key }}" class="ac-choice__input" {{ current === mode.key ? 'checked' : '' }}>
+                <span class="ac-choice__icon">
+                  @!component('components/icon', { name: mode.icon })
+                </span>
+                <span class="ac-choice__text">
+                  <span class="ac-choice__label">{{ mode.label }}</span>
+                  <span class="ac-choice__hint">{{ mode.hint }}</span>
+                </span>
+              </label>
+              @end
+            </div>
+            @!component('components/field_error', { field: item.key })
+          </fieldset>
+          @end
+
+          @let(revealCurrent = flashMessages.get('cover_reveal') || coverReveal)
+          <fieldset class="ac-fieldset">
+            <legend class="field__label">Gizli kapakları kimler açık görsün?</legend>
+            <p class="field__hint">Yaş onayı, yaş uyarısındaki “yaşım tutuyor” seçimidir; 18+ onayı 16+ ve altını da kapsar. Üyeliğe bağlarsanız ziyaretçiler kapağı görmek için giriş yapmalıdır.</p>
+            <div class="ac-choices ac-choices--rules">
+              @each(option in coverReveals)
+              <label class="ac-choice">
+                <input type="radio" name="cover_reveal" value="{{ option.key }}" class="ac-choice__input" {{ revealCurrent === option.key ? 'checked' : '' }}>
+                <span class="ac-choice__icon">
+                  @!component('components/icon', { name: { none: 'eye-off', age: 'shield', members: 'user', members_age: 'lock' }[option.key] })
+                </span>
+                <span class="ac-choice__text">
+                  <span class="ac-choice__label">{{ option.label }}</span>
+                  <span class="ac-choice__hint">{{ option.hint }}</span>
+                </span>
+              </label>
+              @end
+            </div>
+            @!component('components/field_error', { field: 'cover_reveal' })
+          </fieldset>
+
+          <div class="te-image-field">
+            @!component('components/ui/field', { name: 'cover_placeholder_url', label: 'Varsayılan görsel (isteğe bağlı)', value: coverPlaceholder, maxlength: 300, inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '/images/gizli-kapak.png veya https://…', hint: '“Varsayılan görsel” seçilen kapakların yerine gösterilir. Dikey (3:4) bir görsel önerilir. Boşsa yerleşik “Hassas içerik” görseli kullanılır.' })
+            @!component('components/ui/brand_image', { target: 'f-cover_placeholder_url', kind: 'cover_placeholder', label: 'Varsayılan kapak görseli yükle', shape: 'cover', accept: ['png', 'jpg', 'jpeg', 'webp'] })
+          </div>
+          <div class="te-cover-sample">
+            <span class="field__label">Şu anki varsayılan görsel</span>
+            <img src="{{ coverPlaceholder || site.hiddenCover }}" alt="Varsayılan kapak görseli" width="120" height="160" data-fallback="{{ site.hiddenCover }}">
+          </div>
+
+          <div class="te-form-foot">
+            <p>Kaydettiğinizde sitedeki bütün kapaklarda hemen geçerli olur.</p>
             @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
               Kaydet
             @end

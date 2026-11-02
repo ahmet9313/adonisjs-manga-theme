@@ -1,0 +1,24 @@
+{{--
+  "E-postanı doğrula" banner at the top of the settings page for accounts whose address is not
+  confirmed yet (`verifyBanner`, account_security.js: the close button hides it in this browser).
+  Props: member.
+--}}
+@if(!member.emailVerifiedAt)
+<div x-data="verifyBanner" data-user="{{ member.id }}" x-show="!dismissed" class="verify-banner">
+  @component('components/ui/alert', { tone: 'warning', icon: 'mail', title: 'E-postanı doğrula' })
+    <p>{{ member.email }} adresine bir doğrulama bağlantısı gönderdik. Bağlantıya basarak adresinin sana ait olduğunu onayla{{ site.requireVerifiedToPost ? '; doğrulayana kadar yorum ve inceleme yazamazsın' : '' }}.</p>
+    <div class="verify-banner__actions">
+      <form action="/ayarlar/dogrulama" method="POST" data-submit-once>
+        {{ csrfField() }}
+        <input type="hidden" name="next" value="/ayarlar#account">
+        @component('components/ui/button', { type: 'submit', size: 'sm', icon: 'refresh' })
+          Bağlantıyı tekrar gönder
+        @end
+      </form>
+      @component('components/ui/button', { variant: 'ghost', size: 'sm', '@click': 'dismiss()' })
+        Daha sonra
+      @end
+    </div>
+  @end
+</div>
+@end

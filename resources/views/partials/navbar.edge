@@ -17,6 +17,7 @@
         x-data="{ mobileOpen: false }"
         @click.outside="mobileOpen = false"
         @keydown.escape.window="mobileOpen = false"
+        @toggle-mobile-menu.window="mobileOpen = !mobileOpen"
         @resize.window="if (window.innerWidth >= 1024) mobileOpen = false">
   <div class="mx-auto flex h-16 max-w-(--t-container) items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
     <button type="button" class="btn btn--ghost btn--md btn--icon -ml-2 lg:hidden"
@@ -78,11 +79,19 @@
       </div>
       @end
 
+      @if(ui('nav_discover'))
+      <a href="/rastgele" class="btn btn--ghost btn--md btn--icon max-lg:hidden" aria-label="Rastgele seri" title="Rastgele seri">
+        @!component('components/icon', { name: 'shuffle', class: 'btn__icon' })
+      </a>
+      @end
+
       @if(ui('scheme_switch'))
       <div class="hidden lg:block">
         @!component('components/ui/theme_switch')
       </div>
       @end
+
+      @!component('components/social/discord')
 
       @if(ui('bell') && auth && auth.user)
       <button type="button" @click="$dispatch('open-inbox')" class="btn btn--ghost btn--md btn--icon relative"
@@ -115,10 +124,10 @@
       </div>
       @end
 
-      @if(links.length || site.recruitmentUrl)
+      @if(links.length || site.recruitmentUrl || ui('nav_discover'))
       <nav aria-label="Mobil menü">
         <ul class="grid gap-1">
-          @each(link in links)
+          @each(link in [...links, ...(ui('nav_discover') ? [{ href: '/seriler/a-z', label: 'A–Z Liste', icon: 'list', active: path.startsWith('/seriler/a-z') }, { href: '/rastgele', label: 'Rastgele Seri', icon: 'shuffle', active: false }] : [])])
           <li>
             <a href="{{ link.href }}" class="mobile-link" {{ link.active ? 'aria-current=page' : '' }} @click="mobileOpen = false">
               @!component('components/icon', { name: link.icon })
@@ -137,6 +146,8 @@
         </ul>
       </nav>
       @end
+
+      @!component('components/social/discord', { variant: 'mobile' })
 
       @if(!(auth && auth.user))
       <div class="grid grid-cols-2 gap-2">

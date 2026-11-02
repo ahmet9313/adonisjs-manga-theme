@@ -130,7 +130,7 @@
                 <button type="button" class="tcg" :id="'card-' + card.id" :data-rarity="card.rarity" :data-locked="card.count ? '0' : '1'"
                         @click="open(card)" aria-haspopup="dialog">
                   <span class="sr-only" x-text="cardLabel(card)"></span>
-                  <img :src="card.image" alt="" loading="lazy" decoding="async">
+                  <img :src="thumb(card.image)" alt="" loading="lazy" decoding="async">
                   <span class="tcg-letter" aria-hidden="true" x-text="card.rarity"></span>
                   <span x-show="card.count > 1" class="tcg-count" aria-hidden="true" x-text="'×' + card.count"></span>
                   <span x-show="!card.count" class="tcg-lock" aria-hidden="true">

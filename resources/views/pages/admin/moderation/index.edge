@@ -1,0 +1,245 @@
+{{--
+  Admin → Moderasyon (administrators and editors). Tabs: chapter error reports / comment and
+  review complaints; status chips (Açık, Çözüldü, Reddedildi). One card per reported target:
+  how often and why it was reported, the reporters' notes, a preview (spoiler and image too),
+  its author and links to the context. Open cards: Çözüldü / Reddet; comments and reviews also
+  Sil and mutes (1 / 7 / 30 gün, süresiz). The side panel edits the blocked-words list.
+  Every form sends `back` so the page, tab and filters are kept.
+--}}
+@let(number = (value) => Number(value || 0).toLocaleString('tr-TR'))
+@let(baseUrl = (changes) => withQuery(request, changes))
+@let(tabs = [{ key: 'chapter', label: 'Bölüm hataları', count: counts.chapter ? number(counts.chapter) : null, href: '/admin/moderasyon' }, { key: 'content', label: 'Yorum & inceleme şikâyetleri', count: counts.content ? number(counts.content) : null, href: '/admin/moderasyon?tab=icerik' }])
+@let(statusItems = [{ key: 'open', label: 'Açık' }, { key: 'resolved', label: 'Çözüldü' }, { key: 'dismissed', label: 'Reddedildi' }].map((entry) => ({ label: entry.label, active: entry.key === status, href: baseUrl({ durum: entry.key === 'open' ? null : entry.key, page: null }) })))
+@let(kindLabels = { chapter: 'Bölüm', comment: 'Yorum', review: 'İnceleme' })
+@let(formatLabels = { image: 'Görsel', text: 'Metin', video: 'Video' })
+@let(emptyTitles = { open: tab === 'chapter' ? 'Bekleyen bölüm hatası yok' : 'Bekleyen şikâyet yok', resolved: 'Çözülen bildirim yok', dismissed: 'Reddedilen bildirim yok' })
+@component('components/layout/admin', { title, description: 'Okurların bildirdiği bölüm hataları ile yorum ve inceleme şikâyetleri. Aynı içerik için gelen bildirimler tek kartta toplanır.' })
+  @slot('main')
+    <div class="mod-page">
+      <div class="mod-main">
+        @!component('components/ui/tabs', { mode: 'links', tabs, active: tab, label: 'Bildirim türleri' })
+        <div class="mod-toolbar">
+          @!component('components/ui/pill_group', { items: statusItems, label: 'Duruma göre' })
+          <p class="ac-summary mod-toolbar__summary" aria-live="polite">
+            <span><strong>{{ number(queue.total) }}</strong> {{ tab === 'chapter' ? 'bölüm' : 'içerik' }}</span>
+          </p>
+        </div>
+
+        @if(queue.items.length)
+        <ul class="mod-list">
+          @each(item in queue.items)
+          @let(target = item.target)
+          @let(author = target && target.author ? target.author : null)
+          @let(actionUrl = '/admin/moderasyon/' + item.type + '/' + item.id)
+          <li>
+            <article class="panel mod-card" aria-labelledby="mod-{{ item.key }}-title">
+              <header class="mod-card__head">
+                <div class="mod-card__badges">
+                  @!component('components/ui/badge', { kind: item.type === 'chapter' ? 'info' : item.type === 'comment' ? 'accent' : 'warning', text: kindLabels[item.type], size: 'sm' })
+                  @if(target && target.kind === 'chapter')
+                  @!component('components/ui/badge', { kind: 'neutral', text: formatLabels[target.format], size: 'sm' })
+                  @end
+                  @if(target && (target.draft || target.deleted))
+                  @!component('components/ui/badge', { kind: 'neutral', text: target.deleted ? 'Silinmiş' : 'Taslak', size: 'sm' })
+                  @end
+                </div>
+                <p class="mod-card__count">
+                  <strong class="t-num">{{ number(item.total) }}</strong> bildirim
+                  <span aria-hidden="true">·</span>
+                  <time datetime="{{ item.latest }}" title="{{ dateOf(item.latest) }}">{{ agoOf(item.latest) }}</time>
+                </p>
+              </header>
+
+              {{-- What was reported --}}
+              @if(!target)
+              <h2 id="mod-{{ item.key }}-title" class="mod-card__title">{{ kindLabels[item.type] }} #{{ item.id }}</h2>
+              <p class="mod-card__gone">
+                @!component('components/icon', { name: 'trash', class: 'h-4 w-4' })
+                Bu içerik artık yok; silinmiş olabilir. Bildirimleri kapatabilirsin.
+              </p>
+              @elseif(target.kind === 'chapter')
+              <h2 id="mod-{{ item.key }}-title" class="mod-card__title">
+                {{ target.seriesTitle }} · Bölüm {{ target.number }}<span class="font-medium text-(--t-muted)">{{ target.title ? ': ' + target.title : '' }}</span>
+              </h2>
+              <div class="mod-card__links">
+                @component('components/ui/button', { variant: 'secondary', size: 'sm', href: target.url, target: '_blank', rel: 'noopener', iconRight: 'external' })
+                  Bölümü aç
+                @end
+                @component('components/ui/button', { variant: 'ghost', size: 'sm', href: target.editUrl, icon: 'pencil' })
+                  Bölümü düzenle
+                @end
+              </div>
+              @else
+              <h2 id="mod-{{ item.key }}-title" class="sr-only">{{ kindLabels[item.type] }}: {{ author ? '@' + author.username : 'silinmiş hesap' }}, {{ target.seriesTitle }}</h2>
+              <div class="mod-content">
+                <div class="mod-content__head">
+                  @if(author)
+                  @!component('components/ui/user_chip', { user: author, size: 'sm', meta: '@' + author.username + ' · ' + agoOf(target.createdAt), href: auth.user.isAdmin ? '/admin/kullanicilar/' + author.id + '/duzenle' : '/uye/' + author.username })
+                  @if(author.isMuted)
+                  @!component('components/ui/badge', { kind: 'danger', text: 'Susturuldu', size: 'sm', title: 'Bitiş: ' + untilLabel(author.mutedUntil) })
+                  @end
+                  @end
+                  @if(target.kind === 'review')
+                  <span class="rating-pill" title="{{ target.rating }} / 10"><span aria-hidden="true">★</span>{{ target.rating }}<span class="rating-pill__max">/10</span></span>
+                  @end
+                </div>
+                <p class="mod-content__where">
+                  {{ target.seriesTitle }}{{ target.kind === 'comment' && target.chapterNumber !== null ? ' · Bölüm ' + target.chapterNumber : '' }}{{ target.kind === 'comment' && target.reply ? ' · yanıt' : '' }}
+                </p>
+                @if(target.spoiler)
+                @!component('components/ui/badge', { kind: 'warning', text: 'Spoiler', size: 'sm', class: 'mod-content__spoiler' })
+                @end
+                @if(target.kind === 'review' && target.title)
+                <p class="mod-content__title">{{ target.title }}</p>
+                @end
+                @if(target.kind === 'comment' && target.deleted)
+                <p class="mod-card__gone">Yorum silindi; yanıtları duruyor.</p>
+                @elseif(target.body)
+                <p class="mod-content__text">{{ target.body }}</p>
+                @elseif(target.kind === 'review')
+                <p class="mod-content__text text-(--t-muted)">Yalnızca puan verdi.</p>
+                @end
+                @if(target.kind === 'comment' && !target.deleted && (target.image || stickerOf(target.stickerId)))
+                <div class="mod-content__media">
+                  @if(stickerOf(target.stickerId))
+                  <img src="{{ stickerOf(target.stickerId).image }}" alt="{{ stickerOf(target.stickerId).name }} çıkartması" class="mod-content__sticker" loading="lazy" decoding="async">
+                  @end
+                  @if(target.image)
+                  <a href="{{ target.image }}" target="_blank" rel="noopener" class="mod-content__image" aria-label="Yorum görselini yeni sekmede aç">
+                    <img src="{{ target.image }}" alt="" loading="lazy" decoding="async">
+                  </a>
+                  @end
+                </div>
+                @end
+                <a href="{{ target.url }}" target="_blank" rel="noopener" class="link mod-content__context">
+                  Bağlamında aç
+                  @!component('components/icon', { name: 'external', class: 'h-3.5 w-3.5' })
+                </a>
+              </div>
+              @end
+
+              {{-- Why --}}
+              <ul class="mod-reasons" aria-label="Bildirim nedenleri">
+                @each(reason in item.reasons)
+                <li class="tag">
+                  {{ reason.label }}
+                  @if(reason.count > 1)
+                  <span class="mod-reasons__count t-num">×{{ reason.count }}</span>
+                  @end
+                </li>
+                @end
+              </ul>
+              @if(item.notes.length)
+              <ul class="mod-notes" aria-label="Bildirenlerin notları">
+                @each(note in item.notes)
+                <li class="mod-note">
+                  <p class="mod-note__text">{{ note.text }}</p>
+                  <p class="mod-note__by">{{ note.reporter ? '@' + note.reporter : 'Misafir' }} · <time datetime="{{ note.createdAt }}">{{ agoOf(note.createdAt) }}</time></p>
+                </li>
+                @end
+              </ul>
+              @end
+
+              {{-- Actions --}}
+              @if(status === 'open')
+              <div class="mod-actions">
+                <form method="POST" action="{{ actionUrl }}/coz" data-submit-once>
+                  {{ csrfField() }}
+                  <input type="hidden" name="back" value="{{ back }}">
+                  @component('components/ui/button', { type: 'submit', variant: 'primary', size: 'sm', icon: 'check' })
+                    Çözüldü
+                  @end
+                </form>
+                <form method="POST" action="{{ actionUrl }}/reddet" data-submit-once>
+                  {{ csrfField() }}
+                  <input type="hidden" name="back" value="{{ back }}">
+                  @component('components/ui/button', { type: 'submit', size: 'sm', icon: 'x' })
+                    Reddet
+                  @end
+                </form>
+                @if(target && target.kind !== 'chapter' && !target.deleted)
+                <form method="POST" action="{{ actionUrl }}/sil" data-submit-once
+                      data-confirm="{{ target.kind === 'comment' ? 'Yorum silinecek; yanıtları varsa yerinde “Bu yorum silindi.” yazar.' : 'İnceleme ve puan kalıcı olarak silinecek.' }} Bildirimleri de kapatılır."
+                      data-confirm-title="{{ target.kind === 'comment' ? 'Yorum' : 'İnceleme' }} silinsin mi?" data-confirm-label="Sil">
+                  {{ csrfField() }}
+                  <input type="hidden" name="back" value="{{ back }}">
+                  @component('components/ui/button', { type: 'submit', variant: 'danger', size: 'sm', icon: 'trash' })
+                    {{ target.kind === 'comment' ? 'Yorumu sil' : 'İncelemeyi sil' }}
+                  @end
+                </form>
+                @end
+              </div>
+              @else
+              <p class="mod-card__closed">
+                @!component('components/icon', { name: status === 'resolved' ? 'check-circle' : 'x-circle', class: 'h-4 w-4' })
+                {{ item.resolution || (status === 'resolved' ? 'Çözüldü' : 'Reddedildi') }}{{ item.resolvedBy ? ' · @' + item.resolvedBy : '' }}{{ item.resolvedAt ? ' · ' + agoOf(item.resolvedAt) : '' }}
+              </p>
+              @end
+
+              {{-- The author: mute or unmute --}}
+              @if(author && !author.isStaff && author.id !== auth.user.id)
+              <div class="mod-mute">
+                @if(author.isMuted)
+                <p class="mod-mute__state">
+                  @!component('components/icon', { name: 'lock', class: 'h-4 w-4' })
+                  {{ '@' + author.username }} {{ untilLabel(author.mutedUntil) === 'süresiz' ? 'süresiz olarak susturuldu' : untilLabel(author.mutedUntil) + ' tarihine kadar susturuldu' }}.
+                </p>
+                <form method="POST" action="/admin/moderasyon/uye/{{ author.id }}/susturma-kaldir" data-submit-once>
+                  {{ csrfField() }}
+                  <input type="hidden" name="back" value="{{ back }}">
+                  @component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'check-circle' })
+                    Susturmayı kaldır
+                  @end
+                </form>
+                @else
+                <form method="POST" action="/admin/moderasyon/uye/{{ author.id }}/sustur" class="mod-mute__form" data-submit-once
+                      data-confirm="{{ '@' + author.username }} seçtiğin süre boyunca yorum ve inceleme yazamayacak; gelen kutusuna bilgi düşer." data-confirm-title="Kullanıcı susturulsun mu?" data-confirm-label="Sustur">
+                  {{ csrfField() }}
+                  <input type="hidden" name="back" value="{{ back }}">
+                  <label for="mute-{{ item.key }}" class="mod-mute__label">{{ '@' + author.username }} kullanıcısını sustur</label>
+                  <select id="mute-{{ item.key }}" name="days" class="control control--sm mod-mute__select">
+                    @each(entry in muteDurations)
+                    <option value="{{ entry.days }}" {{ entry.days === 7 ? 'selected' : '' }}>{{ entry.label }}</option>
+                    @end
+                  </select>
+                  @component('components/ui/button', { type: 'submit', variant: 'ghost', size: 'sm', icon: 'lock', class: 'ac-danger' })
+                    Sustur
+                  @end
+                </form>
+                @end
+              </div>
+              @end
+            </article>
+          </li>
+          @end
+        </ul>
+        <div class="ac-listfoot">
+          <p class="ac-listfoot__info">Sayfa {{ queue.page }} / {{ queue.lastPage }}</p>
+          @!component('components/ui/pagination', { current: queue.page, total: queue.lastPage, label: 'Bildirim sayfaları' })
+        </div>
+        @else
+        @!component('components/ui/empty_state', { icon: status === 'open' ? 'check-circle' : 'flag', title: emptyTitles[status], description: status === 'open' ? 'Yeni bildirim geldiğinde burada ve menüdeki sayaçta görünür.' : 'Kapatılan bildirimler burada listelenir.' })
+        @end
+      </div>
+
+      <aside class="mod-side">
+        <form method="POST" action="/admin/moderasyon/kelimeler" class="panel" aria-labelledby="words-title" data-submit-once>
+          {{ csrfField() }}
+          <input type="hidden" name="back" value="{{ back }}">
+          <div class="panel__head">
+            <div class="min-w-0">
+              <h2 id="words-title" class="panel__title">Engellenen kelimeler</h2>
+              <p class="panel__desc">Bu ifadeleri içeren yorum ve incelemeler gönderilmez; yazan kişi bir uyarı görür.</p>
+            </div>
+          </div>
+          @!component('components/ui/field', { name: 'words', label: 'Her satıra bir ifade', type: 'textarea', rows: 8, value: blockedWords, hint: 'Büyük/küçük harf Türkçe kurala göre eşlenir (İ = i, I = ı). İfade kelime başında aranır: “aptal” yazarsan “aptalsın” da engellenir, “kaptan” engellenmez.', spellcheck: 'false', autocomplete: 'off' })
+          <div class="form-actions mt-4">
+            @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+              Listeyi kaydet
+            @end
+          </div>
+        </form>
+      </aside>
+    </div>
+  @end
+@end

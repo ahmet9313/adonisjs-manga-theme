@@ -1,0 +1,18 @@
+{{--
+  Discovery links in the catalog / A–Z page headers: the A–Z index (or back to the filterable
+  catalog) and a random series ("Şaşırt beni"; keeps to the one content type picked, if any).
+  Optional: filters (catalog), az (true on the A–Z page).
+--}}
+@let(onlyType = typeof filters !== 'undefined' && filters.types.length === 1 ? filters.types[0] : '')
+@if(typeof az !== 'undefined' && az)
+@component('components/ui/button', { variant: 'secondary', href: '/seriler', icon: 'sliders' })
+  Filtreli liste
+@end
+@else
+@component('components/ui/button', { variant: 'secondary', href: '/seriler/a-z', icon: 'list' })
+  A–Z
+@end
+@end
+@component('components/ui/button', { variant: 'secondary', href: onlyType ? '/rastgele?type=' + encodeURIComponent(onlyType) : '/rastgele', icon: 'shuffle', title: 'Rastgele bir seri aç' })
+  Rastgele
+@end

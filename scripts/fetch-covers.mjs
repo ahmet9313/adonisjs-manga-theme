@@ -166,6 +166,7 @@ async function download(url, target) {
 try {
   const { default: db } = await import('@adonisjs/lucid/services/db')
   const { default: contentConfig } = await import('#config/content')
+  const { refreshSearchText } = await import('#services/search_index_service')
   const rows = await db
     .from('series')
     .join('content_types', 'content_types.id', 'series.content_type_id')
@@ -246,6 +247,7 @@ try {
       update.banner_image = publicPath('banner.jpg')
     }
     await db.from('series').where('id', series.id).update(update)
+    if (mergeTitles) await refreshSearchText([series.id])
     // Collectible cards made from the old cover follow it.
     if (series.cover_image && series.cover_image !== cover)
       await db

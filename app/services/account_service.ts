@@ -1,4 +1,6 @@
 import vine from '@vinejs/vine'
+import { createHash } from 'node:crypto'
+import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import { invalidField } from '#services/upload_service'
 
@@ -86,4 +88,36 @@ export async function assertUniqueIdentity(
 
 export function profileUrl(user: Pick<User, 'username'>) {
   return `/uye/${encodeURIComponent(user.username)}`
+}
+
+/**
+ * Session key of the account stamp. Sessions live in a cookie, so they cannot be deleted on the
+ * server; instead each one carries a stamp of the password and e-mail it was opened with, and
+ * a session whose stamp no longer matches is signed out (silent_auth_middleware).
+ */
+export const SESSION_STAMP = 'auth_stamp'
+
+export function sessionStamp(user: Pick<User, 'id' | 'password' | 'email'>) {
+  return createHash('sha256')
+    .update(`${user.id}:${user.password}:${user.email}`)
+    .digest('base64url')
+    .slice(0, 22)
+}
+
+/**
+ * After a password or e-mail change: every "beni hatırla" login and every other session ends;
+ * this one goes on (keeping "beni hatırla" if it had it).
+ */
+export async function signOutOtherDevices(
+  user: User,
+  {
+    auth,
+    request,
+    session,
+  }: Pick<import('@adonisjs/core/http').HttpContext, 'auth' | 'request' | 'session'>
+) {
+  const remembered = Boolean(request.encryptedCookie('remember_web'))
+  await db.from('remember_me_tokens').where('tokenable_id', user.id).delete()
+  await auth.use('web').login(user, remembered)
+  session.put(SESSION_STAMP, sessionStamp(user))
 }

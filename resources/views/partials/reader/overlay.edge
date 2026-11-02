@@ -1,0 +1,19 @@
+{{--
+  Floating helpers of image chapters (reader.js):
+  - webtoon page counter ("3 / 13") while the strip is read; not in paged mode (the pager counts)
+    nor while reading immersively. Screen readers follow the toolbar's progress bar instead.
+  - "Kaldığın yer": offered when the chapter was left on a page between the first and the last
+    one (accounts: chapter_reads.last_page, guests: localStorage "reader-pos"). It goes away once
+    that page is reached or the reader moves on from the start.
+--}}
+<p class="reader-counter t-num" x-show="!paged && !immersive && !resume && seen !== null" x-cloak aria-hidden="true">
+  <span x-text="(seen ?? 0) + 1">1</span> / {{ pageCount }}
+</p>
+<div class="reader-resume" x-show="resume" x-cloak role="status">
+  @!component('components/icon', { name: 'bookmark', class: 'reader-resume__icon' })
+  <p class="reader-resume__text">Kaldığın yer: <strong>sayfa <span class="t-num" x-text="resume"></span></strong></p>
+  <button type="button" class="btn btn--primary btn--sm" @click="resumeReading()">Devam et</button>
+  <button type="button" class="btn btn--ghost btn--sm btn--icon" @click="dismissResume()" aria-label="Baştan oku" title="Baştan oku">
+    @!component('components/icon', { name: 'x', class: 'btn__icon' })
+  </button>
+</div>

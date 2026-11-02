@@ -1,0 +1,10 @@
+{{--
+  Subtle credit inside a chapter row (partials/series/chapters.edge; the row is a link, so plain
+  text): the chapter's own teams, else its credit line. Chapters without their own credit are
+  covered by the series' teams in the info box. Hidden on phones. Switch: team_credits.
+--}}
+@let(rowCredit = ui('team_credits') && teamCredits ? teamCredits.chapters[chapter.number] : null)
+@if(rowCredit && (rowCredit.teams.length || rowCredit.text))
+@let(rowCreditText = rowCredit.teams.length ? rowCredit.teams.map((team) => team.name).join(', ') : rowCredit.text)
+<span class="chapter-row__credit" title="{{ rowCredit.text || rowCreditText }}">{{ rowCreditText }}</span>
+@end

@@ -5,15 +5,38 @@ import Chapter from '#models/chapter'
 import SeriesModel from '#models/series'
 import ContentType from '#models/content_type'
 import { now } from '#services/input_service'
+import { coverView, type CoverSource } from '#services/cover_policy_service'
+import access from '#services/access_service'
+import readingList from '#services/reading_list_service'
+import type { LibraryStatus } from '#config/site'
+
+/** Most chapters one library hand-over may write (see importLocal). */
+const importLimit = 5000
+import type User from '#models/user'
+
+/** Cover fields of a library row as the current visitor may see them (no banner here). */
+function veiled(series: CoverSource) {
+  // Fields one by one: a Lucid model keeps its columns behind getters, which a spread drops.
+  const view = coverView({
+    coverImage: series.coverImage,
+    bannerImage: null,
+    ageRating: series.ageRating,
+    coverMode: series.coverMode,
+  })
+  return { coverImage: view.coverImage, coverVeil: view.coverVeil }
+}
 
 export interface ReadingState {
   bookmarked: boolean
+  /** Reading status of the bookmark (config/site.ts → libraryStatuses), null when not saved. */
+  status: LibraryStatus | null
   read: number[]
   last: number | null
 }
 
 export interface LibraryImport {
-  bookmarks?: { type: string; slug: string }[]
+  /** `status` is checked here; anything unknown becomes "reading". */
+  bookmarks?: { type: string; slug: string; status?: string }[]
   reads?: { type: string; slug: string; chapters: number[] }[]
 }
 
@@ -44,25 +67,36 @@ class LibraryService {
         .select('chapters.number'),
     ])
     const read = reads.map((row) => Number(row.number))
-    return { bookmarked: Boolean(bookmark), read, last: read[0] ?? null }
+    return {
+      bookmarked: Boolean(bookmark),
+      status: bookmark?.status ?? null,
+      read,
+      last: read[0] ?? null,
+    }
   }
 
-  /** Returns true when this is the reader's first visit to the chapter. */
+  /**
+   * Returns true when this is the reader's first visit to the chapter (it earns the read
+   * reward). A chapter only marked read by hand counts as unvisited until it is opened; one
+   * opened before and marked unread later never counts again (reading_list_service).
+   */
   async recordRead(userId: number, seriesId: number, chapterId: number) {
     const readAt = now()
     const existing = await ChapterRead.query().where({ userId, chapterId }).first()
     if (existing) {
-      existing.merge({ seriesId, readAt })
+      const handMarked = existing.marked
+      existing.merge({ seriesId, readAt, marked: false })
       await existing.save()
-      return false
+      if (!handMarked) return false
+    } else {
+      try {
+        await ChapterRead.create({ userId, chapterId, seriesId, readAt })
+      } catch {
+        // A parallel request inserted the same row first; the unique index already holds it.
+        return false
+      }
     }
-    try {
-      await ChapterRead.create({ userId, chapterId, seriesId, readAt })
-      return true
-    } catch {
-      // A parallel request inserted the same row first; the unique index already holds it.
-      return false
-    }
+    return !(await readingList.wasUnmarked(userId, chapterId))
   }
 
   /** Reading history: one row per series, most recently read first. */
@@ -85,6 +119,8 @@ class LibraryService {
         'series.title',
         'series.slug',
         'series.cover_image',
+        'series.age_rating',
+        'series.cover_mode',
         'content_types.slug as type',
         'content_types.format'
       )
@@ -99,9 +135,11 @@ class LibraryService {
       video: row.format === 'video',
       slug: row.slug as string,
       title: row.title as string,
-      coverImage: String(row.cover_image || '').startsWith('/')
-        ? row.cover_image
-        : '/images/no-cover.svg',
+      ...veiled({
+        coverImage: row.cover_image,
+        ageRating: row.age_rating,
+        coverMode: row.cover_mode,
+      }),
       lastRead: Number(row.number),
       readCount: counts.get(row.series_id) ?? 0,
       readAt: `${String(row.read_at).replace(' ', 'T')}Z`,
@@ -155,20 +193,56 @@ class LibraryService {
       for (const row of rows)
         if (!lastRead.has(row.series_id)) lastRead.set(row.series_id, Number(row.number))
     }
-    return bookmarks.map(({ series }) => ({
+    return bookmarks.map(({ series, status }) => ({
       key: `bookmark:${series.contentType.slug}:${series.slug}`,
+      status,
       type: series.contentType.slug,
       slug: series.slug,
       title: series.title,
-      coverImage: series.coverImage?.startsWith('/') ? series.coverImage : '/images/no-cover.svg',
+      ...veiled(series),
       lastRead: lastRead.get(series.id) ?? null,
       latestChapter:
         series.$extras.latestChapter === null ? null : Number(series.$extras.latestChapter),
     }))
   }
 
-  /** Moves a guest's localStorage library into the account without overwriting newer reads. */
-  async importLocal(userId: number, data: LibraryImport) {
+  /**
+   * Current cover (as this visitor may see it), title and newest chapter of series saved in a
+   * guest's browser, which stores them only as they were when saved. Drafts are left out.
+   */
+  async savedSeries(items: { type: string; slug: string }[]) {
+    if (!items.length) return []
+    const types = await ContentType.query().whereIn('slug', [...new Set(items.map((i) => i.type))])
+    const slugOf = new Map(types.map((type) => [type.id, type.slug]))
+    const rows = await SeriesModel.query()
+      .whereIn('contentTypeId', [...slugOf.keys()])
+      .whereIn('slug', [...new Set(items.map((item) => item.slug))])
+      .where('draft', false)
+      .select('id', 'slug', 'title', 'contentTypeId', 'coverImage', 'ageRating', 'coverMode')
+      .withAggregate('chapters', (chapters) =>
+        chapters.where('draft', false).max('number').as('latestChapter')
+      )
+    const wanted = new Set(items.map((item) => `${item.type}/${item.slug}`))
+    return rows
+      .map((series) => ({
+        type: slugOf.get(series.contentTypeId)!,
+        slug: series.slug,
+        title: series.title,
+        ...veiled(series),
+        latestChapter:
+          series.$extras.latestChapter === null ? null : Number(series.$extras.latestChapter),
+      }))
+      .filter((item) => wanted.has(`${item.type}/${item.slug}`))
+  }
+
+  /**
+   * Moves a guest's localStorage library into the account without overwriting newer reads.
+   * Only what the account may open is taken (no drafts, no members-only/VIP chapters it cannot
+   * read), at most `importLimit` chapters, with a few set-based queries so the single SQLite
+   * connection is not held for long.
+   */
+  async importLocal(user: User, data: LibraryImport) {
+    const userId = user.id
     const wanted = [...(data.bookmarks || []), ...(data.reads || [])]
     if (!wanted.length) return { bookmarks: 0, reads: 0 }
     const types = await ContentType.query().whereIn('slug', [
@@ -179,37 +253,66 @@ class LibraryService {
       .whereIn('contentTypeId', [...typeIds.values()])
       .whereIn('slug', [...new Set(wanted.map((item) => item.slug))])
       .where('draft', false)
-      .select('id', 'slug', 'contentTypeId')
-    const seriesId = (type: string, slug: string) =>
-      series.find((item) => item.slug === slug && item.contentTypeId === typeIds.get(type))?.id
+      .select('id', 'slug', 'contentTypeId', 'access', 'draft', 'ageRating')
+    const find = (type: string, slug: string) =>
+      series.find((item) => item.slug === slug && item.contentTypeId === typeIds.get(type))
 
     let bookmarks = 0
     let reads = 0
+    let budget = importLimit
     await db.transaction(async (trx) => {
       const timestamp = now()
-      for (const item of data.bookmarks || []) {
-        const id = seriesId(item.type, item.slug)
-        if (!id) continue
-        const exists = await Bookmark.query({ client: trx }).where({ userId, seriesId: id }).first()
-        if (exists) continue
-        await Bookmark.create({ userId, seriesId: id, createdAt: timestamp }, { client: trx })
-        bookmarks++
+      const savedRows = await trx
+        .from('bookmarks')
+        .where('user_id', userId)
+        .whereIn(
+          'series_id',
+          series.map((item) => item.id)
+        )
+        .select('series_id')
+      const saved = new Set(savedRows.map((row) => row.series_id as number))
+      // A series the account saved already keeps its own status.
+      const newBookmarks = (data.bookmarks || [])
+        .map((item) => ({
+          id: find(item.type, item.slug)?.id,
+          status: readingList.isStatus(item.status) ? item.status : 'reading',
+        }))
+        .filter((item): item is { id: number; status: LibraryStatus } => {
+          if (!item.id || saved.has(item.id)) return false
+          saved.add(item.id)
+          return true
+        })
+      if (newBookmarks.length) {
+        await trx.table('bookmarks').insert(
+          newBookmarks.map(({ id, status }) => ({
+            user_id: userId,
+            series_id: id,
+            status,
+            created_at: timestamp,
+          }))
+        )
+        bookmarks = newBookmarks.length
       }
+
       for (const item of data.reads || []) {
-        const id = seriesId(item.type, item.slug)
-        if (!id || !item.chapters.length) continue
-        const chapters = await Chapter.query({ client: trx })
-          .where('seriesId', id)
-          .whereIn('number', item.chapters)
+        const target = find(item.type, item.slug)
+        if (!target || !item.chapters.length || budget <= 0) continue
+        const numbers = item.chapters.slice(-budget)
+        const found = await Chapter.query({ client: trx })
+          .where('seriesId', target.id)
+          .whereIn('number', numbers)
           .where('draft', false)
-          .select('id', 'number')
+          .select('id', 'number', 'access')
+        const chapters = found.filter((chapter) =>
+          access.allows(user, access.effectiveAccess({ series: target, chapter }))
+        )
         const existing = await ChapterRead.query({ client: trx })
-          .where({ userId, seriesId: id })
+          .where({ userId, seriesId: target.id })
           .select('chapterId', 'readAt')
         const known = new Set(existing.map((row) => row.chapterId))
         // Imported chapters keep their local order (last entry = most recent) but never become
         // newer than reads the account already has.
-        const order = new Map(item.chapters.map((number, index) => [number, index]))
+        const order = new Map(numbers.map((number, index) => [number, index]))
         const fresh = chapters
           .filter((chapter) => !known.has(chapter.id))
           .sort((a, b) => (order.get(a.number) ?? 0) - (order.get(b.number) ?? 0))
@@ -219,14 +322,19 @@ class LibraryService {
           Date.now()
         )
         const base = oldest - (fresh.length + 1) * 1000
-        for (const [index, chapter] of fresh.entries()) {
-          const readAt = new Date(base + index * 1000).toISOString().slice(0, 19).replace('T', ' ')
-          await ChapterRead.create(
-            { userId, seriesId: id, chapterId: chapter.id, readAt },
-            { client: trx }
-          )
-          reads++
-        }
+        const rows = fresh.map((chapter, index) => ({
+          user_id: userId,
+          series_id: target.id,
+          chapter_id: chapter.id,
+          read_at: new Date(base + index * 1000).toISOString().slice(0, 19).replace('T', ' '),
+          // The browser's list cannot be verified (and guests can mark chapters by hand), so
+          // imported chapters count like hand-made marks: no badges until they are opened.
+          marked: true,
+        }))
+        for (let start = 0; start < rows.length; start += 200)
+          await trx.table('chapter_reads').insert(rows.slice(start, start + 200))
+        reads += rows.length
+        budget -= numbers.length
       }
     })
     return { bookmarks, reads }

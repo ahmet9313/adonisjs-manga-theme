@@ -14,14 +14,23 @@
 @import './reader.css';
 @import './pages/home.css';
 @import './pages/catalog.css';
+@import './pages/browse.css';
 @import './pages/discover.css';
+@import './pages/calendar.css';
 @import './pages/series.css';
 @import './pages/watch.css';
 @import './pages/gate.css';
 @import './pages/profile.css';
 @import './pages/account.css';
+@import './pages/account_security.css';
 @import './pages/community.css';
+@import './pages/engagement.css';
 @import './pages/rewards.css';
-@import './pages/admin.css';
-@import './pages/admin_theme.css';
-@import './pages/admin_community.css';
+@import './pages/views.css';
+@import './pages/teams.css';
+@import './pages/share.css';
+@import './pages/report.css';
+@import './pages/content.css';
+@import './pages/library.css';
+@import './pages/install.css';
+/* Admin panel styles are a separate file (resources/css/admin.css, layout/admin only). */

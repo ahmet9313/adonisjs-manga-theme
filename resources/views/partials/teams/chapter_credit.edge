@@ -1,0 +1,21 @@
+{{--
+  Credit line under the reader / player heading: "Çeviri: Ekip A, Ekip B" linking to the team
+  pages (the chapter's own teams, else the series'), then the chapter's free-text credit.
+  teamCredit comes from team_service.chapterCredit. Switch: team_credits.
+--}}
+@if(ui('team_credits') && teamCredit)
+<p class="team-credit">
+  @!component('components/icon', { name: 'users', class: 'team-credit__icon' })
+  @if(teamCredit.teams.length)
+  <span class="team-credit__teams">Çeviri:
+    @!component('components/teams/links', { teams: teamCredit.teams, class: 'team-credit__link' })
+  </span>
+  @end
+  @if(teamCredit.teams.length && teamCredit.text)
+  <span aria-hidden="true">·</span>
+  @end
+  @if(teamCredit.text)
+  <span>{{ teamCredit.text }}</span>
+  @end
+</p>
+@end

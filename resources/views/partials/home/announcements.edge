@@ -1,0 +1,24 @@
+{{--
+  Home "Duyurular" block (switch home_announcements): the three newest published announcements,
+  pinned first, with a link to /duyurular. Loaded here (post_service via the latestPosts global)
+  only when the switch is on; left out when there is nothing to show.
+--}}
+@let(homePosts = await latestPosts(3))
+@if(homePosts.length)
+<section class="section mt-6 sm:mt-8" aria-labelledby="home-posts-title">
+  @!component('components/ui/section_head', {
+    title: 'Duyurular',
+    id: 'home-posts-title',
+    icon: 'megaphone',
+    href: '/duyurular',
+    linkLabel: 'Tüm duyurular'
+  })
+  <ul class="home-posts">
+    @each(item in homePosts)
+    <li>
+      @!component('components/content/post_card', { item, level: 'h3', class: 'post-card--panel' })
+    </li>
+    @end
+  </ul>
+</section>
+@end

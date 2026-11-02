@@ -1,0 +1,522 @@
+/*
+ * Translation teams: /ekipler (team cards), /ekip/:slug (header, series, latest chapters,
+ * members, "Ekibe katıl" box), /ekibe-katil (roles and recruiting teams), the team logo, and the
+ * credits under the reader / player heading and in series page chapter rows.
+ * Colours come from tokens only; the logo's initial sits on a colour taken from the team name.
+ */
+
+@layer components {
+  /* ---- Team logo (components/teams/logo) ------------------------------------------------- */
+  .team-logo {
+    display: inline-flex;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-lg);
+    background: var(--t-surface-2);
+  }
+
+  .team-logo > img,
+  .team-logo__initial {
+    height: 100%;
+    width: 100%;
+  }
+
+  .team-logo > img {
+    object-fit: cover;
+  }
+
+  .team-logo__initial {
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+  }
+
+  .team-logo--sm {
+    height: 2.25rem;
+    width: 2.25rem;
+    font-size: 0.875rem;
+  }
+
+  .team-logo--md {
+    height: 3rem;
+    width: 3rem;
+    font-size: 1.125rem;
+  }
+
+  .team-logo--lg {
+    height: 3.5rem;
+    width: 3.5rem;
+    font-size: 1.375rem;
+  }
+
+  .team-logo--xl {
+    height: 5rem;
+    width: 5rem;
+    border-radius: var(--radius-xl);
+    font-size: 2rem;
+  }
+
+  @media (width >= 640px) {
+    .team-logo--xl {
+      height: 6.5rem;
+      width: 6.5rem;
+      font-size: 2.5rem;
+    }
+  }
+
+  /* ---- /ekipler -------------------------------------------------------------------------- */
+  .team-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  @media (width >= 640px) {
+    .team-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (width >= 1024px) {
+    .team-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .team-card {
+    position: relative;
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition:
+      border-color var(--dur-1),
+      background-color var(--dur-1);
+  }
+
+  .team-card:hover {
+    border-color: var(--t-border-strong);
+  }
+
+  .team-card__head,
+  .recruit-team__head {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .team-card__title {
+    font-size: 1rem;
+    font-weight: 750;
+    line-height: 1.3;
+    color: var(--t-heading);
+    overflow-wrap: anywhere;
+  }
+
+  .team-card__link {
+    border-radius: var(--radius-sm);
+  }
+
+  .team-card__link:hover {
+    color: var(--t-accent-text);
+  }
+
+  /* The whole card opens the team page; the link stays the only focus stop. */
+  .team-card .team-card__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .team-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  .team-card__desc {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--t-text-2);
+  }
+
+  .team-card__foot {
+    margin-top: auto;
+  }
+
+  /* ---- /ekip/:slug ----------------------------------------------------------------------- */
+  .team-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  @media (width >= 640px) {
+    .team-hero {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 1.75rem;
+    }
+  }
+
+  .team-hero__body {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .team-hero__titles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+
+  .team-hero__title {
+    font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.125rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.022em;
+    color: var(--t-heading);
+    overflow-wrap: anywhere;
+  }
+
+  .team-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+
+  .team-hero__desc {
+    margin-top: 0.875rem;
+    max-width: 65ch;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    white-space: pre-line;
+    color: var(--t-text);
+    overflow-wrap: anywhere;
+  }
+
+  .team-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .team-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0 1.75rem;
+    margin-top: 1.5rem;
+  }
+
+  @media (width >= 1024px) {
+    .team-layout {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      align-items: start;
+    }
+
+    .team-layout__aside {
+      position: sticky;
+      top: 5rem;
+      margin-top: 0;
+    }
+  }
+
+  .team-layout__aside {
+    display: grid;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .team-aside__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9375rem;
+    font-weight: 750;
+    color: var(--t-heading);
+  }
+
+  .team-aside__title > svg {
+    color: var(--t-accent);
+  }
+
+  .team-aside__empty {
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+
+  .team-role + .team-role {
+    margin-top: 1rem;
+    border-top: 1px solid var(--t-border);
+    padding-top: 0.875rem;
+  }
+
+  .team-role__title {
+    margin-bottom: 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t-muted);
+  }
+
+  .team-people {
+    display: grid;
+    gap: 0.125rem;
+  }
+
+  .team-person {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.625rem;
+    margin-inline: -0.5rem;
+    border-radius: var(--radius-md);
+    padding: 0.3125rem 0.5rem;
+    transition: background-color var(--dur-1);
+  }
+
+  .team-person:hover {
+    background: var(--t-hover);
+  }
+
+  .team-person__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 650;
+    color: var(--t-heading);
+  }
+
+  .team-person__handle {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .team-join {
+    border-color: var(--t-accent-line);
+  }
+
+  .team-join__text {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    white-space: pre-line;
+    color: var(--t-text);
+    overflow-wrap: anywhere;
+  }
+
+  .team-join .team-links {
+    margin-top: 0.875rem;
+  }
+
+  .team-join__note {
+    margin-top: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  /* Latest chapters: rows like the series page chapter list. */
+  .team-chapters {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--t-border);
+  }
+
+  .team-chapter {
+    display: flex;
+    min-height: 3.75rem;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--t-surface);
+    padding: 0.5rem 0.875rem;
+    color: var(--t-text);
+    transition: background-color var(--dur-1);
+  }
+
+  .team-chapter:hover {
+    background: var(--t-hover);
+  }
+
+  .team-chapter:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .team-chapter__cover {
+    position: relative;
+    height: 2.75rem;
+    width: 2.0625rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--t-surface-2);
+  }
+
+  .team-chapter__cover > img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  .team-chapter__main {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .team-chapter__series {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--t-muted);
+  }
+
+  .team-chapter__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .team-chapter__time {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    color: var(--t-muted);
+  }
+
+  /* ---- /ekibe-katil ---------------------------------------------------------------------- */
+  .recruit-roles {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  @media (width >= 640px) {
+    .recruit-roles {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (width >= 1024px) {
+    .recruit-roles {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .recruit-role {
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-lg);
+    background: var(--t-surface);
+    padding: 0.875rem 1rem;
+  }
+
+  .recruit-role__name {
+    font-size: 0.9375rem;
+    font-weight: 750;
+    color: var(--t-heading);
+  }
+
+  .recruit-role__hint {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--t-text-2);
+  }
+
+  .recruit-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  @media (width >= 1024px) {
+    .recruit-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .recruit-team {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+  }
+
+  /* ---- Credits --------------------------------------------------------------------------- */
+  /* Under the reader / player heading (partials/teams/chapter_credit). */
+  .team-credit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  .watch-head .team-credit {
+    justify-content: flex-start;
+  }
+
+  .team-credit__icon {
+    height: 0.9375rem;
+    width: 0.9375rem;
+    flex-shrink: 0;
+  }
+
+  .team-credit__link {
+    border-radius: var(--radius-xs);
+    font-weight: 650;
+    color: var(--t-accent-text);
+  }
+
+  .team-credit__link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Series page chapter rows (partials/teams/chapter_row): subtle, from 640px only. */
+  .chapter-row__credit {
+    display: none;
+  }
+
+  @media (width >= 640px) {
+    .chapter-row__credit {
+      display: block;
+      max-width: 12rem;
+      flex-shrink: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.75rem;
+      color: var(--t-muted);
+    }
+  }
+}

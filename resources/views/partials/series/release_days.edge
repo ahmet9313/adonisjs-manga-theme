@@ -1,0 +1,18 @@
+{{--
+  "Yeni bölümler: Cuma, Cumartesi" row of "Seri bilgileri" (series.releaseDays / releaseNote, set in
+  the admin series form). Nothing is shown when neither is set.
+--}}
+@let(releaseKeys = schedule.keys(series.releaseDays))
+@if(releaseKeys.length || series.releaseNote)
+<div>
+  <dt>Yeni bölümler</dt>
+  <dd>
+    @if(releaseKeys.length)
+    <a href="/takvim" class="link-person" title="Yayın Takvimi">{{ schedule.days(series.releaseDays) }}</a>
+    @end
+    @if(series.releaseNote)
+    <span class="{{ releaseKeys.length ? 'series-release__note' : '' }}">{{ series.releaseNote }}</span>
+    @end
+  </dd>
+</div>
+@end

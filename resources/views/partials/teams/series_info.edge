@@ -1,0 +1,12 @@
+{{--
+  "Çeviri ekibi" row of the series info box (partials/series/info.edge, inside its <dl>):
+  the series' default teams (teamCredits from team_service.seriesCredits). Switch: team_credits.
+--}}
+@if(ui('team_credits') && teamCredits && teamCredits.teams.length)
+<div>
+  <dt>Çeviri ekibi</dt>
+  <dd>
+    @!component('components/teams/links', { teams: teamCredits.teams })
+  </dd>
+</div>
+@end

@@ -1,0 +1,129 @@
+{{--
+  /ekip/:slug: team header (logo, name, counts, description, links), then the published series it
+  works on and its latest published chapters, beside the "Ekibe katıl" box (when recruiting) and
+  the members by role. Drafts never appear; locked chapters show their lock like on series pages.
+  Data: team, links, roles [{ role, label, people }], memberCount, series (presenter output),
+  chapters (team_service.latestChapters).
+--}}
+@component('components/layout/main', { title, description })
+
+@slot('main')
+  @!component('components/breadcrumb', { items: [{ label: 'Ekipler', href: '/ekipler' }, { label: team.name }] })
+
+  <header class="panel team-hero">
+    @!component('components/teams/logo', { team, size: 'xl' })
+    <div class="team-hero__body">
+      <div class="team-hero__titles">
+        <h1 class="team-hero__title">{{ team.name }}</h1>
+        @if(team.recruiting)
+        @!component('components/ui/badge', { kind: 'success', text: 'Üye arıyor' })
+        @end
+      </div>
+      <p class="team-hero__meta">
+        <span>{{ memberCount }} üye</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ series.length }} seri</span>
+      </p>
+      @if(team.description)
+      <p class="team-hero__desc">{{ team.description }}</p>
+      @end
+      @if(links.length)
+      <div class="team-links">
+        @each(link in links)
+        @component('components/ui/button', { href: link.url, size: 'sm', icon: link.icon, target: '_blank', rel: 'noopener nofollow ugc' })
+          {{ link.label }}
+        @end
+        @end
+      </div>
+      @end
+    </div>
+  </header>
+
+  <div class="team-layout">
+    <div class="team-layout__main">
+      <section class="section" aria-labelledby="team-series-title">
+        @!component('components/ui/section_head', { id: 'team-series-title', title: 'Serileri', icon: 'book-open', description: series.length ? 'Ekibin çevirdiği seriler' : '' })
+        @if(series.length)
+        <div class="series-grid">
+          @each((item, index) in series)
+          @!component('components/series/card', { series: item, priority: index < 4 })
+          @end
+        </div>
+        @else
+        @!component('components/ui/empty_state', { icon: 'book-open', title: 'Henüz seri yok', description: 'Ekibin çevirdiği seriler yayımlandığında burada görünecek.' })
+        @end
+      </section>
+
+      <section class="section" aria-labelledby="team-chapters-title">
+        @!component('components/ui/section_head', { id: 'team-chapters-title', title: 'Son bölümler', icon: 'clock' })
+        @if(chapters.length)
+        <ul class="panel panel--flush team-chapters">
+          @each(chapter in chapters)
+          <li>
+            <a href="{{ chapter.url }}" class="team-chapter">
+              <span class="team-chapter__cover">
+                <img src="{{ thumbOf(chapter.coverImage, 160) }}" alt="" width="40" height="53" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
+                  @if(chapter.coverVeil)
+                  data-veil="{{ chapter.coverVeil }}"
+                  @end
+                  >
+              </span>
+              <span class="team-chapter__main">
+                <span class="team-chapter__series">{{ chapter.seriesTitle }}</span>
+                <span class="team-chapter__name">Bölüm {{ chapter.number }}{{ chapter.title ? ': ' + chapter.title : '' }}</span>
+              </span>
+              @if(chapter.lock)
+              <span class="badge badge--sm lock-badge" data-tone="{{ chapter.lock === 'vip' ? 'accent' : 'neutral' }}" title="{{ site.accessLevels[chapter.lock].label }}">
+                @!component('components/icon', { name: chapter.lock === 'vip' ? 'star' : 'lock', stroke: 2 })
+                {{ chapter.lock === 'vip' ? 'VIP' : 'Üye' }}
+              </span>
+              @end
+              <time class="team-chapter__time" datetime="{{ chapter.publishedAt }}" title="{{ dateOf(chapter.publishedAt) }}">{{ chapter.timeAgo }}</time>
+            </a>
+          </li>
+          @end
+        </ul>
+        @else
+        @!component('components/ui/empty_state', { icon: 'document', title: 'Henüz bölüm yok', description: 'Ekibin bölümleri yayımlandıkça burada listelenecek.' })
+        @end
+      </section>
+    </div>
+
+    <aside class="team-layout__aside" aria-label="Ekip ayrıntıları">
+      @if(team.recruiting)
+      @include('partials/teams/join_box')
+      @end
+
+      <section class="panel panel--tight" aria-labelledby="team-members-title">
+        <h2 id="team-members-title" class="team-aside__title">
+          @!component('components/icon', { name: 'users', class: 'h-4 w-4' })
+          Üyeler
+        </h2>
+        @if(roles.length)
+        @each(group in roles)
+        <div class="team-role">
+          <h3 class="team-role__title">{{ group.label }}</h3>
+          <ul class="team-people">
+            @each(person in group.people)
+            <li>
+              <a href="/uye/{{ person.username }}" class="team-person">
+                @!component('components/avatar', { user: person, size: 'h-8 w-8', text: 'text-xs' })
+                <span class="team-person__name">{{ person.fullName || person.username }}</span>
+                @if(person.fullName && person.fullName !== person.username)
+                <span class="team-person__handle">{{ '@' + person.username }}</span>
+                @end
+              </a>
+            </li>
+            @end
+          </ul>
+        </div>
+        @end
+        @else
+        <p class="team-aside__empty">Üye listesi henüz eklenmemiş.</p>
+        @end
+      </section>
+    </aside>
+  </div>
+@end
+
+@end

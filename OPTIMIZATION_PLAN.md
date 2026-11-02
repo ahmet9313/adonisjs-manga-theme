@@ -172,7 +172,7 @@ Etiketler: **[D]** iddia doğrulandı · **[K]** kısmen doğrulandı (düzeltil
 | D1 | Orta [Ö] | MySQL bağlantısında `dateStrings` ayarı yok. `mysql2`, DATETIME sütunlarını ham sorgularda (`db.from(...)`) `Date` nesnesi olarak döndürür. SQLite'ta ise bunlar dizgi olarak gelir. Ham sorgu sonuçlarını dizgi kabul eden yerler (geçmiş, okundu zamanları, sıralama ve biçimlendirme) MySQL'de farklı davranabilir. `last_checkin_on` VARCHAR olduğu için etkilenmez. MySQL sunucusu olmadığından bu çalıştırılarak doğrulanmadı. | `config/database.ts` (mysql), `library_service.ts`, `comment_service.ts` |
 | D2 | Orta [D] | P6 ile aynı: `chapter_reads(series_id)` ve `bookmarks(series_id)` indeksleri eksik. | `0014_create_library_tables.ts` |
 | D3 | Orta [D] | SQLite'ta WAL ve `busy_timeout` ayarlı değil. Okuma ile yazma birbirini kilitler; aynı anda yazmada `SQLITE_BUSY` hatası alınabilir. | `config/database.ts` |
-| D4 | Düşük [D] | 0016 migration'ı `users.frame_id/effect_id/wallpaper_id` ve `comments.sticker_id` için yabancı anahtar ekleyemedi (SQLite kısıtı). Silinen bir kozmetik, kullanıcıda geçersiz kimlik bırakabiliyor; kod bunu yumuşak biçimde yok sayıyor. | `0016_create_community_tables.ts:10-25` |
+| D4 | Düşük [D] | 0016 migration'ı `users.frame_id/effect_id/wallpaper_id` ve `comments.sticker_id` için yabancı anahtar ekleyemedi (SQLite kısıtı). Silinen bir kozmetik, kullanıcıda geçersiz kimlik bırakabiliyor; kod bunu yumuşak biçimde yok sayıyor. | Giderildi (2026-10-21): 0023 indeksleri (22 ms → 0,3 ms) |
 | D5 | Düşük [Ö] | Denormalize sayaçlar (`like_count`, `reply_count`, `profile_like_count`) için düzeltme ya da yeniden hesaplama aracı yok. | `comment_service.ts` |
 
 ### 2.5 Güvenlik, eşzamanlılık ve arka plan
@@ -904,8 +904,11 @@ Sıra gerekçesi:
 | Faz | Durum | Not |
 | --- | --- | --- |
 | 1 | ✅ Tamamlandı (2026-10-15) | Ayrıntılar AGENTS.md günlüğünde. Ek: P10 (görsellerde oturum) giderildi; `admin:promote` betiği eklendi. Dosya tabanlı `ace` komutları bu ortamda (jsonschema 1.5.0 + Node 24.21) yüklenemediğinden betik `ace` dışında yazıldı. |
-| 1b | Bekliyor | Ek bulgulardan X1–X5, X9, X11 ile Ek A'daki G2 (build içinden göreli DB/içerik yolu), G3 (`db:reset`/`migrate:fresh` onaysız), G19 (düz HTTP'de `secure` çerez yüzünden üretimde girişin bozulması); küçük ve güvenlik/veri odaklı, Faz 2'den önce önerilir. |
-| 2–8 | Bekliyor | — |
+| 1b | Kısmen (2026-10-21) | X1 (geçici dosyalar), X3 (önbellek), X4 (oturum iptali), X5 (giriş sınırı), X9 (yorum sınırı yarışı) ve G3 (`SIL` onayı) giderildi. Kalan: X2 (MySQL'de çalıştırılmadı), X11 (eski demo yönetici uyarısı), G2 (build içinden göreli yol), G19 (düz HTTP'de `secure` çerez). |
+| 2–5 | ✅ Tamamlandı (2026-10-15) | Tasarım sistemi, tema ayarları, ortak sayfalar ve yönetim paneli "Mürekkep & Kâğıt" yeniden tasarımıyla teslim edildi (K1'deki merlintoon paleti yerine). |
+| 6 | Büyük ölçüde (2026-10-21) | Sıcak yol indeksleri (0023) ve `ANALYZE`, SQLite WAL, MySQL tarih/charset ayarı, gereksiz preload'lar, toplu aktarım. Kalan: ana sayfa önbelleği, D1/D2/D8 tekrar sorguları. |
+| 7 | Kısmen (2026-10-21) | Kuyruk yerine istek anında `sharp` ile `?w=` WebP kopyaları (disk önbelleği), yönetim JS/CSS ayrımı, sıkıştırma. Kalan: iş kuyruğu, yüklemede yeniden kodlama, okuyucu sayfa boyutları. |
+| 8 | Bekliyor | CSP report-only, kilitli bölüm dosyalarının erişim denetimi, son ölçüm. |
 
 ---
 
@@ -958,16 +961,16 @@ Aşağıdaki tablolar, iddiaları çürütmeye çalışan doğrulayıcılar ve e
 | C1 | Düşük | Hash'li asset'ler `max-age=0` ile sunuluyordu | `config/static.ts` artık `headers()` kullanıyor | Giderildi |
 | C2 | Orta | Router'dan sunulan görsellerde ETag/Cache-Control yoktu | `media_controller.ts` `serveContent`: Cache-Control + `download(path, true)` | Giderildi |
 | C3 | Orta | Üretimde her görsel tam router yığınından geçiyor, `progress.summary` çalıştırıyordu | `content_middleware.ts` artık router'dan önce sunuyor | Giderildi (yedek `/content/*` rotası duruyor) |
-| C4 | Düşük | Tek JS paketi (74.6 KB, gzip 26 KB); uygulama kodu ~28 KB | `app.js:1-19` | Açık (düşük getiri) |
+| C4 | Düşük | Tek JS paketi (74.6 KB, gzip 26 KB); uygulama kodu ~28 KB | `app.js:1-19` | Kısmen (2026-10-21): yönetim modülleri ayrı parça |
 | C5 | Düşük | Tekrarlanan kartlarda glass/blur kullanılıyor (Safari'de pahalı; görselin arkasında boşa) | `series_list.edge:143-145`, `home.edge:159-160`, `bookmarks.edge:33-36`, `series_detail.edge:132-136,227-229` | Açık |
 | C6 | Düşük | Sonsuz `fx` animasyonları (6 efekt) | `app.css:194-282`; reduced-motion kuralı var (`:580-585`) | Açık (düşük) |
 | C7 | Orta | Okuyucunun ilk sayfası lazy yükleniyor, görsellerde boyut yok; hero ve banner'da `fetchpriority` yok; katalog ilk satırı lazy | `chapter_reader.edge:25-31`, `home.edge:42-70`, `series_detail.edge:6-11,25-30`, `series_list.edge:150` | Açık |
-| C8 | Orta | Kapak, sayfa, yorum ve kart görselleri işlenmeden tam boyutta sunuluyor (ör. 4.8 MB PNG `max-h-96` içinde gösteriliyor) | `upload_service.ts:13,33-34`; `comment_controller.ts:12`; `public/content/comments/63f8…png` | Açık |
+| C8 | Orta | Kapak, sayfa, yorum ve kart görselleri işlenmeden tam boyutta sunuluyor (ör. 4.8 MB PNG `max-h-96` içinde gösteriliyor) | `upload_service.ts:13,33-34`; `comment_controller.ts:12`; `public/content/comments/63f8…png` | Kısmen (2026-10-21): `?w=` WebP küçük kopyaları; yüklemede yeniden kodlama yok |
 | C9 | Düşük | Yorumlar görünürlükten bağımsız olarak hemen yükleniyor | `comments.js:68-71,87-95` | Açık |
 | C10 | Düşük | `prose` sınıfları çalışmıyor (typography eklentisi kurulu değil) | `chapter_reader.edge:39`; build CSS'te `prose` 0 kez geçiyor | Açık |
 | C11 | Düşük | `check-mobile-nav` Playwright Chromium'u bulamıyor; root olarak `--no-sandbox` yok | `scripts/check-mobile-nav.mjs:21-35,57-69` | Açık |
 | C12 | Orta | Prod CSS'te önekli `backdrop-filter` öne alınıyor ve Lightning CSS önek-siz satırı düşürüyor; Chromium'da blur yok, dev ve prod farklı görünüyor | `app.css:35-36,41-42`; `build/public/assets/app-*.css` | Açık |
-| C13 | Orta | HTML/CSS/JS/JSON yanıtlarında sıkıştırma yok (CSS 110.6 KB → gzip 17.8 KB) | `start/kernel.ts` server stack | Açık |
+| C13 | Orta | HTML/CSS/JS/JSON yanıtlarında sıkıştırma yok (CSS 110.6 KB → gzip 17.8 KB) | `start/kernel.ts` server stack | Giderildi (2026-10-21): `compress_middleware` (br/gzip) |
 | C14 | Düşük | Seri kapağında boyut olmadığı için mobilde CLS oluşuyor | `series_detail.edge:24-30` | Açık |
 
 ### A.4 Backend sorguları ve katman yapısı (D)
@@ -977,29 +980,29 @@ Aşağıdaki tablolar, iddiaları çürütmeye çalışan doğrulayıcılar ve e
 | D1 | Düşük | Seri detayı: misafir 20, üye 26 sorgu; 8'i tekrar, 3'ü kullanılmayan preload | `series_controller.ts:77-85`; `series_service.ts:19-47,204-226` | Açık |
 | D2 | Düşük | Okuyucu: misafir 12, üye 18–28 sorgu; ~7'si gereksiz; `summary` iki kez çalışıyor | `chapter_controller.ts:11-30`; `series_service.ts:57-70` | Açık |
 | D3 | Düşük | Gereksiz bölüm yüklemeleri: yorum kaydı, `recentByUser`, dashboard. Admin bölüm listesi içeriğe gerçekten ihtiyaç duyuyor | `comment_controller.ts:78-83`; `comment_service.ts:271`; `dashboard_controller.ts:26-29` | Açık |
-| D4 | Yüksek | `popular()` her seri için `chapter_reads`/`bookmarks` korelasyonlu COUNT çalıştırıyor, `series_id` indeksi yok. 500 seri/300 bin okumada 6.9 sn sürüyor ve senkron better-sqlite3 tüm siteyi kilitliyor; indeksle 19 ms | `recommendation_service.ts:5-8,70-75`; `0014:23,50-51` | Açık |
+| D4 | Yüksek | `popular()` her seri için `chapter_reads`/`bookmarks` korelasyonlu COUNT çalıştırıyor, `series_id` indeksi yok. 500 seri/300 bin okumada 6.9 sn sürüyor ve senkron better-sqlite3 tüm siteyi kilitliyor; indeksle 19 ms | `recommendation_service.ts:5-8,70-75`; `0014:23,50-51` | Giderildi (2026-10-21): 0023 indeksleri (22 ms → 0,3 ms) |
 | D5 | Düşük | Geçmiş `limit(2000)` + JS ile tekilleştirme; 2000'den fazla okumada yanlış sonuç | `library_service.ts:68-104` | Açık |
 | D6 | Düşük | Kozmetik mağazası her görüntülemede tam tablo GROUP BY yapıyor | `cosmetic_service.ts:137-161` | Açık |
-| D7 | Düşük | `evaluate` tetikleyen metriği bilmiyor; oy throttle'ı yok | `progress_service.ts:68-99`; `comment_service.ts:235-238` | Açık |
+| D7 | Düşük | `evaluate` tetikleyen metriği bilmiyor; oy throttle'ı yok | `progress_service.ts:68-99`; `comment_service.ts:235-238` | Kısmen (2026-10-21): oy hız sınırı; `evaluate` hâlâ bütün metrikler |
 | D8 | Düşük | Profil: 3 tekrar COUNT, tüm kart koleksiyonu ve kullanılmayan preload'lar (~7 gereksiz sorgu) | `account_controller.ts:34-69`; `card_service.ts:66-96`; `comment_service.ts:272` | Açık |
 | D9 | Düşük | 4 sözlük controller'ı kopya; `toIso` ve sayaç yardımcıları kopya | `admin/{genre,author,artist,content_type}_controller.ts`; `comment_service.ts:25`; `notification_service.ts:21` | Açık |
 | D10 | Düşük | JSON hata biçimi 4 farklı şekilde; seri ve bölüm 404'leri düz metin | `comment_controller.ts:49…`; `series_controller.ts:80`; `chapter_controller.ts:10,14,19` | Açık |
-| D11 | Düşük | `importLocal` öğe başına sorgu çalıştırıyor, tek uzun transaction (SQLite'ı kilitliyor) | `library_service.ts:180-219`; `library_controller.ts:12-27` | Açık |
+| D11 | Düşük | `importLocal` öğe başına sorgu çalıştırıyor, tek uzun transaction (SQLite'ı kilitliyor) | `library_service.ts:180-219`; `library_controller.ts:12-27` | Giderildi (2026-10-21): erişim süzgeci, toplu ekleme, 5000 sınırı, hız sınırı |
 | — | — | "JSON 500 ham SQL sızdırıyor" iddiası | `handler.ts` `renderErrorAsJSON` → `GENERIC_SERVER_ERROR` | Çürütüldü/Giderildi (bkz. F2) |
 
 ### A.5 Veritabanı (E)
 
 | ID | Önem | Sorun | Kanıt | Durum |
 |---|---|---|---|---|
-| E1 | Orta | SQLite'ta eksik indeksler: sıcak yolda `chapter_reads(series_id)` ve `bookmarks(series_id)`; cascade/admin yolunda `comment_likes(comment_id)`, `comments(chapter_id)`, `comments(sticker_id)`, `series_authors(author_id)`, `series_artists(artist_id)`. MySQL/InnoDB FK kolonlarını otomatik indeksler | `0014`, `0015:46-48`, `0008/0009:22`, `0011:11` | Açık |
+| E1 | Orta | SQLite'ta eksik indeksler: sıcak yolda `chapter_reads(series_id)` ve `bookmarks(series_id)`; cascade/admin yolunda `comment_likes(comment_id)`, `comments(chapter_id)`, `comments(sticker_id)`, `series_authors(author_id)`, `series_artists(artist_id)`. MySQL/InnoDB FK kolonlarını otomatik indeksler | `0014`, `0015:46-48`, `0008/0009:22`, `0011:11` | Giderildi (2026-10-21): 0023 |
 | E2 | Düşük | `chapters.series_id` indeksi `unique(series_id, number)` varken gereksiz | `0006:23-24` | Açık (dokunulmayacak) |
-| E3 | Yüksek | MySQL'de `dateStrings` yok: Date nesnesi üzerinde `.replace` çağrısı TypeError atıyor (yorumlar, profil, rozetler 500 dönüyor); `isRecent` NaN olduğu için her istekte `last_seen` UPDATE çalışıyor | `config/database.ts` mysql; `comment_service.ts:25`; `profile/show.edge:6,150`; `rewards/badges.edge:27`; `level.ts:33` | Açık (MySQL'de çalıştırılmadı) |
-| E4 | Düşük | SQLite WAL kapalı (busy timeout varsayılanı 5 sn) | `config/database.ts` sqlite | Açık |
+| E3 | Yüksek | MySQL'de `dateStrings` yok: Date nesnesi üzerinde `.replace` çağrısı TypeError atıyor (yorumlar, profil, rozetler 500 dönüyor); `isRecent` NaN olduğu için her istekte `last_seen` UPDATE çalışıyor | `config/database.ts` mysql; `comment_service.ts:25`; `profile/show.edge:6,150`; `rewards/badges.edge:27`; `level.ts:33` | Kodda giderildi (2026-10-21): `dateStrings`, `timezone`, `utf8mb4`; MySQL'de çalıştırılmadı |
+| E4 | Düşük | SQLite WAL kapalı (busy timeout varsayılanı 5 sn) | `config/database.ts` sqlite | Giderildi (2026-10-21): WAL, NORMAL, busy_timeout; `npm run db:backup` |
 | E5 | Düşük | LIKE içinde `%` ve `_` kaçışlanmıyor; MySQL'de JSON kolonu büyük/küçük harfe duyarlı | `series_service.ts:157-160,191-195` | Açık |
 | E6 | Orta | Tür/yazar/çizer silinince pivot satırları CASCADE ile sessizce siliniyor; "silinemez" mesajı hiçbir zaman çıkmıyor | `0007/0008/0009:19-21`; `genre_controller.ts:83-88`, `author/artist_controller.ts:79-84` | Açık |
 | E7 | Düşük | `root_id` sorgularda kullanılmıyor; kozmetik silinirken `detach()` aynı transaction içinde olmalı | `comment_service.ts:40,162`; `cosmetic_service.ts:256-264` | Açık (tasarım gereği) |
 | E8 | Düşük | `remove()` sert/yumuşak silme kararını bellekteki `replyCount` ile veriyor; eşzamanlı eklenen yanıt CASCADE ile silinebilir | `comment_service.ts:246-252`; `0015:33-35` | Açık |
-| E9 | Orta | MySQL: `(like_count - dislike_count)` unsigned çıkarma işlemi ERROR 1690 veriyor; `sort=top` 500 dönüyor | `comment_service.ts:116`; `0015:41`; `0016:24` | Açık |
+| E9 | Orta | MySQL: `(like_count - dislike_count)` unsigned çıkarma işlemi ERROR 1690 veriyor; `sort=top` 500 dönüyor | `comment_service.ts:116`; `0015:41`; `0016:24` | Giderildi (2026-10-21): imzalı CAST |
 | E10 | Düşük | Bildirim tablosu sınırsız büyüyor: `notifyMany` budama yapmıyor, okunmamışlar hiç silinmiyor | `notification_service.ts:47-80` | Açık |
 | E11 | Düşük | `groupLimit` window function istiyor (MySQL 8+); en düşük sürüm belgelenmemiş | `comment_service.ts:104-106` | Açık |
 
@@ -1009,22 +1012,22 @@ Aşağıdaki tablolar, iddiaları çürütmeye çalışan doğrulayıcılar ve e
 |---|---|---|---|---|
 | F1 | Orta | Editör kozmetik/kart yönetebiliyor ve kendine hediye verebiliyordu | `routes.ts:151-183` `.use(middleware.role(['admin']))` | Giderildi (editör 403 testi var) |
 | F2 | — | "Üretim 5xx ham mesaj döndürüyor" | `handler.ts` `hideDetails` | Çürütüldü |
-| F3 | Yüksek | Bodyparser her multipart parçayı tmp'ye yazıyor ve silmiyor; global limit 200 MB | `upload_gate_middleware.ts` misafirleri ve 12 MB üstünü engelliyor; `config/bodyparser.ts:42,50` hâlâ `autoProcess: true`, `200mb` | Kısmen (üye red ve hata yolları hâlâ tmp sızdırıyor) |
+| F3 | Yüksek | Bodyparser her multipart parçayı tmp'ye yazıyor ve silmiyor; global limit 200 MB | `upload_gate_middleware.ts` misafirleri ve 12 MB üstünü engelliyor; `config/bodyparser.ts:42,50` hâlâ `autoProcess: true`, `200mb` | Kısmen (2026-10-21): taşınmayan geçici dosyalar istek sonunda silinir; global sınır 200 MB |
 | F4 | Düşük | Kart yarışları | `disassemble` koşullu (`card_service.ts:121`); `give()` select-then-insert yapıyor (`:23-35`); `craft` parçaları ayrı transaction'da harcıyor | Kısmen |
-| F5 | Orta | Parola veya e-posta değişince remember-me token'ları ve oturum geçersiz kılınmıyor (G4 ile aynı) | `account_controller.ts:149-159,135-147`; karşılaştırma: `admin/user_controller.ts:60` | Açık |
+| F5 | Orta | Parola veya e-posta değişince remember-me token'ları ve oturum geçersiz kılınmıyor (G4 ile aynı) | `account_controller.ts:149-159,135-147`; karşılaştırma: `admin/user_controller.ts:60` | Giderildi (2026-10-21): oturum damgası + remember token silme |
 | F6 | — | `--production --seed` demo yönetici oluşturuyor | `setup-and-start.mjs:165-171` seed'i atlıyor | Çürütüldü. Kalan: daha önce seed'lenmiş DB'deki `admin@admin.com/admin` algılanmıyor |
-| F7 | Düşük | Seri/bölüm silme, kapak/banner değiştirme ve sayfa düzenleme eski dosyaları yetim bırakıyor | `admin/chapter_controller.ts:160-165`; `admin/series_controller.ts:89-93,177-182` | Açık |
-| F8 | Düşük | Dosyalar transaction'dan önce kaydediliyor; transaction başarısız olursa geri alınmıyor | `admin/chapter_controller.ts:65-86`; `series_controller.ts:89-103` (doğru örnek: `card_controller.save`) | Açık |
-| F9 | Düşük | `announce` istek içinde çalışıyor; hata verirse kayıtlı bölüm 500 dönüyor ve tekrar deneme "numara mevcut" hatasına düşüyor | `admin/chapter_controller.ts:123-128` | Açık |
-| F10 | Orta | Oy, import, craft/disassemble, avatar/banner ve `current_password` uç noktalarında throttle yok | `comment_controller.ts:131-139`; `account_controller.ts:135-159` | Açık |
+| F7 | Düşük | Seri/bölüm silme, kapak/banner değiştirme ve sayfa düzenleme eski dosyaları yetim bırakıyor | `admin/chapter_controller.ts:160-165`; `admin/series_controller.ts:89-93,177-182` | Giderildi (2026-10-21): kapak/banner/sayfa/yorum görseli temizliği |
+| F8 | Düşük | Dosyalar transaction'dan önce kaydediliyor; transaction başarısız olursa geri alınmıyor | `admin/chapter_controller.ts:65-86`; `series_controller.ts:89-103` (doğru örnek: `card_controller.save`) | Giderildi (2026-10-21): başarısız kayıtta yeni dosyalar silinir |
+| F9 | Düşük | `announce` istek içinde çalışıyor; hata verirse kayıtlı bölüm 500 dönüyor ve tekrar deneme "numara mevcut" hatasına düşüyor | `admin/chapter_controller.ts:123-128` | Giderildi (2026-10-21): bildirim hatası günlüğe yazılır |
+| F10 | Orta | Oy, import, craft/disassemble, avatar/banner ve `current_password` uç noktalarında throttle yok | `comment_controller.ts:131-139`; `account_controller.ts:135-159` | Kısmen (2026-10-21): oy, aktarım, kart, avatar/banner, mevcut parola sınırlı |
 | F11 | Düşük | `/content` altındaki SVG | `config/static.ts` `svgHeaders` (sandbox CSP), `nosniff` | Giderildi |
-| F12 | Düşük | Kozmetik önbelleği yükleme sürerken `invalidate` çağrılırsa bayat değer yazılabiliyor | `cosmetic_service.ts:51-71` | Açık |
+| F12 | Düşük | Kozmetik önbelleği yükleme sürerken `invalidate` çağrılırsa bayat değer yazılabiliyor | `cosmetic_service.ts:51-71` | Giderildi (2026-10-21): sürüm sayacı |
 | F13 | Düşük | Zamanlanmış veya bakım işi yok | grep: scheduler/queue yok | Açık |
 | F14 | Düşük | CSP kapalı; 12 inline `onerror`, 9 `onsubmit` | `config/shield.ts`; `resources/views` | Açık |
-| F15 | Orta | Kozmetik önbelleği reddedilmiş promise'i sonsuza dek tutuyor; tek bir DB hatası her isteği yeniden başlatmaya kadar bozuyor | `cosmetic_service.ts:53-61` (`catch` yok); `silent_auth_middleware.ts:15` | Açık |
-| F16 | Orta | Başarılı giriş aynı IP'nin sayacını sıfırlıyor; saldırgan kendi hesabıyla sınırı aşabiliyor | `auth_controller.ts:51,70` | Açık |
-| F17 | Düşük | Yorum hız sınırı paralel isteklerle aşılabiliyor (kayıt geç yapılıyor) | `comment_controller.ts:56,105` | Açık |
-| F18 | Düşük | Reddedilen veya geçersiz üye yüklemeleri tmp dosyası bırakıyor | `bodyparser_middleware-*.js:1095-1105` | Açık |
+| F15 | Orta | Kozmetik önbelleği reddedilmiş promise'i sonsuza dek tutuyor; tek bir DB hatası her isteği yeniden başlatmaya kadar bozuyor | `cosmetic_service.ts:53-61` (`catch` yok); `silent_auth_middleware.ts:15` | Giderildi (2026-10-21): başarısız yükleme unutulur |
+| F16 | Orta | Başarılı giriş aynı IP'nin sayacını sıfırlıyor; saldırgan kendi hesabıyla sınırı aşabiliyor | `auth_controller.ts:51,70` | Giderildi (2026-10-21): bağlantı + hesap sınırı, sayaç sıfırlanmaz |
+| F17 | Düşük | Yorum hız sınırı paralel isteklerle aşılabiliyor (kayıt geç yapılıyor) | `comment_controller.ts:56,105` | Giderildi (2026-10-21): kontrol ve sayım tek adımda |
+| F18 | Düşük | Reddedilen veya geçersiz üye yüklemeleri tmp dosyası bırakıyor | `bodyparser_middleware-*.js:1095-1105` | Giderildi (2026-10-21): bkz. F3 |
 
 ### A.7 Eleştirmenin belirlediği eksik alanlar (G)
 

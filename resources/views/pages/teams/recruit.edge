@@ -1,0 +1,57 @@
+{{--
+  /ekibe-katil: what each role does (config/teams.ts roles) and every recruiting team with its
+  recruitment text and contact links. No application form: people apply through the team's links.
+  Data: items [{ team, links, memberCount, seriesCount }] (team_service.recruiting), roles.
+--}}
+@component('components/layout/main', { title, description })
+
+@slot('main')
+  @!component('components/ui/page_header', { title: 'Ekibe Katıl', description: 'Okuduğun serilerin Türkçeye gelmesine sen de katkı ver. Aşağıdaki ekipler gönüllü arıyor; başvurmak için ekibin Discord’una ya da sitesine yaz.' })
+
+  <section class="mt-6" aria-labelledby="recruit-roles-title">
+    <h2 id="recruit-roles-title" class="sr-only">Görevler</h2>
+    <ul class="recruit-roles">
+      @each((entry, key) in roles)
+      <li class="recruit-role">
+        <p class="recruit-role__name">{{ entry.label }}</p>
+        <p class="recruit-role__hint">{{ entry.hint }}</p>
+      </li>
+      @end
+    </ul>
+  </section>
+
+  <section class="section" aria-labelledby="recruit-teams-title">
+    @!component('components/ui/section_head', { id: 'recruit-teams-title', title: 'Üye arayan ekipler', icon: 'user-plus', description: items.length ? items.length + ' ekip' : '' })
+    @if(items.length)
+    <ul class="recruit-list">
+      @each(item in items)
+      @let(team = item.team)
+      @let(links = item.links)
+      <li class="recruit-team">
+        <div class="recruit-team__head">
+          @!component('components/teams/logo', { team, size: 'md' })
+          <div class="min-w-0">
+            <h3 class="team-card__title"><a href="/ekip/{{ team.slug }}" class="team-card__link">{{ team.name }}</a></h3>
+            <p class="team-card__meta">
+              <span>{{ item.memberCount }} üye</span>
+              <span aria-hidden="true">·</span>
+              <span>{{ item.seriesCount }} seri</span>
+            </p>
+          </div>
+        </div>
+        @let(compact = true)
+        @include('partials/teams/join_box')
+      </li>
+      @end
+    </ul>
+    @else
+    @component('components/ui/empty_state', { icon: 'users', title: 'Şu an üye arayan ekip yok', description: 'Ekipler alım açtığında burada görünecek. O zamana kadar ekiplerin sayfalarına göz atabilirsin.' })
+      @component('components/ui/button', { href: '/ekipler', icon: 'users' })
+        Tüm ekipler
+      @end
+    @end
+    @end
+  </section>
+@end
+
+@end

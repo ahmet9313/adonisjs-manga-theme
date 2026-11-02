@@ -1,0 +1,333 @@
+/*
+ * First-run setup wizard (/kurulum, layout/install): brand, step list, the card, system checks,
+ * options and the sample-content progress. Colours come from tokens (var(--t-*)) only.
+ */
+
+@layer components {
+  .install {
+    display: flex;
+    min-height: 100vh;
+    max-width: 40rem;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-inline: auto;
+    padding: 2rem 1rem 3rem;
+  }
+
+  @media (width >= 640px) {
+    .install {
+      padding-top: 3.5rem;
+    }
+  }
+
+  .install__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .install__name {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--t-heading);
+  }
+
+  .install__tag {
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  .install__card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  @media (width >= 640px) {
+    .install__card {
+      padding: 2rem;
+    }
+  }
+
+  .install__lead {
+    margin-top: 0.5rem;
+    color: var(--t-text-2);
+  }
+
+  .install__section {
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 750;
+    color: var(--t-heading);
+  }
+
+  .install__hint {
+    margin-top: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+
+  .install__ok {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 650;
+    color: var(--t-success);
+  }
+
+  .install__form {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .install__inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .install__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+  }
+
+  .install__choice {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .install__segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .install__radio {
+    position: relative;
+    display: grid;
+    cursor: pointer;
+  }
+
+  .install__radio > input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .install__radio > span {
+    display: grid;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 650;
+    color: var(--t-text-2);
+  }
+
+  .install__radio > input:checked + span {
+    background: var(--t-accent);
+    color: var(--t-on-accent);
+  }
+
+  .install__radio > input:focus-visible + span {
+    outline: 2px solid var(--t-accent);
+    outline-offset: 2px;
+  }
+
+  .install__foot {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  /* ---- Step list ------------------------------------------------------------------------ */
+  .install-steps {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+  }
+
+  .install-steps__item {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    text-align: center;
+  }
+
+  .install-steps__dot {
+    display: grid;
+    height: 1.75rem;
+    width: 1.75rem;
+    place-items: center;
+    border: 1px solid var(--t-border-strong);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 750;
+    color: var(--t-muted);
+  }
+
+  .install-steps__item[data-state='current'] .install-steps__dot {
+    border-color: var(--t-accent);
+    background: var(--t-accent);
+    color: var(--t-on-accent);
+  }
+
+  .install-steps__item[data-state='done'] .install-steps__dot {
+    border-color: var(--t-success);
+    background: var(--t-success-soft);
+    color: var(--t-success);
+  }
+
+  .install-steps__label {
+    font-size: 0.6875rem;
+    font-weight: 650;
+    line-height: 1.25;
+    color: var(--t-muted);
+  }
+
+  .install-steps__item[data-state='current'] .install-steps__label {
+    color: var(--t-heading);
+  }
+
+  @media (width < 480px) {
+    .install-steps__item:not([data-state='current']) .install-steps__label {
+      display: none;
+    }
+  }
+
+  /* ---- System checks ---------------------------------------------------------------------- */
+  .install-checks {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .install-checks__item {
+    display: flex;
+    gap: 0.75rem;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-sm);
+    padding: 0.625rem 0.75rem;
+  }
+
+  .install-checks__icon {
+    flex-shrink: 0;
+    color: var(--t-success);
+  }
+
+  .install-checks__item[data-status='warn'] .install-checks__icon {
+    color: var(--t-warning);
+  }
+
+  .install-checks__item[data-status='fail'] {
+    border-color: var(--t-danger);
+    background: var(--t-danger-soft);
+  }
+
+  .install-checks__item[data-status='fail'] .install-checks__icon {
+    color: var(--t-danger);
+  }
+
+  .install-checks__text {
+    display: grid;
+    min-width: 0;
+    gap: 0.125rem;
+  }
+
+  .install-checks__label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .install-checks__detail {
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+    overflow-wrap: anywhere;
+  }
+
+  /* ---- Content options -------------------------------------------------------------------- */
+  .install-option {
+    display: flex;
+    cursor: pointer;
+    gap: 0.75rem;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-sm);
+    padding: 0.875rem;
+  }
+
+  .install-option:has(input:checked) {
+    border-color: var(--t-accent);
+  }
+
+  .install-option > input {
+    margin-top: 0.2rem;
+    accent-color: var(--t-accent);
+  }
+
+  .install-option__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .install-option__text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+
+  .install-job {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  .install-job__spinner {
+    height: 1.75rem;
+    width: 1.75rem;
+    flex-shrink: 0;
+    border: 3px solid var(--t-border-strong);
+    border-top-color: var(--t-accent);
+    border-radius: 9999px;
+    animation: ui-spin 0.8s linear infinite;
+  }
+
+  .install-job__title {
+    font-weight: 750;
+    color: var(--t-heading);
+  }
+
+  .install-job__step {
+    margin-top: 0.25rem;
+    color: var(--t-text-2);
+  }
+
+  .install-next {
+    display: grid;
+    gap: 0.5rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+    color: var(--t-text-2);
+  }
+
+  .install-next code {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .install-job__spinner {
+    animation-duration: 2.4s;
+  }
+}

@@ -1,0 +1,10 @@
+{{--
+  Mark over a blurred cover (cover_policy_service): an eye-off icon; the age badge of the card
+  already says why. The image itself carries data-veil="blur" (CSS blur, see components.css).
+  Nothing for other covers. Props: series (coverVeil), class.
+--}}
+@if(series.coverVeil === 'blur')
+<span class="cover-veil {{ $props.get('class', '') }}" aria-hidden="true">
+  @!component('components/icon', { name: 'eye-off', stroke: 1.8, class: 'cover-veil__icon' })
+</span>
+@end

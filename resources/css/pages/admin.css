@@ -367,10 +367,6 @@
   }
 
   @media (width >= 640px) {
-    .admin-fields--2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .admin-fields--3 {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -570,17 +566,6 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-
-  .admin-combo__search {
-    position: sticky;
-    top: -0.375rem;
-    z-index: 1;
-    margin: -0.375rem -0.375rem 0.375rem;
-    border-bottom: 1px solid var(--t-border);
-    background: var(--t-surface);
-    padding: 0.5rem;
-  }
-
   .admin-option {
     cursor: pointer;
   }
@@ -625,13 +610,6 @@
     background: var(--t-accent-strong);
     color: var(--t-on-accent);
   }
-
-  .admin-option__hint {
-    margin-left: auto;
-    font-size: 0.75rem;
-    color: var(--t-muted);
-  }
-
   .admin-picker {
     cursor: text;
   }
@@ -924,5 +902,338 @@
 
   .admin-search .control--icon {
     flex: 1 1 14rem;
+  }
+
+  /* ---- "Kapak bul" (partials/admin/cover_finder) ---------------------------------------- */
+  .cover-finder__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--t-border);
+    padding-top: 1rem;
+  }
+
+  .cover-finder__hint {
+    flex: 1 1 12rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--t-muted);
+  }
+
+  .cover-finder__form {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .cover-finder__query {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .cover-finder__context {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .cover-finder__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-top: 1rem;
+  }
+
+  .cover-finder__sources {
+    font-size: 0.75rem;
+    color: var(--t-warning);
+  }
+
+  .cover-finder__picked {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 12rem;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--t-text);
+  }
+
+  .cover-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .cover-grid--wide {
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  }
+
+  @media (width < 480px) {
+    .cover-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cover-grid--wide {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .cover-option {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-md);
+    background: var(--t-surface-2);
+    text-align: left;
+    transition:
+      border-color var(--dur-1),
+      box-shadow var(--dur-1);
+  }
+
+  .cover-option:hover {
+    border-color: var(--t-border-strong);
+  }
+
+  .cover-option[aria-pressed='true'] {
+    border-color: var(--t-accent);
+    box-shadow: var(--t-ring);
+  }
+
+  .cover-option.is-broken {
+    display: none;
+  }
+
+  .cover-option__art {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    background: var(--t-surface);
+  }
+
+  .cover-grid--wide .cover-option__art {
+    aspect-ratio: 19 / 5;
+  }
+
+  .cover-option__art > img {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  .cover-option__best {
+    position: absolute;
+    top: 0.375rem;
+    left: 0.375rem;
+  }
+
+  .cover-option__check {
+    position: absolute;
+    top: 0.375rem;
+    right: 0.375rem;
+    display: none;
+    height: 1.5rem;
+    width: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--t-accent);
+    color: var(--t-on-accent);
+  }
+
+  .cover-option__check > svg {
+    height: 0.875rem;
+    width: 0.875rem;
+  }
+
+  .cover-option[aria-pressed='true'] .cover-option__check {
+    display: flex;
+  }
+
+  .cover-option__body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.5rem 0.625rem 0.625rem;
+  }
+
+  .cover-option__title {
+    overflow: hidden;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--t-heading);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cover-option__detail,
+  .cover-option__source {
+    overflow: hidden;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--t-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cover-option__source {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-weight: 650;
+    color: var(--t-text);
+  }
+
+  .cover-option--skeleton {
+    aspect-ratio: 2 / 3.6;
+    padding: 0;
+  }
+
+  .cover-option--skeleton > .skeleton {
+    display: block;
+    height: 100%;
+    width: 100%;
+    border-radius: 0;
+  }
+
+  .cover-finder__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .cover-finder__error {
+    flex-basis: 100%;
+    text-align: right;
+  }
+
+  /* Step 2 of "Otomatik doldur": the fields a work fills in. */
+  .autofill__head {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    outline: none;
+  }
+
+  .autofill__cover {
+    width: 6rem;
+    flex-shrink: 0;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    background: var(--t-surface-2);
+    box-shadow: 0 0 0 1px var(--t-border);
+  }
+
+  .autofill__title {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--t-heading);
+  }
+
+  .autofill__meta {
+    margin-block: 0.125rem 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--t-muted);
+  }
+
+  .autofill__note {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--t-muted);
+  }
+
+  .autofill__list {
+    display: grid;
+    margin-top: 1rem;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-md);
+  }
+
+  .autofill__row {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: 0.5rem 1rem;
+    align-items: start;
+    padding: 0.75rem 1rem;
+  }
+
+  .autofill__row + .autofill__row {
+    border-top: 1px solid var(--t-border);
+  }
+
+  @media (width < 640px) {
+    .autofill__row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .autofill__row > .check {
+    font-weight: 700;
+    color: var(--t-heading);
+  }
+
+  .autofill__value {
+    display: grid;
+    min-width: 0;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--t-text);
+  }
+
+  .autofill__text {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: pre-line;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+  }
+
+  .autofill__was {
+    font-size: 0.75rem;
+    color: var(--t-muted);
+  }
+
+  .autofill__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .autofill__chips .chip {
+    height: 1.75rem;
+    max-width: 100%;
+    padding-inline: 0.625rem;
+    font-size: 0.75rem;
+    white-space: normal;
+  }
+
+  .autofill__extra {
+    display: grid;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+  }
+
+  .autofill__banner {
+    width: 100%;
+    max-width: 22rem;
+    aspect-ratio: 19 / 5;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    background: var(--t-surface-2);
   }
 }

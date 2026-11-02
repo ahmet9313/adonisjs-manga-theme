@@ -1,0 +1,16 @@
+{{--
+  Footer "Bilgi" column (switch footer_pages): announcements and the published pages marked
+  "Alt bilgide göster" (Admin → İçerik → Sayfalar), in their order.
+--}}
+@if(ui('footer_pages'))
+@let(footerLinks = await footerPages())
+<nav aria-labelledby="footer-info">
+  <p id="footer-info" class="footer-title">Bilgi</p>
+  <ul class="space-y-2">
+    <li><a href="/duyurular" class="footer-link">Duyurular</a></li>
+    @each(link in footerLinks)
+    <li><a href="/sayfa/{{ link.slug }}" class="footer-link">{{ link.title }}</a></li>
+    @end
+  </ul>
+</nav>
+@end

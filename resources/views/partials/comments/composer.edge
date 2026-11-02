@@ -2,6 +2,7 @@
   Comment composer bound to composers[ckey] ('root' or the parent comment id).
   Images and GIFs: the "Görsel" button, dropping a file on the box or pasting (Ctrl+V).
   Ctrl/⌘ + Enter sends. Stickers come from the reader's inventory (/envanter).
+  Typing @ and two letters suggests members (/uyeler/ara); ↑ ↓ choose, Enter or Tab inserts.
 --}}
 <form class="composer" :class="composer(ckey).dragging && 'is-dragging'"
   @submit.prevent="submit(ckey)"
@@ -13,18 +14,48 @@
     Görseli veya GIF'i buraya bırak
   </div>
 
+  <div class="relative">
   <label :for="ckey === 'root' ? 'comment-root' : 'reply-' + ckey" class="sr-only" x-text="ckey === 'root' ? 'Yorum yaz' : 'Yanıt yaz'">Yorum yaz</label>
   <textarea
     :id="ckey === 'root' ? 'comment-root' : 'reply-' + ckey"
     class="composer__input"
     rows="2"
     x-model="composer(ckey).text"
-    @input="grow($event)"
+    @input="grow($event); mentionInput(ckey, $event)"
+    @keydown="mentionKeydown(ckey, $event)"
+    @blur="closeMention(ckey)"
+    @click="mentionInput(ckey, $event)"
+    aria-autocomplete="list"
+    :aria-controls="'mentions-' + ckey"
+    :aria-activedescendant="mentionActiveId(ckey)"
     @paste="paste(ckey, $event)"
     @keydown.ctrl.enter.prevent="submit(ckey)"
     @keydown.meta.enter.prevent="submit(ckey)"
     :placeholder="ckey === 'root' ? 'Ne düşünüyorsun? Görsel veya GIF de ekleyebilirsin.' : 'Yanıtını yaz…'"
   ></textarea>
+
+  <div :id="'mentions-' + ckey" role="listbox" aria-label="Üye önerileri" class="menu mention-menu"
+       x-cloak x-show="mentionOpen(ckey)">
+    <template x-for="(item, index) in mentionItems(ckey)" :key="item.username">
+      <div role="option" class="menu__item mention-menu__item" :id="'mention-' + ckey + '-' + index"
+           :aria-selected="Boolean(composer(ckey).mention && index === composer(ckey).mention.active).toString()"
+           @mousedown.prevent="pickMention(ckey, item)">
+        <span class="mention-menu__avatar" aria-hidden="true">
+          <template x-if="item.avatar">
+            <img :src="item.avatar" alt="" loading="lazy" decoding="async">
+          </template>
+          <template x-if="!item.avatar">
+            <span class="text-on-image" :style="`background: linear-gradient(135deg, hsl(${item.hue} 70% 45%), hsl(${(item.hue + 50) % 360} 70% 35%))`" x-text="item.fullName.charAt(0).toUpperCase()"></span>
+          </template>
+        </span>
+        <span class="min-w-0 flex-1 truncate">
+          <span class="mention-menu__name" x-text="item.fullName"></span>
+          <span class="mention-menu__user" x-text="'@' + item.username"></span>
+        </span>
+      </div>
+    </template>
+  </div>
+  </div>
 
   <div class="composer__attachments" x-show="composer(ckey).sticker || composer(ckey).preview" x-cloak>
     <template x-if="composer(ckey).sticker">

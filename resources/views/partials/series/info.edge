@@ -30,6 +30,7 @@
       </dd>
     </div>
     @end
+    @include('partials/teams/series_info')
     <div>
       <dt>İçerik türü</dt>
       <dd>
@@ -54,10 +55,12 @@
       <dd class="t-num">{{ series.publicationYear }}</dd>
     </div>
     @end
+    @include('partials/series/release_days')
     <div>
       <dt>Bölüm sayısı</dt>
       <dd class="t-num">{{ chapters.length }}</dd>
     </div>
+    @include('partials/series/audience')
   </dl>
 </aside>
 @end

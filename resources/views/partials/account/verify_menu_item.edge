@@ -1,0 +1,8 @@
+{{-- Account menu reminder while the e-mail address is not confirmed (needs `me`, the signed-in user). --}}
+@if(!me.emailVerifiedAt)
+<a href="/ayarlar#account" class="menu__item verify-menu-item">
+  @!component('components/icon', { name: 'mail' })
+  <span class="flex-1">E-postanı doğrula</span>
+  <span class="verify-menu-item__dot" aria-hidden="true"></span>
+</a>
+@end

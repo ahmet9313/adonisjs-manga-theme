@@ -4,7 +4,9 @@
  * - `tagInput`: chip list for short texts (alternative titles, keywords) with optional
  *   suggestions. components/ui/tag_input.edge renders a plain comma separated text field that
  *   works without JavaScript; with it, the same field becomes hidden and carries `tags`.
- * - `imageDrop`: image drop zone with preview (components/ui/dropzone.edge).
+ * - `tagInput` also takes tags from the `tags-add` window event ({ id, tags }).
+ * - `imageDrop`: image drop zone with preview (components/ui/dropzone.edge); also takes a file
+ *   from the `image-drop` window event ({ name, file }, sent by cover_finder.js).
  * - `pendingToast`: shows a notice handed over by a script that navigated here (the chapter
  *   upload in chapter_form.js leaves the page with XMLHttpRequest, which uses up the flash).
  *
@@ -22,6 +24,7 @@ export function fileSize(bytes) {
 
 function tagInput() {
   return {
+    onFill: null,
     tags: [],
     draft: '',
     suggestions: [],
@@ -41,6 +44,17 @@ function tagInput() {
       }
       this.suggestions = Array.isArray(config.suggestions) ? config.suggestions.map(String) : []
       for (const tag of Array.isArray(config.tags) ? config.tags : []) this.push(tag)
+      // Tags added from elsewhere ("Otomatik doldur", cover_finder.js): { id, tags }.
+      this.onFill = (event) => {
+        if (event.detail?.id !== this.baseId) return
+        const added = (event.detail.tags || []).map((tag) => this.push(tag)).filter(Boolean)
+        if (added.length) this.$dispatch('change')
+      }
+      window.addEventListener('tags-add', this.onFill)
+    },
+
+    destroy() {
+      window.removeEventListener('tags-add', this.onFill)
     },
 
     /** Posted value: the controller splits it on commas. */
@@ -75,7 +89,8 @@ function tagInput() {
 
     push(value) {
       const tag = String(value).trim().replace(/\s+/g, ' ')
-      if (!tag || this.has(tag)) return ''
+      // The posted value is comma separated, so a tag with a comma would be split on save.
+      if (!tag || tag.includes(',') || this.has(tag)) return ''
       this.tags.push(tag)
       return tag
     },
@@ -163,13 +178,34 @@ function imageDrop() {
     over: false,
     objectUrl: '',
 
+    onHandover: null,
+
     init() {
       this.original = this.$el.dataset.current || ''
       this.preview = this.original
+      // A file chosen elsewhere ("Kapak bul", cover_finder.js) for the input of this name.
+      this.onHandover = (event) => {
+        if (event.detail?.name === this.$refs.file?.name) this.useFile(event.detail.file)
+      }
+      window.addEventListener('image-drop', this.onHandover)
     },
 
     destroy() {
+      window.removeEventListener('image-drop', this.onHandover)
       this.revoke()
+    },
+
+    /** Puts the file into the input (posted with the form) and marks the form as changed. */
+    useFile(file) {
+      try {
+        const transfer = new DataTransfer()
+        transfer.items.add(file)
+        this.$refs.file.files = transfer.files
+      } catch {
+        this.error = 'Tarayıcınız bu görseli alana koyamadı; indirip elle seçin.'
+        return
+      }
+      this.$refs.file.dispatchEvent(new Event('change', { bubbles: true }))
     },
 
     pick(event) {

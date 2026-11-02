@@ -1,0 +1,86 @@
+{{--
+  Catalog genre dropdown (inside the `filterBar` form of pages/series_list.edge).
+  Each genre is a three-state chip: one press includes it (genre=…), a second excludes it
+  (xgenre=…), a third clears it. The chip only drives two checkboxes; without JavaScript the
+  chips stay hidden and the checkboxes ("Dahil" / "Hariç") are shown instead, so the plain GET
+  form sends the same fields. genre_mode=all asks for every included genre (VE); empty is VEYA.
+  Needs: genres, filters (genres, excludedGenres, genreMode).
+--}}
+@let(picked = filters.genres.length + filters.excludedGenres.length)
+<details class="catalog-filter" data-menu="openGenre" :open="openGenre" @toggle="sync('openGenre', $el.open)" @click.outside="openGenre = false">
+  <summary class="catalog-filter__trigger" data-active="{{ picked ? 'true' : 'false' }}" :data-active="String(genreCount() > 0)">
+    @!component('components/icon', { name: 'tag', class: 'catalog-filter__icon' })
+    <span class="catalog-filter__name">Tür</span>
+    <span class="count" x-show="genreCount()"
+      @if(!picked)
+      style="display: none"
+      @end
+      ><span x-text="genreCount()">{{ picked }}</span><span class="sr-only"> seçili</span></span>
+    @!component('components/icon', { name: 'chevron-down', class: 'catalog-filter__chevron' })
+  </summary>
+  <div id="filter-genre" class="catalog-filter__panel catalog-filter__panel--wide">
+    <div class="catalog-filter__search" x-cloak>
+      <div class="control control--sm control--icon">
+        @!component('components/icon', { name: 'search' })
+        <input type="search" x-model="genreSearch" aria-label="Türlerde ara" placeholder="Tür ara" autocomplete="off" @keydown.enter.prevent>
+      </div>
+    </div>
+    <p id="genre-filter-hint" class="genre-tri__hint" x-cloak>
+      Bir kez bas: <strong class="genre-tri__hint-in">dahil</strong> · iki kez: <strong class="genre-tri__hint-out">hariç</strong> · üç kez: temizle
+    </p>
+    <div role="group" aria-label="Türler" aria-describedby="genre-filter-hint" class="catalog-filter__options genre-tri__list">
+      @each(genre in genres)
+      @let(chipState = filters.genres.includes(genre) ? 'include' : filters.excludedGenres.includes(genre) ? 'exclude' : '')
+      <div class="genre-tri" data-genre="{{ genre }}" x-data="{ name: $el.dataset.genre }" x-show="genreMatches(name)">
+        <button type="button" class="genre-tri__chip" x-cloak data-state="{{ chipState }}"
+                :data-state="genreState(name)" @click="cycleGenre(name)">
+          <span class="genre-tri__mark" aria-hidden="true">
+            <span x-show="genreState(name) === 'include'">
+              @!component('components/icon', { name: 'plus', stroke: 2.5 })
+            </span>
+            <span x-show="genreState(name) === 'exclude'">
+              @!component('components/icon', { name: 'minus', stroke: 2.5 })
+            </span>
+          </span>
+          <span class="genre-tri__name">{{ genre }}</span>
+          <span class="sr-only" x-show="genreState(name) === 'include'">: dahil</span>
+          <span class="sr-only" x-show="genreState(name) === 'exclude'">: hariç</span>
+        </button>
+        {{-- Form fields; also the controls when JavaScript is off. --}}
+        <span class="genre-tri__fallback" x-show="false">
+          <span class="genre-tri__label">{{ genre }}</span>
+          <label class="genre-tri__opt">
+            <input type="checkbox" name="genre" value="{{ genre }}" {{ chipState === 'include' ? 'checked' : '' }} :checked="genreState(name) === 'include'">
+            Dahil
+          </label>
+          <label class="genre-tri__opt">
+            <input type="checkbox" name="xgenre" value="{{ genre }}" {{ chipState === 'exclude' ? 'checked' : '' }} :checked="genreState(name) === 'exclude'">
+            Hariç
+          </label>
+        </span>
+      </div>
+      @end
+    </div>
+    <p class="catalog-filter__empty" x-cloak x-show="!hasGenreMatch()">Eşleşen tür yok.</p>
+    <fieldset class="genre-mode">
+      <legend class="genre-mode__legend">Dahil edilen türler</legend>
+      <div class="genre-mode__options">
+        <label class="genre-mode__opt">
+          <input type="radio" name="genre_mode" value="" class="sr-only" x-model="genreMode" {{ filters.genreMode === 'all' ? '' : 'checked' }}>
+          <span>Herhangi biri (VEYA)</span>
+        </label>
+        <label class="genre-mode__opt">
+          <input type="radio" name="genre_mode" value="all" class="sr-only" x-model="genreMode" {{ filters.genreMode === 'all' ? 'checked' : '' }}>
+          <span>Tümü (VE)</span>
+        </label>
+      </div>
+    </fieldset>
+    <div class="catalog-filter__foot">
+      <span class="catalog-filter__picked" x-cloak x-show="genreCount()">
+        <span x-show="selectedGenres.length"><span x-text="selectedGenres.length"></span> dahil</span><span x-show="selectedGenres.length && excludedGenres.length"> · </span><span x-show="excludedGenres.length"><span x-text="excludedGenres.length"></span> hariç</span>
+      </span>
+      <button type="button" class="btn btn--ghost btn--sm" x-cloak @click="clearGenres()" :disabled="!genreCount()">Temizle</button>
+      <button type="submit" class="btn btn--primary btn--sm">Uygula</button>
+    </div>
+  </div>
+</details>

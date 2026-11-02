@@ -54,7 +54,7 @@
         @let(rarityLabel = (rarities.find((entry) => entry.rarity === card.rarity) || { label: '' }).label)
         <li class="ac-card {{ card.active ? '' : 'is-off' }}">
           <a href="{{ editUrl }}" class="tcg block" data-rarity="{{ card.rarity }}" tabindex="-1" aria-hidden="true">
-            <img src="{{ card.image }}" alt="" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+            <img src="{{ thumbOf(card.image, 320) }}" alt="" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
             <span class="tcg-letter">{{ card.rarity }}</span>
           </a>
           <div class="ac-card__body">

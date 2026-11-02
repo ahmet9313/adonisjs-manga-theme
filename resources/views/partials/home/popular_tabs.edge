@@ -1,0 +1,37 @@
+{{--
+  "Popüler Seriler" (switch home_popular) once the site counts views (view_service): the most
+  viewed published series today, in the last 7 and 30 days and of all time, as accessible tabs.
+  All four lists are rendered on the server; without JavaScript the default tab stays visible.
+  The default is the week, or the first longer period that has views.
+--}}
+@let(periodTabs = [
+  { key: 'gunluk', label: 'Günlük', items: popularTabs.day, empty: 'Bugün henüz okunan seri yok.' },
+  { key: 'haftalik', label: 'Haftalık', items: popularTabs.week, empty: 'Bu hafta henüz okunan seri yok.' },
+  { key: 'aylik', label: 'Aylık', items: popularTabs.month, empty: 'Son 30 günde okunan seri yok.' },
+  { key: 'tumu', label: 'Tümü', items: popularTabs.all, empty: 'Henüz okunan seri yok.' },
+])
+@let(defaultTab = (periodTabs.slice(1).find((tab) => tab.items.length) || periodTabs[3]).key)
+<section class="section" aria-labelledby="home-popular-title">
+  @!component('components/ui/section_head', {
+    title: 'Popüler Seriler',
+    id: 'home-popular-title',
+    icon: 'fire',
+    description: 'En çok görüntülenen seriler',
+    href: '/seriler?order=views'
+  })
+
+  @component('components/ui/tabs', { tabs: periodTabs, active: defaultTab, label: 'Popüler dönem', id: 'home-popular', class: 'home-popular' })
+    @slot('gunluk')
+    @!component('components/series/rank_list', { items: periodTabs[0].items, empty: periodTabs[0].empty })
+    @end
+    @slot('haftalik')
+    @!component('components/series/rank_list', { items: periodTabs[1].items, empty: periodTabs[1].empty })
+    @end
+    @slot('aylik')
+    @!component('components/series/rank_list', { items: periodTabs[2].items, empty: periodTabs[2].empty })
+    @end
+    @slot('tumu')
+    @!component('components/series/rank_list', { items: periodTabs[3].items, empty: periodTabs[3].empty })
+    @end
+  @end
+</section>

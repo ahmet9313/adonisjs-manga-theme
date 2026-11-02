@@ -4,7 +4,8 @@
   "members", or members / VIP content; gate.reason says which), 'vip' (signed-in member opening
   VIP content) or 'warning' (the chapter's own notice; "Devam et" reopens it with ?onay=1).
   Props: gate, series (SeriesInfo), chapter ({ number, title } or null), next (current URL).
-  Nothing of the content itself is rendered here; the cover is blurred for age gates.
+  Nothing of the content itself is rendered here; the cover is blurred for age gates and for
+  covers hidden by cover_policy_service (coverVeil 'blur').
 --}}
 @let(seriesUrl = '/series/' + series.type + '/' + series.slug)
 @let(where = chapter ? 'Bu bölüm' : 'Bu seri')
@@ -13,12 +14,12 @@
 @let(continueUrl = next + (next.includes('?') ? '&' : '?') + 'onay=1')
 @let(age = gate.kind === 'age' ? gate.age : (series.ageRating ? parseInt(series.ageRating, 10) : 0))
 @let(icons = { age: 'shield', login: 'lock', vip: 'star', warning: 'exclamation' })
-@component('components/layout/main', { title, description: series.title })
+@component('components/layout/main', { title, description: series.title, noindex: true })
   @slot('main')
   <div class="gate">
     <section class="gate__card" aria-labelledby="gate-title">
-      <div class="gate__cover {{ gate.kind === 'age' || (gate.kind === 'login' && gate.reason === 'age') ? 'gate__cover--blur' : '' }}" aria-hidden="true">
-        <img src="{{ series.coverImage }}" alt="" width="240" height="320" decoding="async" data-fallback="/images/no-cover.svg">
+      <div class="gate__cover {{ gate.kind === 'age' || (gate.kind === 'login' && gate.reason === 'age') || series.coverVeil === 'blur' ? 'gate__cover--blur' : '' }}" aria-hidden="true">
+        <img src="{{ thumbOf(series.coverImage, 640) }}" alt="" width="240" height="320" decoding="async" data-fallback="/images/no-cover.svg">
       </div>
       <div class="gate__body">
         <p class="gate__context t-overline">

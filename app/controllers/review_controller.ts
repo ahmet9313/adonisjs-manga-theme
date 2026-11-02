@@ -6,6 +6,8 @@ import reviews, { isReviewSort } from '#services/review_service'
 import { pageNumber } from '#services/input_service'
 import { recordAttempt, tooManyAttempts } from '#services/throttle'
 import access from '#services/access_service'
+import moderation from '#services/moderation_service'
+import wordFilter from '#services/word_filter_service'
 
 const saveValidator = vine.compile(
   vine.object({
@@ -22,8 +24,12 @@ const listValidator = vine.compile(
 )
 
 export default class ReviewController {
-  async index({ request, auth }: HttpContext) {
+  async index({ request, auth, response }: HttpContext) {
     const { series } = await request.validateUsing(listValidator, { data: request.qs() })
+    // Drafts stay hidden from readers here too (their page is a 404).
+    const target = await SeriesModel.find(series)
+    if (!target || !access.visible(auth.user, { series: target }))
+      return response.notFound({ error: 'Seri bulunamadı' })
     const sortInput = request.input('sort')
     const page = pageNumber(request.input('page'))
     const viewer = auth.user ?? null
@@ -49,13 +55,19 @@ export default class ReviewController {
 
   async store({ request, auth, response }: HttpContext) {
     const user = auth.user!
+    const muted = moderation.muteError(user)
+    if (muted) return response.forbidden({ error: muted })
     const key = `review:${user.id}`
     if (tooManyAttempts(key, 8))
       return response.tooManyRequests({ error: 'Çok hızlı işlem yapıyorsun. Biraz bekle.' })
     const data = await request.validateUsing(saveValidator)
+    const blocked = wordFilter.check('review', data.title, data.body)
+    if (blocked) return response.unprocessableEntity({ error: blocked })
     const series = await SeriesModel.find(data.series_id)
     if (!series || !access.visible(user, { series }))
       return response.notFound({ error: 'Seri bulunamadı' })
+    if (!access.allows(user, series.access))
+      return response.forbidden({ error: 'Bu seriyi puanlamak için erişimin yok.' })
     recordAttempt(key, 60 * 1000)
     const created = await reviews.save(user, series.id, {
       rating: data.rating,

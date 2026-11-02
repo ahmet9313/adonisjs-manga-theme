@@ -55,6 +55,7 @@
             <th scope="col">Durum</th>
             <th scope="col" class="max-xl:hidden">Çeviri</th>
             <th scope="col" class="num">Bölüm</th>
+            <th scope="col" class="num max-md:hidden">Görüntülenme</th>
             <th scope="col">Güncellendi</th>
             <th scope="col"><span class="sr-only">İşlemler</span></th>
           </tr>
@@ -66,7 +67,7 @@
           <tr>
             <td class="cell-main">
               <div class="admin-cell">
-                <img src="{{ series.coverImage || '/images/no-cover.svg' }}" alt="" class="admin-thumb" width="40" height="53" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+                <img src="{{ thumbOf(series.coverImage, 160) || '/images/no-cover.svg' }}" alt="" class="admin-thumb" width="40" height="53" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
                 <div class="admin-cell__body">
                   <a href="/admin/seriler/{{ series.id }}/duzenle" class="admin-title line-clamp-2">{{ series.title }}</a>
                   <div class="admin-cell__meta">
@@ -74,6 +75,7 @@
                     @!component('components/ui/badge', { kind: 'status', value: series.status, size: 'sm', class: 'md:hidden' })
                     @if(series.draft)
                     @!component('components/ui/badge', { kind: 'draft', tone: 'warning', text: 'Taslak', size: 'sm', title: 'Yayında değil; yalnız yönetim görür' })
+                    @!component('partials/admin/scheduled_badge', { at: series.publishAt })
                     @end
                     @if(series.access !== 'public')
                     @!component('components/ui/badge', { kind: 'access', tone: series.access === 'vip' ? 'accent' : 'neutral', text: site.accessLevels[series.access].label, size: 'sm' })
@@ -81,9 +83,12 @@
                     @if(series.featured)
                     @!component('components/ui/badge', { kind: 'accent', text: 'Öne çıkan', size: 'sm', title: 'Ana sayfa vitrininde' })
                     @end
+                    @if(series.pinned)
+                    @!component('components/ui/badge', { kind: 'info', text: 'Sabit', size: 'sm', title: 'Son Güncellenenler listesinin başında' })
+                    @end
                     <span class="admin-mono truncate max-lg:hidden">/{{ series.slug }}</span>
                   </div>
-                  <p class="admin-cell__meta md:hidden">Çeviri: {{ series.translationStatus }} · {{ number(chapterCount) }} bölüm · {{ agoOf(series.updatedAt) }}</p>
+                  <p class="admin-cell__meta md:hidden">Çeviri: {{ series.translationStatus }} · {{ number(chapterCount) }} bölüm · {{ countOf(series.viewCount) }} görüntülenme · {{ agoOf(series.updatedAt) }}</p>
                 </div>
               </div>
             </td>
@@ -103,6 +108,7 @@
               <span class="text-muted">0</span>
               @end
             </td>
+            <td data-label="Görüntülenme" class="num max-md:hidden" title="{{ number(series.viewCount) }} görüntülenme">{{ countOf(series.viewCount) }}</td>
             <td data-label="Güncellendi" class="whitespace-nowrap text-muted max-md:hidden">
               <time datetime="{{ series.updatedAt }}" title="{{ dateOf(series.updatedAt) }}">{{ agoOf(series.updatedAt) }}</time>
             </td>

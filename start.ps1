@@ -2,7 +2,8 @@
 param(
     [switch]$Seed,
     [switch]$Production,
-    [switch]$Check
+    [switch]$Check,
+    [switch]$SkipInstall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,8 +17,13 @@ function Find-Node24 {
     $candidates += Get-ChildItem -Path (Join-Path $PSScriptRoot '.tools') -Filter node.exe -Recurse -ErrorAction SilentlyContinue | ForEach-Object FullName
 
     foreach ($candidate in $candidates) {
-        $major = [int]((& $candidate --version).TrimStart('v').Split('.')[0])
-        if ($major -ge 24) { return $candidate }
+        # A broken node shim on PATH must not stop the search (the portable install follows).
+        try {
+            $major = [int]((& $candidate --version).TrimStart('v').Split('.')[0])
+            if ($major -ge 24) { return $candidate }
+        } catch {
+            continue
+        }
     }
     return $null
 }
@@ -77,6 +83,7 @@ $scriptArgs = @()
 if ($Seed) { $scriptArgs += '--seed' }
 if ($Production) { $scriptArgs += '--production' }
 if ($Check) { $scriptArgs += '--check' }
+if ($SkipInstall) { $scriptArgs += '--skip-install' }
 
 & $nodeCommand scripts/setup-and-start.mjs @scriptArgs
 exit $LASTEXITCODE

@@ -3,6 +3,7 @@ import { now, slugify, pageNumber, pageSize, searchText } from '#services/input_
 import type { HttpContext } from '@adonisjs/core/http'
 import Author from '#models/author'
 import vine from '@vinejs/vine'
+import { refreshSearchText, seriesOfPerson } from '#services/search_index_service'
 
 const authorValidator = vine.compile(
   vine.object({ name: vine.string().trim().minLength(1).maxLength(255) })
@@ -106,6 +107,7 @@ export default class AuthorController {
     author.slug = slugify(data.name)
     author.updatedAt = now()
     await author.save()
+    await refreshSearchText(await seriesOfPerson('author', author.id))
     session.flash('success', 'Yazar güncellendi')
     return response.redirect('/admin/yazarlar')
   }
@@ -113,7 +115,9 @@ export default class AuthorController {
   async destroy({ params, session, response }: HttpContext) {
     const author = await Author.findOrFail(params.id)
     try {
+      const series = await seriesOfPerson('author', author.id)
       await author.delete()
+      await refreshSearchText(series)
       session.flash('success', 'Yazar silindi')
     } catch {
       session.flash('error', 'Bu yazar serilere bağlı olduğu için silinemez')

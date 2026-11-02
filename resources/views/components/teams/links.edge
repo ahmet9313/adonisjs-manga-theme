@@ -1,0 +1,7 @@
+{{--
+  Team names as links to their pages, comma separated ("Ekip A, Ekip B").
+  Props: teams ([{ name, slug }]), class (on each link; default `link-person`).
+--}}
+@each((team, index) in teams)
+<a href="/ekip/{{ team.slug }}" class="{{ $props.get('class', 'link-person') }}">{{ team.name }}</a>{{ index < teams.length - 1 ? ', ' : '' }}
+@end

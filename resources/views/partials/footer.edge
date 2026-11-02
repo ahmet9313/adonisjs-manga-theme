@@ -4,8 +4,8 @@
 --}}
 @if(ui('footer'))
 <footer class="site-footer mt-auto border-t border-(--t-border)">
-  <div class="mx-auto grid max-w-(--t-container) gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.5fr_repeat(3,1fr)] lg:px-8">
-    <div class="max-w-sm">
+  <div class="mx-auto grid max-w-(--t-container) grid-cols-2 gap-x-6 gap-y-10 px-4 py-12 sm:px-6 md:grid-cols-4 lg:grid-cols-[1.5fr_repeat(4,1fr)] lg:px-8">
+    <div class="col-span-2 max-w-sm md:col-span-4 lg:col-span-1">
       <a href="/" class="logo">
         @if(site.logo)
         <img src="{{ site.logo }}" alt="" class="logo__img">
@@ -18,9 +18,10 @@
       @if(ui('footer_description'))
       <p class="mt-3 text-sm leading-relaxed text-(--t-footer-link)">{{ site.description }}</p>
       @end
-      @if(ui('footer_social') && site.socialLinks.length)
+      @let(social = socialLinks())
+      @if(ui('footer_social') && social.length)
       <nav aria-label="Sosyal medya" class="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-        @each(link in site.socialLinks)
+        @each(link in social)
         <a href="{{ link.url }}" class="footer-link" rel="noopener noreferrer">{{ link.label }}</a>
         @end
       </nav>
@@ -30,6 +31,7 @@
       <p id="footer-explore" class="footer-title">Keşfet</p>
       <ul class="space-y-2">
         <li><a href="/seriler" class="footer-link">Seriler</a></li>
+        <li><a href="/takvim" class="footer-link">Yayın Takvimi</a></li>
         <li><a href="/seriler?order=rating" class="footer-link">En yüksek puanlılar</a></li>
         <li><a href="/oneriler" class="footer-link">Öneriler</a></li>
         <li><a href="/kaydedilenler" class="footer-link">Kaydedilenler</a></li>
@@ -42,6 +44,8 @@
         <li><a href="/rozetler" class="footer-link">Rozetler</a></li>
         <li><a href="/kartlar" class="footer-link">Kartlar</a></li>
         <li><a href="/kozmetik/cerceveler" class="footer-link">Kozmetikler</a></li>
+        <li><a href="/ekipler" class="footer-link">Çeviri ekipleri</a></li>
+        <li><a href="/ekibe-katil" class="footer-link">Ekibe katıl</a></li>
       </ul>
     </nav>
     <nav aria-labelledby="footer-account">
@@ -57,7 +61,9 @@
         @end
       </ul>
     </nav>
+    @include('partials/footer/pages')
   </div>
+  @include('partials/footer/disclaimer')
   <div class="border-t border-(--t-border)">
     <div class="mx-auto flex max-w-(--t-container) flex-wrap items-center justify-between gap-3 px-4 py-5 text-sm text-(--t-footer-link) sm:px-6 lg:px-8">
       <span>&copy; {{ new Date().getFullYear() }} {{ site.name }}</span>

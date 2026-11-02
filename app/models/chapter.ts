@@ -33,6 +33,10 @@ export default class Chapter extends BaseModel {
   @column({ consume: (value) => Boolean(value) })
   declare draft: boolean
 
+  /** Draft published by the scheduler at this UTC time (publishing_service.publishDue). */
+  @column()
+  declare publishAt: string | null
+
   /** Stricter of this and the series' access counts; `public` means "same as the series". */
   @column()
   declare access: AccessLevel
@@ -40,6 +44,14 @@ export default class Chapter extends BaseModel {
   /** Optional notice the reader confirms before the chapter opens. */
   @column()
   declare warning: string | null
+
+  /** All-time views (view_service): one per visitor and day. */
+  @column({ consume: (value) => Number(value) || 0 })
+  declare viewCount: number
+
+  /** Optional free-text credit line ("Çeviri: X · Edit: Y"); teams are in `chapter_teams`. */
+  @column()
+  declare credits: string | null
 
   @column()
   declare createdAt: string

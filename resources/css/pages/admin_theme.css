@@ -1491,6 +1491,35 @@ details[open] > summary .te-chevron {
   min-height: 9rem;
 }
 
+.te-cover-sample {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
+
+.te-cover-sample > img {
+  width: 7.5rem;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  box-shadow: 0 0 0 1px var(--t-border);
+}
+
+/* Portrait image (default cover for hidden covers, Yaş ve Erişim). */
+.brand-drop--cover .brand-drop__zone {
+  max-width: 11rem;
+  aspect-ratio: 3 / 4;
+}
+
+.brand-drop--cover .brand-drop__img {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  max-height: none;
+  width: 100%;
+  object-fit: cover;
+}
+
 .brand-drop__zone.has-image {
   border-style: solid;
   padding: 0.75rem;

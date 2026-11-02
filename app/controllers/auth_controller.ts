@@ -8,9 +8,18 @@ import {
   registerValidator,
   safeNext,
   assertUniqueIdentity,
+  SESSION_STAMP,
+  sessionStamp,
 } from '#services/account_service'
 import { now } from '#services/input_service'
-import { clearAttempts, recordAttempt, tooManyAttempts } from '#services/throttle'
+import accountMail from '#services/account_mail_service'
+import {
+  clearAttempts,
+  recordAttempt,
+  refundAttempt,
+  takeAttempt,
+  tooManyAttempts,
+} from '#services/throttle'
 
 const loginWindow = 15 * 60 * 1000
 const registerWindow = 60 * 60 * 1000
@@ -48,27 +57,35 @@ export default class AuthController {
   private async attemptLogin({ request, auth, session, response }: HttpContext) {
     const data = await request.validateUsing(loginValidator)
     const next = safeNext(data.next)
+    const login = data.login.toLowerCase()
+    // Two limits: per connection (counted before the slow password check, so a parallel burst
+    // is counted too; a right password only takes back its own attempt) and per account
+    // (wrong passwords only; cleared by the account's own successful login).
     const key = `login:${request.ip()}`
+    const accountKey = `login-account:${login}`
     const fail = (message: string) => {
       session.flash('error', message)
       session.flash('login', data.login)
       return response.redirect(`/giris?next=${encodeURIComponent(next)}`)
     }
-    if (tooManyAttempts(key, 8))
-      return fail('Çok fazla deneme yaptınız. Lütfen biraz sonra tekrar deneyin.')
+    const tooMany = 'Çok fazla deneme yaptınız. Lütfen biraz sonra tekrar deneyin.'
+    if (tooManyAttempts(accountKey, 8)) return fail(tooMany)
+    if (!takeAttempt(key, 8, loginWindow)) return fail(tooMany)
 
     let user: User
     try {
-      user = await User.verifyCredentials(data.login.toLowerCase(), data.password)
+      user = await User.verifyCredentials(login, data.password)
     } catch (error) {
       if (!(error instanceof authErrors.E_INVALID_CREDENTIALS)) throw error
-      recordAttempt(key, loginWindow)
+      recordAttempt(accountKey, loginWindow)
       return fail('Kullanıcı adı/e-posta veya parola hatalı.')
     }
+    refundAttempt(key)
     if (user.bannedAt) return fail('Hesabınız askıya alınmış. Destek ile iletişime geçin.')
 
-    clearAttempts(key)
+    clearAttempts(accountKey)
     await auth.use('web').login(user, data.remember === 'on')
+    session.put(SESSION_STAMP, sessionStamp(user))
     user.lastLoginAt = now()
     await user.save()
     session.flash('success', `Hoş geldin, ${user.fullName}!`)
@@ -83,8 +100,9 @@ export default class AuthController {
 
   private async createAccount({ request, auth, session, response }: HttpContext) {
     const data = await request.validateUsing(registerValidator)
-    const key = `register:${request.ip()}`
-    if (tooManyAttempts(key, 5)) {
+    // Counted before the uniqueness check, so the form cannot be used to probe which user
+    // names and e-mail addresses exist without limit.
+    if (!takeAttempt(`register:${request.ip()}`, 5, registerWindow)) {
       session.flash(
         'error',
         'Bu bağlantıdan çok fazla kayıt denendi. Lütfen daha sonra tekrar deneyin.'
@@ -95,7 +113,6 @@ export default class AuthController {
     const email = data.email.toLowerCase()
     await assertUniqueIdentity(username, email)
 
-    recordAttempt(key, registerWindow)
     const timestamp = now()
     const user = await User.create({
       username,
@@ -108,13 +125,19 @@ export default class AuthController {
       updatedAt: timestamp,
     })
     await progress.welcome(user)
+    await accountMail.verification(user, request)
     await auth.use('web').login(user)
-    session.flash('success', 'Hesabın oluşturuldu. Aramıza hoş geldin!')
+    session.put(SESSION_STAMP, sessionStamp(user))
+    session.flash(
+      'success',
+      `Hesabın oluşturuldu, aramıza hoş geldin! ${user.email} adresine bir doğrulama bağlantısı gönderdik.`
+    )
     return response.redirect(safeNext(data.next))
   }
 
   async logout({ auth, session, response }: HttpContext) {
     await auth.use('web').logout()
+    session.forget(SESSION_STAMP)
     session.flash('success', 'Çıkış yapıldı')
     return response.redirect('/')
   }

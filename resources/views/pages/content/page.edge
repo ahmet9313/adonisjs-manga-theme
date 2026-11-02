@@ -1,0 +1,27 @@
+{{--
+  Static page (/sayfa/:slug, Admin → İçerik → Sayfalar). `html` is the server-rendered Markdown
+  subset (app/services/markdown_service.ts: escaped, no raw HTML). Unpublished pages reach staff
+  only, with a notice.
+--}}
+@component('components/layout/main', { title: page.title, description })
+  @slot('main')
+    <article class="content-page" aria-labelledby="page-title">
+      @!component('components/ui/page_header', {
+        title: page.title,
+        id: 'page-title',
+        breadcrumb: [{ label: page.title }]
+      })
+      @if(!page.published)
+      <div class="draft-note">
+        @component('components/ui/alert', { tone: 'warning', title: 'Yayında olmayan sayfa' })
+          <p>Bu sayfayı yalnız yönetici ve editörler görür. Yayınlamak için <a href="/admin/sayfalar/{{ page.id }}/duzenle" class="link">sayfayı düzenleyip</a> “Yayında” seçeneğini açın.</p>
+        @end
+      </div>
+      @end
+      <div class="md-body panel">
+        {{{ html }}}
+      </div>
+      <p class="content-page__meta">Son güncelleme: <time datetime="{{ page.updatedAt.replace(' ', 'T') }}">{{ dateOf(page.updatedAt) }}</time></p>
+    </article>
+  @end
+@end

@@ -128,8 +128,7 @@
 
 @media print {
   .site-header,
-  .site-footer,
-  .no-print {
+  .site-footer {
     display: none !important;
   }
 

@@ -1,0 +1,31 @@
+{{--
+  "Paylaş" menu (series page): WhatsApp, Telegram, X and Facebook as plain links, "Bağlantıyı
+  kopyala" and, on touch devices with a share sheet, "Diğer uygulamalar" (share.js → shareLinks).
+  No third-party scripts. Props: url (absolute address, siteUrl()), title, id (menu id).
+--}}
+@let(links = shareLinksOf(url, title))
+<div x-data="shareLinks" data-share-url="{{ url }}" data-share-title="{{ title }}" class="contents">
+  @component('components/ui/dropdown', { id: $props.get('id', 'share-menu'), label: 'Paylaş', align: 'right', width: 'w-60', buttonClass: 'btn btn--secondary btn--lg series-share' })
+    @slot('trigger')
+      @!component('components/icon', { name: 'share', class: 'btn__icon' })
+      <span class="series-share__label">Paylaş</span>
+    @end
+    @slot('main')
+      <button type="button" class="menu__item" x-show="canShare" x-cloak @click="close(); native()">
+        @!component('components/icon', { name: 'share' })
+        <span>Diğer uygulamalar…</span>
+      </button>
+      @each(link in links)
+      <a href="{{ link.href }}" class="menu__item" target="_blank" rel="noopener noreferrer" @click="close()">
+        @!component('partials/share/icon', { name: link.key })
+        <span>{{ link.label }}<span class="sr-only"> ile paylaş (yeni sekmede)</span></span>
+      </a>
+      @end
+      <div class="menu__sep" role="separator"></div>
+      <button type="button" class="menu__item" @click="close(); copy()">
+        @!component('components/icon', { name: 'link' })
+        <span>Bağlantıyı kopyala</span>
+      </button>
+    @end
+  @end
+</div>

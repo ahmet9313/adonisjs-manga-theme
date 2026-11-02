@@ -1,0 +1,38 @@
+{{--
+  "Bölüm nasıldı?" (Göster/Gizle → chapter_reactions) at the end of a chapter or episode.
+  Needs `reactions` = { counts, total, mine } (reaction_service) and `chapter.id`; the choices
+  come from config/site.ts → chapterReactions. chapterReactions (reactions.js) posts to
+  /bolumler/:id/tepki; pressing the chosen reaction again removes it. Guests see the counts and
+  a sign-in prompt.
+--}}
+@if(ui('chapter_reactions') && reactions)
+@let(member = Boolean(auth && auth.user))
+<section class="reactions" aria-labelledby="reactions-title" x-data="chapterReactions"
+  data-config="{{ JSON.stringify({ chapterId: chapter.id, counts: reactions.counts, mine: reactions.mine, member }) }}">
+  <div class="reactions__head">
+    <h2 id="reactions-title" class="reactions__title">Bölüm nasıldı?</h2>
+    <p class="reactions__total" aria-live="polite">
+      <span x-text="total() ? total() + ' tepki' : 'İlk tepkiyi sen ver'">{{ reactions.total ? reactions.total + ' tepki' : 'İlk tepkiyi sen ver' }}</span>
+    </p>
+  </div>
+  <div class="reactions__list" role="group" aria-labelledby="reactions-title">
+    @each(item in site.chapterReactions)
+    <button type="button" class="reaction" data-key="{{ item.key }}"
+            aria-pressed="{{ reactions.mine === item.key ? 'true' : 'false' }}" :aria-pressed="(mine === $el.dataset.key).toString()"
+            :aria-busy="busy.toString()" @click="choose($el.dataset.key)">
+      <span class="reaction__emoji" aria-hidden="true">{{ item.emoji }}</span>
+      <span class="reaction__label">{{ item.label }}</span>
+      <span class="reaction__count t-num" x-text="counts[$el.closest('[data-key]').dataset.key] || 0">{{ reactions.counts[item.key] || 0 }}</span>
+    </button>
+    @end
+  </div>
+  @if(!member)
+  <p class="reactions__hint">
+    Tepki vermek için
+    <button type="button" class="link" @click="$dispatch('open-auth', 'login')">giriş yap</button>
+    ya da
+    <button type="button" class="link" @click="$dispatch('open-auth', 'register')">kayıt ol</button>.
+  </p>
+  @end
+</section>
+@end

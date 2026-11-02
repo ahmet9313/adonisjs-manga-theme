@@ -1,0 +1,27 @@
+{{--
+  Row of share buttons (end of a chapter or episode): the same targets as partials/share/menu.
+  Props: url (absolute address, siteUrl()), title, label (text before the buttons).
+--}}
+@let(links = shareLinksOf(url, title))
+<div class="share-row" x-data="shareLinks" data-share-url="{{ url }}" data-share-title="{{ title }}">
+  <p class="share-row__label">{{ $props.get('label', 'Paylaş') }}</p>
+  <ul class="share-row__list">
+    <li x-show="canShare" x-cloak>
+      <button type="button" class="btn btn--secondary btn--md btn--icon" @click="native()" aria-label="Diğer uygulamalarla paylaş" title="Diğer uygulamalar">
+        @!component('components/icon', { name: 'share', class: 'btn__icon' })
+      </button>
+    </li>
+    @each(link in links)
+    <li>
+      <a href="{{ link.href }}" class="btn btn--secondary btn--md btn--icon" target="_blank" rel="noopener noreferrer" aria-label="{{ link.label }} ile paylaş (yeni sekmede)" title="{{ link.label }}">
+        @!component('partials/share/icon', { name: link.key, class: 'btn__icon' })
+      </a>
+    </li>
+    @end
+    <li>
+      <button type="button" class="btn btn--secondary btn--md btn--icon" @click="copy()" aria-label="Bağlantıyı kopyala" title="Bağlantıyı kopyala">
+        @!component('components/icon', { name: 'link', class: 'btn__icon' })
+      </button>
+    </li>
+  </ul>
+</div>

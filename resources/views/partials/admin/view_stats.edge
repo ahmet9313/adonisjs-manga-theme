@@ -1,0 +1,43 @@
+{{--
+  Dashboard: views today, in the last 7 days and in total, and this week's five most viewed series
+  (view_service.dashboard; days in the site time zone, one view per browser, chapter and day).
+--}}
+@let(views = viewStats)
+@let(fullCount = (value) => Number(value || 0).toLocaleString('tr-TR'))
+<section class="section admin-views" aria-labelledby="views-title">
+  @!component('components/ui/section_head', { title: 'Görüntülenme', id: 'views-title', icon: 'eye', description: 'Her tarayıcı bir bölümü günde bir kez sayılır; botlar ve taslak önizlemeleri sayılmaz.' })
+  <div class="admin-views__grid">
+    <div class="admin-views__stats">
+      @!component('components/ui/stat', { label: 'Bugün', value: fullCount(views.today), icon: 'eye' })
+      @!component('components/ui/stat', { label: 'Son 7 gün', value: fullCount(views.week), icon: 'chart' })
+      @!component('components/ui/stat', { label: 'Toplam', value: fullCount(views.all), icon: 'fire', href: '/seriler?order=views' })
+    </div>
+
+    <section class="panel panel--flush" aria-labelledby="views-top-title">
+      <div class="panel__head">
+        <h3 id="views-top-title" class="panel__title">Bu haftanın en çok okunanları</h3>
+        <a href="/seriler?order=trending" class="section-head__link">
+          Trend
+          @!component('components/icon', { name: 'arrow-right', class: 'h-4 w-4' })
+        </a>
+      </div>
+      @if(views.top.length)
+      <ol class="admin-views__top">
+        @each((row, index) in views.top)
+        <li class="admin-views__row">
+          <span class="admin-views__rank t-num" aria-hidden="true">{{ index + 1 }}</span>
+          <img src="{{ thumbOf(row.series.coverImage, 160) || '/images/no-cover.svg' }}" alt="" class="admin-thumb admin-thumb--sm" width="32" height="43" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+          <a href="/admin/seriler/{{ row.series.id }}/duzenle" class="admin-title line-clamp-1">{{ row.series.title }}</a>
+          <span class="view-count" title="{{ fullCount(row.views) }} görüntülenme">
+            @!component('components/icon', { name: 'eye', class: 'view-count__icon' })
+            {{ countOf(row.views) }}<span class="sr-only"> görüntülenme</span>
+          </span>
+        </li>
+        @end
+      </ol>
+      @else
+      <p class="admin-views__empty">Bu hafta henüz görüntülenme yok.</p>
+      @end
+    </section>
+  </div>
+</section>

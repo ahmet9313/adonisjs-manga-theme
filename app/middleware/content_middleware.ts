@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
-import { serveContent } from '#controllers/media_controller'
+import { serveContent } from '#services/media_service'
 
 /**
  * Serves `/content/*` images and videos before the router middleware runs, so media requests do not

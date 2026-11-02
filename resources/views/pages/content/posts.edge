@@ -1,0 +1,32 @@
+{{--
+  Announcements (/duyurular): pinned first, then the newest, 10 per page (?page=). Drafts never
+  appear here. Each item: pinned badge, date, title link and a plain-text excerpt.
+--}}
+@component('components/layout/main', { title: 'Duyurular', description: site.name + ' ekibinden haberler, yeni seriler ve site duyuruları.' })
+  @slot('main')
+    @!component('components/ui/page_header', {
+      title: 'Duyurular',
+      description: 'Ekipten haberler, yeni seriler ve site duyuruları.',
+      breadcrumb: [{ label: 'Duyurular' }]
+    })
+
+    @if(items.length)
+    <ol class="post-list">
+      @each(item in items)
+      <li>
+        @!component('components/content/post_card', { item })
+      </li>
+      @end
+    </ol>
+    @!component('components/ui/pagination', { current: currentPage, total: totalPages, label: 'Duyuru sayfaları', class: 'mt-8' })
+    @elseif(total)
+    @component('components/ui/empty_state', { icon: 'list', title: 'Bu sayfada duyuru yok', description: 'İstenen sayfa son sayfadan sonra geliyor.' })
+      @component('components/ui/button', { href: '/duyurular', icon: 'arrow-left' })
+        İlk sayfaya dön
+      @end
+    @end
+    @else
+    @!component('components/ui/empty_state', { icon: 'megaphone', title: 'Henüz duyuru yok', description: 'Yeni seriler ve site haberleri burada paylaşılacak.' })
+    @end
+  @end
+@end

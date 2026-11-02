@@ -1,0 +1,18 @@
+/*
+ * Admin panel styles, loaded only by components/layout/admin.edge after app.css (readers never
+ * download them). Plain CSS on the design tokens: the utility classes used in admin templates
+ * come from app.css, which scans every template. The rules join app.css's cascade layers; the
+ * layer order is declared here too, because Vite may put this file before app.css and the first
+ * stylesheet that names the layers fixes their order.
+ */
+@layer theme, base, components, utilities;
+
+@import './pages/admin.css';
+@import './pages/admin_theme.css';
+@import './pages/admin_community.css';
+@import './pages/admin_views.css';
+@import './pages/admin_teams.css';
+@import './pages/moderation.css';
+@import './pages/admin_schedule.css';
+@import './pages/admin_content.css';
+@import './pages/admin_tools.css';

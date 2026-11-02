@@ -20,6 +20,7 @@ class CommunityStatsService {
       .join('users', 'users.id', 'chapter_reads.user_id')
       .whereNull('users.banned_at')
       .where('chapter_reads.read_at', '>=', since(days))
+      .where('chapter_reads.marked', false)
       .groupBy('chapter_reads.user_id')
       .select('chapter_reads.user_id')
       .count('* as chapters')

@@ -13,12 +13,15 @@
 
 @slot('banner')
   <div class="series-banner" data-art="{{ series.bannerImage ? 'banner' : 'cover' }}" aria-hidden="true">
-    <img src="{{ series.bannerImage || series.coverImage }}" alt="" decoding="async" fetchpriority="high" data-fallback="{{ series.bannerImage ? series.coverImage : '' }}">
+    <img src="{{ thumbOf(series.bannerImage || series.coverImage, series.bannerImage ? 1280 : 640) }}" srcset="{{ series.bannerImage ? (srcsetOf(series.bannerImage, [640, 1280]) || '') : '' }}" sizes="100vw" alt="" decoding="async" fetchpriority="high" data-fallback="{{ series.bannerImage ? series.coverImage : '' }}"
+      @if(series.coverVeil === 'blur')
+      data-veil="blur"
+      @end
+      >
   </div>
 @end
 
 @slot('main')
-  @include('partials/draft_notice')
   <noscript>
     <style>
       .chapter-list > li[x-cloak] { display: block !important; }
@@ -28,6 +31,8 @@
   </noscript>
 
   @include('partials/series/hero')
+  {{-- After the hero: it is pulled up over the banner (negative margin) and would cover the notice. --}}
+  @include('partials/draft_notice')
 
   <div class="series-layout {{ hasAside ? '' : 'series-layout--single' }}">
     @include('partials/series/info')

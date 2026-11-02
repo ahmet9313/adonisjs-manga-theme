@@ -1,0 +1,31 @@
+{{--
+  Admin dashboard: the next 5 planned publications, series and chapters together, soonest first
+  (`scheduled` from publishing_service.upcoming). Each row opens the record's form.
+--}}
+<section class="section panel panel--flush admin-scheduled" aria-labelledby="scheduled-title">
+  <div class="panel__head">
+    <h2 id="scheduled-title" class="panel__title">Planlı yayınlar</h2>
+    <a href="/takvim" class="section-head__link">
+      Yayın Takvimi
+      @!component('components/icon', { name: 'arrow-right', class: 'h-4 w-4' })
+    </a>
+  </div>
+  @if(scheduled.length)
+  <ul class="admin-scheduled__list">
+    @each(item in scheduled)
+    <li class="admin-scheduled__item">
+      <span class="admin-scheduled__icon" aria-hidden="true">
+        @!component('components/icon', { name: item.kind === 'series' ? 'library' : 'document', class: 'h-4 w-4' })
+      </span>
+      <span class="min-w-0 flex-1">
+        <a href="{{ item.href }}" class="admin-title line-clamp-1">{{ item.title }}</a>
+        <span class="block text-xs text-muted">{{ item.detail }}</span>
+      </span>
+      <time class="admin-scheduled__time" datetime="{{ item.at }}">{{ schedule.label(item.at) }}</time>
+    </li>
+    @end
+  </ul>
+  @else
+  <p class="px-5 py-4 text-sm text-muted">Planlanmış yayın yok. Bir seriyi veya bölümü taslak olarak kaydederken “Planlı yayın zamanı” seçebilirsin.</p>
+  @end
+</section>

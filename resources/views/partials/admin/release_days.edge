@@ -1,0 +1,27 @@
+{{--
+  "Yayın günleri" of the series form: weekdays new chapters usually come out (`release_days[]`,
+  config/calendar.ts) and an optional note (`release_note`, e.g. "Her cuma 20.00'de"). Shown on
+  the series page ("Yeni bölümler") and in the week view of /takvim. Props: series (edit) or null.
+--}}
+@let(failed = flashMessages.has('inputErrorsBag'))
+@let(chosen = failed ? [].concat(flashMessages.get('release_days') || []) : (series ? schedule.keys(series.releaseDays) : []))
+@let(error = flashMessages.has('inputErrorsBag.release_days') ? flashMessages.get('inputErrorsBag.release_days')[0] : '')
+<div class="admin-fields mt-4">
+  <fieldset id="f-release_days" class="weekday-picker" aria-describedby="f-release_days-hint">
+    <legend class="field__label">Yayın günleri</legend>
+    <div class="weekday-picker__list">
+      @each(entry in Object.entries(schedule.weekdays))
+      <label class="weekday-pick" title="{{ entry[1] }}">
+        <input type="checkbox" name="release_days[]" value="{{ entry[0] }}" class="sr-only" {{ chosen.includes(entry[0]) ? 'checked' : '' }}>
+        <span aria-hidden="true">{{ schedule.shortWeekdays[entry[0]] }}</span>
+        <span class="sr-only">{{ entry[1] }}</span>
+      </label>
+      @end
+    </div>
+    <p id="f-release_days-hint" class="field__hint">Yeni bölümlerin genelde çıktığı günler. Seri sayfasında “Yeni bölümler” olarak ve Yayın Takvimi’nde o günlerde görünür.</p>
+    @if(error)
+    <p class="field__error" role="alert">{{ error }}</p>
+    @end
+  </fieldset>
+  @!component('components/ui/field', { name: 'release_note', label: 'Yayın notu (isteğe bağlı)', value: series ? (series.releaseNote || '') : '', maxlength: 80, placeholder: 'ör. Her cuma 20.00’de', hint: 'Günlerin yanında kısa bir not olarak gösterilir.' })
+</div>

@@ -9,6 +9,10 @@ export interface AdminNavItem {
   icon: string
   /** Matching is exact for the dashboard so it is not active everywhere. */
   exact?: boolean
+  /** Counter shown next to the label (start/view.ts → navBadge), e.g. open reports. */
+  badge?: 'reports'
+  /** Narrower than the group's roles (e.g. an admin-only item in a shared group). */
+  roles?: Role[]
 }
 
 export interface AdminNavGroup {
@@ -34,6 +38,20 @@ export const adminNav: AdminNavGroup[] = [
     ],
   },
   {
+    // Its own group so editors reach it too (Topluluk is for administrators only).
+    key: 'moderation',
+    label: null,
+    roles: ['admin', 'editor'],
+    items: [
+      {
+        label: 'Moderasyon',
+        href: '/admin/moderasyon',
+        badge: 'reports',
+        icon: 'M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5',
+      },
+    ],
+  },
+  {
     key: 'manga',
     label: 'Manga',
     roles: ['admin', 'editor'],
@@ -47,6 +65,11 @@ export const adminNav: AdminNavGroup[] = [
         label: 'Bölümler',
         href: '/admin/bolumler',
         icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      },
+      {
+        label: 'Toplu Yükle',
+        href: '/admin/toplu-yukle',
+        icon: 'M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z',
       },
       {
         label: 'Türler',
@@ -71,6 +94,24 @@ export const adminNav: AdminNavGroup[] = [
     ],
   },
   {
+    key: 'content',
+    label: 'İçerik',
+    roles: ['admin', 'editor'],
+    items: [
+      {
+        label: 'Duyurular',
+        href: '/admin/duyurular',
+        icon: 'M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z',
+      },
+      {
+        label: 'Sayfalar',
+        href: '/admin/sayfalar',
+        roles: ['admin'],
+        icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
+      },
+    ],
+  },
+  {
     key: 'community',
     label: 'Topluluk',
     roles: ['admin'],
@@ -84,6 +125,11 @@ export const adminNav: AdminNavGroup[] = [
         label: 'Kartlar',
         href: '/admin/kartlar',
         icon: 'M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122',
+      },
+      {
+        label: 'Ekipler',
+        href: '/admin/ekipler',
+        icon: 'M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z',
       },
     ],
   },
@@ -126,6 +172,23 @@ export const adminNav: AdminNavGroup[] = [
         label: 'Gelişmiş',
         href: '/admin/tema/gelismis',
         icon: 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5',
+      },
+    ],
+  },
+  {
+    key: 'tools',
+    label: 'Araçlar',
+    roles: ['admin'],
+    items: [
+      {
+        label: 'Dosya Denetimi',
+        href: '/admin/dosya-denetimi',
+        icon: 'M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z',
+      },
+      {
+        label: 'Etkinlik Kaydı',
+        href: '/admin/etkinlik',
+        icon: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z',
       },
     ],
   },

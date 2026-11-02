@@ -47,17 +47,27 @@ const badgeNames = new Map(badges.map((badge) => [badge.slug, badge.name]))
 class CosmeticService {
   private cache: Map<number, Cosmetic> | null = null
   private loading: Promise<Map<number, Cosmetic>> | null = null
+  /** Bumped by invalidate(): a load that started before it must not fill the cache. */
+  private version = 0
 
   async catalog() {
     if (this.cache) return this.cache
-    this.loading ??= Cosmetic.query()
-      .orderBy('sortOrder', 'asc')
-      .orderBy('id', 'asc')
-      .then((rows) => {
-        this.cache = new Map(rows.map((row) => [row.id, row]))
-        this.loading = null
-        return this.cache
-      })
+    if (!this.loading) {
+      const version = this.version
+      // A failed load is forgotten, so the next request tries again instead of every page
+      // failing until a restart.
+      this.loading = Cosmetic.query()
+        .orderBy('sortOrder', 'asc')
+        .orderBy('id', 'asc')
+        .then((rows) => {
+          const catalog = new Map(rows.map((row) => [row.id, row]))
+          if (version === this.version) this.cache = catalog
+          return catalog
+        })
+        .finally(() => {
+          if (version === this.version) this.loading = null
+        })
+    }
     return this.loading
   }
 
@@ -66,6 +76,7 @@ class CosmeticService {
   }
 
   invalidate() {
+    this.version++
     this.cache = null
     this.loading = null
   }

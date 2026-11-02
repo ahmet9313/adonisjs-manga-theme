@@ -1,0 +1,13 @@
+{{--
+  Team logo (class `team-logo`, pages/teams.css): the uploaded image, or the team's initial on a
+  colour taken from its name. Props: team ({ name, logo }), size sm|md|lg|xl (md), class.
+--}}
+@let(name = team.name || '?')
+@let(hue = [...name].reduce((sum, char) => sum + char.charCodeAt(0), 0) * 47 % 360)
+<span class="team-logo team-logo--{{ $props.get('size', 'md') }} {{ $props.get('class', '') }}" aria-hidden="true">
+  @if(team.logo)
+  <img src="{{ thumbOf(team.logo, 160) }}" alt="" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg">
+  @else
+  <span class="team-logo__initial text-on-image" style="background: linear-gradient(135deg, hsl({{ hue }} 55% 42%), hsl({{ (hue + 40) % 360 }} 60% 30%))">{{ name.charAt(0).toLocaleUpperCase('tr') }}</span>
+  @end
+</span>

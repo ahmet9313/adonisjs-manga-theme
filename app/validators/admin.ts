@@ -1,5 +1,6 @@
-import site, { accessLevelKeys } from '#config/site'
+import site, { accessLevelKeys, seriesCoverModeKeys } from '#config/site'
 import vine from '@vinejs/vine'
+import calendar, { weekdayKeys } from '#config/calendar'
 
 const relationIds = () =>
   vine.array(vine.number().positive().withoutDecimals()).maxLength(100).optional()
@@ -16,12 +17,20 @@ export const seriesValidator = vine.compile(
     alternative_titles: vine.string().maxLength(5000).optional(),
     featured: vine.enum(['on']).optional(),
     featured_description: vine.string().maxLength(5000).optional(),
+    pinned: vine.enum(['on']).optional(),
     draft: vine.enum(['on']).optional(),
     access: vine.enum(accessLevelKeys).optional(),
+    cover_mode: vine.enum(seriesCoverModeKeys).optional(),
+    /** Planned publication (datetime-local, site time zone), checked by publishing_service. */
+    publish_at: vine.string().trim().maxLength(25).optional(),
+    release_days: vine.array(vine.enum(weekdayKeys)).maxLength(7).optional(),
+    release_note: vine.string().trim().maxLength(calendar.noteLength).optional(),
     keywords: vine.string().maxLength(5000).optional(),
     genres: relationIds(),
     authors: relationIds(),
     artists: relationIds(),
+    /** Translation teams (team_service checks them). */
+    teams: relationIds(),
   })
 )
 
@@ -32,10 +41,21 @@ export const chapterValidator = vine.compile(
     title: vine.string().trim().maxLength(255).optional(),
     draft: vine.enum(['on']).optional(),
     access: vine.enum(accessLevelKeys).optional(),
+    publish_at: vine.string().trim().maxLength(25).optional(),
     warning: vine.string().trim().maxLength(500).optional(),
     text_content: vine.string().maxLength(1000000).optional(),
     page_order: vine.string().maxLength(100000).optional(),
     /** Video episodes: JSON list of sources, checked by `parseSources` (video_service). */
     sources: vine.string().maxLength(200000).optional(),
+    /** Translation teams of this chapter (empty: the series' teams) and a free-text credit. */
+    teams: relationIds(),
+    credits: vine.string().trim().maxLength(200).optional(),
+    /**
+     * "Son Güncellenenler" switches; `latest_controls` marks a form that has them, so a request
+     * without it (older clients) keeps the defaults: move the series up and notify readers.
+     */
+    latest_controls: vine.enum(['1']).optional(),
+    bump: vine.enum(['on']).optional(),
+    notify: vine.enum(['on']).optional(),
   })
 )

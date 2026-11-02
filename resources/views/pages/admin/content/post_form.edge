@@ -1,0 +1,70 @@
+{{--
+  Announcement form (create and edit, administrators and editors). Posted fields: title, slug
+  (optional, as on pages), body (Markdown subset with live preview), published, pinned.
+  Publishing stamps today's date once; turning "Yayınla" off makes it a draft again.
+--}}
+@let(isEdit = Boolean(post))
+@let(sent = flashMessages.has('title'))
+@let(published = sent ? flashMessages.has('published') : (isEdit ? Boolean(post.publishedAt) : true))
+@let(pinned = sent ? flashMessages.has('pinned') : (isEdit ? post.pinned : false))
+@component('components/layout/admin', {
+  title: isEdit ? post.title : title,
+  description: isEdit
+    ? (post.publishedAt ? 'Yayın tarihi: ' + dateOf(post.publishedAt) : 'Taslak; yalnız yönetici ve editörler görür.') + (post.author ? ' · Yazan: ' + post.author.username : '')
+    : 'Yeni bir seri, bölüm takvimi ya da site haberi paylaşın.',
+  crumbs: [{ label: 'Duyurular', href: '/admin/duyurular' }, { label: isEdit ? 'Düzenle' : 'Yeni duyuru' }]
+})
+  @slot('actions')
+    @if(isEdit)
+    @component('components/ui/button', { href: '/duyuru/' + post.slug, iconRight: 'external', target: '_blank', rel: 'noopener' })
+      {{ post.publishedAt ? 'Sitede aç' : 'Önizle' }}<span class="sr-only"> (yeni sekmede)</span>
+    @end
+    @end
+  @end
+
+  @slot('main')
+    <form action="{{ isEdit ? '/admin/duyurular/' + post.id + '/duzenle' : '/admin/duyurular/ekle' }}" method="POST" class="content-form" data-submit-once>
+      {{ csrfField() }}
+      <div class="content-form__main panel">
+        <div class="admin-fields">
+          @!component('components/ui/field', { name: 'title', label: 'Başlık', required: true, maxlength: 160, autocomplete: 'off', value: isEdit ? post.title : '', placeholder: 'ör. Yeni seri: Solo Leveling', autofocus: !isEdit })
+          @!component('components/ui/field', { name: 'slug', label: 'Adres (isteğe bağlı)', maxlength: 180, autocomplete: 'off', spellcheck: 'false', value: isEdit ? post.slug : '', placeholder: isEdit ? post.slug : 'duyuru-adresi', hint: isEdit ? 'Duyuru /duyuru/' + post.slug + ' adresinde. Boş bırakırsanız aynı kalır.' : 'Boş bırakırsanız başlıktan oluşturulur.' })
+          @!component('components/admin/markdown_editor', { name: 'body', value: isEdit ? post.body : '', html: previewHtml || '', limit, rows: 14 })
+        </div>
+      </div>
+
+      <aside class="content-form__side">
+        @component('components/ui/panel', { title: 'Yayın', id: 'post-publish' })
+          <div class="grid gap-4">
+            @!component('components/ui/field', { name: 'published', label: 'Yayınla', type: 'toggle', value: published, hint: 'Kapalıyken taslak olarak kalır: listelerde ve ana sayfada görünmez.' })
+            @!component('components/ui/field', { name: 'pinned', label: 'Sabitle', type: 'toggle', value: pinned, hint: 'Sabit duyurular listelerde ve ana sayfada en üstte durur.' })
+          </div>
+        @end
+        <div class="form-actions">
+          @component('components/ui/button', { variant: 'ghost', href: '/admin/duyurular' })
+            Vazgeç
+          @end
+          @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+            {{ isEdit ? 'Kaydet' : 'Duyuruyu kaydet' }}
+          @end
+        </div>
+      </aside>
+    </form>
+
+    @if(isEdit)
+    <section class="panel admin-danger-zone mt-6 flex max-w-3xl flex-wrap items-center justify-between gap-4" aria-labelledby="danger-title">
+      <div class="min-w-0 flex-1 basis-64">
+        <h2 id="danger-title" class="panel__title">Duyuruyu sil</h2>
+        <p class="panel__desc">Duyuru kalıcı olarak kaldırılır. Yalnız gizlemek için “Yayınla” seçeneğini kapatın.</p>
+      </div>
+      <form action="/admin/duyurular/{{ post.id }}/sil" method="POST" data-submit-once
+            data-confirm="“{{ post.title }}” duyurusu silinecek." data-confirm-title="Duyuru silinsin mi?" data-confirm-label="Sil">
+        {{ csrfField() }}
+        @component('components/ui/button', { type: 'submit', variant: 'danger', icon: 'trash' })
+          Duyuruyu sil
+        @end
+      </form>
+    </section>
+    @end
+  @end
+@end

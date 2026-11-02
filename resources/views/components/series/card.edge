@@ -1,6 +1,6 @@
 {{--
   Series card (class `series-card`, see components.css).
-  Props: series (presenter output: type, slug, title, coverImage, status, ageRating,
+  Props: series (presenter output: type, slug, title, coverImage, coverVeil, status, ageRating,
          ratingAverage, ratingCount, lastChapter?), layout grid|row|compact (grid),
          priority (eager image for the first visible cards), showStatus (true), level (h3),
          meta (extra text in the meta line), class.
@@ -15,13 +15,21 @@
 @let(priority = $props.get('priority', false))
 <article class="series-card {{ layout === 'grid' ? '' : 'series-card--' + layout }} {{ $props.get('class', '') }}">
   <a href="{{ url }}" class="series-card__cover" tabindex="-1" aria-hidden="true">
-    <img src="{{ series.coverImage }}" alt="" width="300" height="400" decoding="async" data-fallback="/images/no-cover.svg"
+    @let(srcset = srcsetOf(series.coverImage, [160, 320, 640]))
+    <img src="{{ thumbOf(series.coverImage, 320) }}" alt="" width="300" height="400" decoding="async" data-fallback="/images/no-cover.svg"
+      @if(srcset)
+      srcset="{{ srcset }}" sizes="{{ layout === 'grid' ? '(min-width: 1024px) 210px, (min-width: 640px) 30vw, 46vw' : '96px' }}"
+      @end
+      @if(series.coverVeil)
+      data-veil="{{ series.coverVeil }}"
+      @end
       @if(priority)
       loading="eager" fetchpriority="high"
       @else
       loading="lazy"
       @end
       >
+    @!component('components/series/veil', { series })
     @if(layout !== 'row')
     <span class="series-card__badges">
       @!component('components/ui/badge', { kind: 'type', value: series.type, solid: true, caps: true, size: 'sm' })

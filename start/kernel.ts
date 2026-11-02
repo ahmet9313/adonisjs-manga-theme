@@ -24,8 +24,11 @@ server.errorHandler(() => import('#exceptions/handler'))
  */
 server.use([
   () => import('#middleware/container_bindings_middleware'),
-  () => import('@adonisjs/static/static_middleware'),
+  () => import('#middleware/compress_middleware'),
+  // Before the static files: /content may live inside public/ and must still get its own
+  // headers, access rules and resized variants (media_service).
   () => import('#middleware/content_middleware'),
+  () => import('@adonisjs/static/static_middleware'),
   () => import('@adonisjs/vite/vite_middleware'),
 ])
 
@@ -34,6 +37,9 @@ server.use([
  * requests with a registered route.
  */
 router.use([
+  // Before installation every page leads to the setup wizard (/kurulum), and after it the
+  // wizard is gone; it needs no session or database, so it runs first.
+  () => import('#middleware/install_gate_middleware'),
   // Session and auth come first so `upload_gate` can refuse multipart bodies from guests
   // before the body parser writes them to disk; shield (CSRF) still needs the parsed body.
   () => import('@adonisjs/session/session_middleware'),
@@ -51,4 +57,5 @@ router.use([
 export const middleware = router.named({
   auth: () => import('#middleware/auth_middleware'),
   role: () => import('#middleware/role_middleware'),
+  verified: () => import('#middleware/verified_middleware'),
 })

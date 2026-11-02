@@ -45,7 +45,9 @@ class ProgressService {
       return Number(row.total)
     }
     const values: Partial<Record<Metric, number>> = {}
-    if (wanted.has('chapters')) values.chapters = await count('chapter_reads')
+    // Chapters marked read by hand (reading_list_service) do not count towards badges.
+    if (wanted.has('chapters'))
+      values.chapters = await count('chapter_reads', (query) => query.where('marked', false))
     if (wanted.has('comments'))
       values.comments = await count('comments', (query) => query.whereNull('deleted_at'))
     if (wanted.has('likesReceived')) {

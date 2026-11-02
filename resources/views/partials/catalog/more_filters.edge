@@ -1,0 +1,42 @@
+{{--
+  Catalog "Diğer" dropdown (inside the `filterBar` form of pages/series_list.edge): publication
+  year range (year_from, year_to) and minimum number of chapters (min_chapters). Plain number
+  fields, so the form works without JavaScript; empty fields are left out of the URL.
+  Needs: filters (yearFrom, yearTo, minChapters).
+--}}
+@let(yearMax = new Date().getFullYear() + 1)
+@let(active = Boolean(filters.yearFrom || filters.yearTo || filters.minChapters))
+@let(picked = (filters.yearFrom || filters.yearTo ? 1 : 0) + (filters.minChapters ? 1 : 0))
+<details class="catalog-filter" data-menu="openMore" :open="openMore" @toggle="sync('openMore', $el.open)" @click.outside="openMore = false">
+  <summary class="catalog-filter__trigger" data-active="{{ active ? 'true' : 'false' }}">
+    @!component('components/icon', { name: 'sliders', class: 'catalog-filter__icon' })
+    <span class="catalog-filter__name">Diğer</span>
+    @if(picked)
+    <span class="count">{{ picked }}<span class="sr-only"> seçili</span></span>
+    @end
+    @!component('components/icon', { name: 'chevron-down', class: 'catalog-filter__chevron' })
+  </summary>
+  <div id="filter-more" class="catalog-filter__panel catalog-filter__panel--end">
+    <fieldset class="catalog-range">
+      <legend class="catalog-range__legend">Yayın yılı</legend>
+      <div class="catalog-range__fields">
+        <label class="sr-only" for="filter-year-from">En erken yayın yılı</label>
+        <input id="filter-year-from" type="number" name="year_from" inputmode="numeric" min="1900" max="{{ yearMax }}"
+               value="{{ filters.yearFrom || '' }}" placeholder="1900" class="control">
+        <span class="catalog-range__dash" aria-hidden="true">–</span>
+        <label class="sr-only" for="filter-year-to">En geç yayın yılı</label>
+        <input id="filter-year-to" type="number" name="year_to" inputmode="numeric" min="1900" max="{{ yearMax }}"
+               value="{{ filters.yearTo || '' }}" placeholder="{{ yearMax - 1 }}" class="control">
+      </div>
+    </fieldset>
+    <div class="catalog-range">
+      <label class="catalog-range__legend" for="filter-min-chapters">En az bölüm</label>
+      <input id="filter-min-chapters" type="number" name="min_chapters" inputmode="numeric" min="1" max="100000"
+             value="{{ filters.minChapters || '' }}" placeholder="Örn. 50" class="control">
+    </div>
+    <div class="catalog-filter__foot">
+      <button type="button" class="btn btn--ghost btn--sm" x-cloak @click="clearMore()">Temizle</button>
+      <button type="submit" class="btn btn--primary btn--sm">Uygula</button>
+    </div>
+  </div>
+</details>

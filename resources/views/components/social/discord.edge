@@ -1,0 +1,20 @@
+{{--
+  Discord link in the header (switch nav_discord), shown only when Admin → Tema → Genel has a
+  Discord address. Props: variant 'desktop' (icon button, ≥ lg) | 'mobile' (row in the
+  hamburger menu). Opens in a new tab.
+--}}
+@let(url = ui('nav_discord') ? discordUrl() : null)
+@if(url)
+@let(glyph = 'M19.3 5.4A16.6 16.6 0 0 0 15.2 4l-.5 1.1a15.3 15.3 0 0 0-5.3 0L8.8 4a16.6 16.6 0 0 0-4.1 1.4C2.1 9.3 1.4 13.1 1.7 16.9a16.8 16.8 0 0 0 5.1 2.6l1.1-1.8a10.8 10.8 0 0 1-1.7-.8l.4-.3a11.9 11.9 0 0 0 10.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a16.8 16.8 0 0 0 5.1-2.6c.4-4.4-.7-8.2-2.6-11.5ZM8.7 14.6c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z')
+@if($props.get('variant', 'desktop') === 'mobile')
+<a href="{{ url }}" class="mobile-link" target="_blank" rel="noopener noreferrer">
+  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="{{ glyph }}"/></svg>
+  Discord<span class="sr-only"> (yeni sekmede açılır)</span>
+</a>
+@else
+<a href="{{ url }}" class="btn btn--ghost btn--md btn--icon max-lg:hidden" target="_blank" rel="noopener noreferrer"
+   aria-label="Discord sunucumuz (yeni sekmede açılır)" title="Discord">
+  <svg class="btn__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="{{ glyph }}"/></svg>
+</a>
+@end
+@end

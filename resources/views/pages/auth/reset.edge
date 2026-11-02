@@ -1,0 +1,43 @@
+{{--
+  New password from a mailed link (/sifre-sifirla/:token). Props: token (null when the link is
+  invalid, used or expired), username. Same password rules as registration; after saving, the
+  member is signed in here and signed out everywhere else.
+--}}
+@component('components/layout/main', { title })
+
+@slot('main')
+  <div class="auth-page">
+    <div class="auth-page__grid auth-page__grid--single">
+      <section class="panel auth-card" aria-labelledby="auth-title">
+        @if(token)
+        <span class="tone-icon auth-card__icon" data-tone="accent" aria-hidden="true">
+          @!component('components/icon', { name: 'lock' })
+        </span>
+        <h1 id="auth-title" class="t-h1 auth-card__title">Yeni parola belirle</h1>
+        <p class="auth-card__lead">&#64;{{ username }} hesabı için yeni bir parola seç. Kaydettiğinde diğer cihazlardaki oturumlar kapanır.</p>
+        <form action="/sifre-sifirla/{{ encodeURIComponent(token) }}" method="POST" class="mt-6 space-y-4" data-submit-once>
+          {{ csrfField() }}
+          <input type="text" name="username" value="{{ username }}" autocomplete="username" class="sr-only" tabindex="-1" aria-hidden="true" readonly>
+          @!component('components/auth/password', { id: 'reset-password', name: 'password', label: 'Yeni parola', autocomplete: 'new-password', minlength: 8, hint: 'En az 8 karakter. Başka sitelerde kullanmadığın bir parola seç.' })
+          @!component('components/auth/password', { id: 'reset-confirm', name: 'password_confirmation', label: 'Yeni parola (tekrar)', autocomplete: 'new-password' })
+          <button type="submit" class="btn btn--primary btn--lg btn--block">Parolayı kaydet</button>
+        </form>
+        @else
+        <span class="tone-icon auth-card__icon" data-tone="warning" aria-hidden="true">
+          @!component('components/icon', { name: 'exclamation' })
+        </span>
+        <h1 id="auth-title" class="t-h1 auth-card__title">Bağlantı geçersiz</h1>
+        <p class="auth-card__lead">Bu parola sıfırlama bağlantısı daha önce kullanılmış ya da süresi dolmuş. Bağlantılar {{ site.accountLinks.resetMinutes }} dakika geçerlidir ve yalnız bir kez kullanılabilir.</p>
+        @component('components/ui/button', { variant: 'primary', size: 'lg', href: '/sifremi-unuttum', class: 'btn--block mt-6' })
+          Yeni bağlantı iste
+        @end
+        @end
+        <p class="auth-card__switch">
+          <a href="/giris" class="link">Giriş sayfasına dön</a>
+        </p>
+      </section>
+    </div>
+  </div>
+@end
+
+@end

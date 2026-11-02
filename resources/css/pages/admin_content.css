@@ -1,0 +1,165 @@
+/*
+ * Admin → İçerik: page and announcement forms (pages/admin/content/*) and the Markdown editor
+ * with its live preview (components/admin/markdown_editor.edge). The preview uses `.md-body`
+ * from pages/content.css, the same rules as the site. Tokens only.
+ */
+
+@layer components {
+  .content-form {
+    display: grid;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  @media (width >= 1280px) {
+    .content-form {
+      grid-template-columns: minmax(0, 1fr) 18rem;
+    }
+  }
+
+  .content-form__side {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (width >= 1280px) {
+    .content-form__side {
+      position: sticky;
+      top: 5rem;
+    }
+  }
+
+  .content-form__side .form-actions {
+    justify-content: flex-end;
+  }
+
+  /* ---- Markdown editor ------------------------------------------------------------------- */
+  .md-editor__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .md-editor__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem;
+    border: 1px solid var(--t-border);
+    border-radius: var(--radius-control);
+    background: var(--t-surface-2);
+    padding: 0.125rem;
+  }
+
+  .md-editor__tool {
+    min-width: 2rem;
+    padding: 0 0.5rem;
+  }
+
+  .md-editor__glyph {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .md-editor__glyph--italic {
+    font-style: italic;
+    font-weight: 600;
+  }
+
+  .md-editor__panes {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  @media (width >= 1024px) {
+    .md-editor__panes {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .md-editor__input {
+    min-height: 18rem;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+
+  .md-editor__preview {
+    min-width: 0;
+    max-height: 36rem;
+    overflow-y: auto;
+    border: 1px dashed var(--t-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--t-bg);
+    padding: 0.875rem 1rem 1rem;
+  }
+
+  .md-editor__label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t-muted);
+  }
+
+  .md-editor__state {
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .md-editor__preview .md-body {
+    font-size: 0.9375rem;
+  }
+
+  .md-editor__empty {
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+
+  .md-editor__foot {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .md-editor__foot code {
+    border-radius: var(--radius-xs);
+    background: var(--t-surface-2);
+    padding: 0 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .md-editor__count {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--t-muted);
+  }
+
+  /* ---- Tema → Genel: footer and social links --------------------------------------------- */
+  .te-links {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .te-links__social {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  @media (width >= 768px) {
+    .te-links__social {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}

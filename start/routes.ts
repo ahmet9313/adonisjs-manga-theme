@@ -8,6 +8,7 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 
 const HomeController = () => import('#controllers/home_controller')
+const InstallController = () => import('#controllers/install_controller')
 const SeriesController = () => import('#controllers/series_controller')
 const AgeController = () => import('#controllers/age_controller')
 const ChapterController = () => import('#controllers/chapter_controller')
@@ -15,22 +16,72 @@ const MediaController = () => import('#controllers/media_controller')
 
 // Public routes
 router.get('/content/*', [MediaController, 'show']).as('content.show')
+// First-run setup wizard (config/install.ts); install_gate_middleware closes it once installed
+router
+  .group(() => {
+    router.get('/', [InstallController, 'welcome']).as('install.welcome')
+    router.post('/anahtar', [InstallController, 'verifyKey']).as('install.key')
+    router.post('/veritabani', [InstallController, 'migrate']).as('install.migrate')
+    router.get('/site', [InstallController, 'site']).as('install.site')
+    router.post('/site', [InstallController, 'saveSite']).as('install.site.save')
+    router.get('/yonetici', [InstallController, 'admin']).as('install.admin')
+    router.post('/yonetici', [InstallController, 'saveAdmin']).as('install.admin.save')
+    router.get('/icerik', [InstallController, 'content']).as('install.content')
+    router.post('/icerik', [InstallController, 'saveContent']).as('install.content.save')
+    router.get('/icerik/durum', [InstallController, 'seedStatus']).as('install.content.status')
+    router.get('/bitir', [InstallController, 'finish']).as('install.finish')
+    router.post('/bitir', [InstallController, 'complete']).as('install.complete')
+  })
+  .prefix('/kurulum')
+
 router.get('/', [HomeController, 'index']).as('home')
 router.get('/seriler', [SeriesController, 'index']).as('series.index')
 router.get('/ara', [SeriesController, 'search']).as('series.search')
+const BrowseController = () => import('#controllers/browse_controller')
+router.get('/seriler/a-z', [BrowseController, 'az']).as('series.az')
+router.get('/rastgele', [BrowseController, 'random']).as('series.random')
 router.get('/series/:type/:slug', [SeriesController, 'show']).as('series.show')
 router.post('/yas-onayi', [AgeController, 'confirm']).as('age.confirm')
+// Search engines and feeds (config/seo.ts); the series feed comes before the chapter route.
+const SeoController = () => import('#controllers/seo_controller')
+router.get('/robots.txt', [SeoController, 'robots']).as('seo.robots')
+router.get('/sitemap.xml', [SeoController, 'sitemap']).as('seo.sitemap')
+router.get('/sitemaps/:file', [SeoController, 'sitemapPart']).as('seo.sitemap_part')
+router.get('/rss.xml', [SeoController, 'feed']).as('seo.feed')
+router.get('/series/:type/:slug/rss.xml', [SeoController, 'seriesFeed']).as('seo.series_feed')
 router.get('/series/:type/:slug/:chapter', [ChapterController, 'show']).as('chapter.show')
+const CalendarController = () => import('#controllers/calendar_controller')
+router.get('/takvim', [CalendarController, 'index']).as('calendar')
 const LibraryController = () => import('#controllers/library_controller')
 router.get('/kaydedilenler', [LibraryController, 'index']).as('bookmarks')
+router.get('/kutuphane/kapaklar', [LibraryController, 'saved']).as('library.saved')
 router
   .group(() => {
     router.post('/kaydet', [LibraryController, 'toggle']).as('library.toggle')
     router.post('/kaldir', [LibraryController, 'remove']).as('library.remove')
+    router.post('/durum', [LibraryController, 'status']).as('library.status')
+    router.post('/okundu', [LibraryController, 'markChapter']).as('library.read')
+    router.post('/okundu/tumu', [LibraryController, 'markAll']).as('library.readAll')
     router.post('/aktar', [LibraryController, 'import']).as('library.import')
   })
   .prefix('/kutuphane')
   .use(middleware.auth())
+
+// Reader settings and reading position for accounts (guests keep them in the browser)
+const ReaderController = () => import('#controllers/reader_controller')
+router
+  .group(() => {
+    router.post('/tercihler', [ReaderController, 'prefs']).as('reader.prefs')
+    router.post('/konum', [ReaderController, 'position']).as('reader.position')
+  })
+  .prefix('/okuyucu')
+  .use(middleware.auth())
+// Static pages, announcements and the cookie notice (Admin → İçerik)
+const ContentController = () => import('#controllers/content_controller')
+router.get('/sayfa/:slug', [ContentController, 'page']).as('content.page')
+router.get('/duyurular', [ContentController, 'posts']).as('content.posts')
+router.get('/duyuru/:slug', [ContentController, 'post']).as('content.post')
+router.post('/cerez-onayi', [ContentController, 'acceptCookies']).as('content.cookies')
 
 // Comments: reading is public, writing requires an account
 const CommentController = () => import('#controllers/comment_controller')
@@ -38,12 +89,22 @@ router.get('/yorumlar', [CommentController, 'index']).as('comments.index')
 router.get('/yorumlar/:id/yanitlar', [CommentController, 'replies']).as('comments.replies')
 router
   .group(() => {
-    router.post('/', [CommentController, 'store']).as('comments.store')
-    router.post('/:id/begen', [CommentController, 'like']).as('comments.like')
+    router.post('/', [CommentController, 'store']).as('comments.store').use(middleware.verified())
     router.post('/:id/oy', [CommentController, 'vote']).as('comments.vote')
     router.post('/:id/sil', [CommentController, 'destroy']).as('comments.destroy')
+    router.post('/:id/duzenle', [CommentController, 'update']).as('comments.update')
   })
   .prefix('/yorumlar')
+  .use(middleware.auth())
+
+// Chapter reactions ("Bölüm nasıldı?") and the @mention picker (members)
+const ReactionController = () => import('#controllers/reaction_controller')
+const MemberController = () => import('#controllers/member_controller')
+router
+  .group(() => {
+    router.post('/bolumler/:id/tepki', [ReactionController, 'store']).as('reactions.store')
+    router.get('/uyeler/ara', [MemberController, 'search']).as('members.search')
+  })
   .use(middleware.auth())
 
 // Ratings and reviews: reading is public, rating requires an account
@@ -51,12 +112,21 @@ const ReviewController = () => import('#controllers/review_controller')
 router.get('/incelemeler', [ReviewController, 'index']).as('reviews.index')
 router
   .group(() => {
-    router.post('/', [ReviewController, 'store']).as('reviews.store')
+    router.post('/', [ReviewController, 'store']).as('reviews.store').use(middleware.verified())
     router.post('/:id/faydali', [ReviewController, 'vote']).as('reviews.vote')
     router.post('/:id/sil', [ReviewController, 'destroy']).as('reviews.destroy')
   })
   .prefix('/incelemeler')
   .use(middleware.auth())
+
+// Translation teams (config/teams.ts)
+const TeamController = () => import('#controllers/team_controller')
+router.get('/ekipler', [TeamController, 'index']).as('teams.index')
+router.get('/ekip/:slug', [TeamController, 'show']).as('teams.show')
+router.get('/ekibe-katil', [TeamController, 'recruit']).as('teams.recruit')
+// Reports: chapter errors (guests too, throttled per address) and comment / review complaints
+const ReportController = () => import('#controllers/report_controller')
+router.post('/bildir', [ReportController, 'store']).as('reports.store')
 
 // Accounts: sign in, registration and member profiles
 const AuthController = () => import('#controllers/auth_controller')
@@ -67,6 +137,24 @@ router.get('/kayit', [AuthController, 'showRegister']).as('auth.register')
 router.post('/kayit', [AuthController, 'register']).as('auth.register.post')
 router.post('/cikis', [AuthController, 'logout']).as('auth.logout')
 router.get('/uye/:username', [AccountController, 'show']).as('profile.show')
+
+// Password reset, e-mail verification, data export and account deletion
+const PasswordResetController = () => import('#controllers/password_reset_controller')
+const VerificationController = () => import('#controllers/email_verification_controller')
+const AccountDataController = () => import('#controllers/account_data_controller')
+router.get('/sifremi-unuttum', [PasswordResetController, 'showForgot']).as('password.forgot')
+router.post('/sifremi-unuttum', [PasswordResetController, 'sendForgot']).as('password.send')
+router.get('/sifre-sifirla/:token', [PasswordResetController, 'showReset']).as('password.reset')
+router.post('/sifre-sifirla/:token', [PasswordResetController, 'reset']).as('password.update')
+router.get('/eposta-dogrula/:token', [VerificationController, 'verify']).as('email.verify')
+router
+  .group(() => {
+    router.post('/dogrulama', [VerificationController, 'resend']).as('email.resend')
+    router.get('/verilerim', [AccountDataController, 'export']).as('account.export')
+    router.post('/hesabi-sil', [AccountDataController, 'destroy']).as('account.destroy')
+  })
+  .prefix('/ayarlar')
+  .use(middleware.auth())
 router
   .post('/uye/:username/begen', [AccountController, 'like'])
   .as('profile.like')
@@ -131,6 +219,7 @@ const AdminDashboardController = () => import('#controllers/admin/dashboard_cont
 const AdminUserController = () => import('#controllers/admin/user_controller')
 const AdminSeriesController = () => import('#controllers/admin/series_controller')
 const AdminChapterController = () => import('#controllers/admin/chapter_controller')
+const AdminCoverController = () => import('#controllers/admin/cover_controller')
 const AdminGenreController = () => import('#controllers/admin/genre_controller')
 const AdminAuthorController = () => import('#controllers/admin/author_controller')
 const AdminArtistController = () => import('#controllers/admin/artist_controller')
@@ -139,6 +228,12 @@ const AdminCosmeticController = () => import('#controllers/admin/cosmetic_contro
 const AdminCardController = () => import('#controllers/admin/card_controller')
 const AdminRoleController = () => import('#controllers/admin/role_controller')
 const AdminThemeController = () => import('#controllers/admin/theme_controller')
+const AdminTeamController = () => import('#controllers/admin/team_controller')
+const AdminModerationController = () => import('#controllers/admin/moderation_controller')
+const AdminPageController = () => import('#controllers/admin/page_controller')
+const AdminPostController = () => import('#controllers/admin/post_controller')
+const AdminBulkUploadController = () => import('#controllers/admin/bulk_upload_controller')
+const AdminToolsController = () => import('#controllers/admin/admin_tools_controller')
 
 router
   .group(() => {
@@ -213,6 +308,61 @@ router
       })
       .use(middleware.role(['admin']))
 
+    // Translation teams (administrators only; editors pick teams on the series/chapter forms)
+    router
+      .group(() => {
+        router.get('/ekipler', [AdminTeamController, 'index']).as('admin.teams.index')
+        router.get('/ekipler/ekle', [AdminTeamController, 'create']).as('admin.teams.create')
+        router.post('/ekipler/ekle', [AdminTeamController, 'store']).as('admin.teams.store')
+        router.get('/ekipler/:id/duzenle', [AdminTeamController, 'edit']).as('admin.teams.edit')
+        router
+          .post('/ekipler/:id/duzenle', [AdminTeamController, 'update'])
+          .as('admin.teams.update')
+        router.post('/ekipler/:id/sil', [AdminTeamController, 'destroy']).as('admin.teams.destroy')
+      })
+      .use(middleware.role(['admin']))
+
+    // Moderation queue, mutes and blocked words (administrators and editors)
+    router.get('/moderasyon', [AdminModerationController, 'index']).as('admin.moderation.index')
+    router
+      .post('/moderasyon/kelimeler', [AdminModerationController, 'words'])
+      .as('admin.moderation.words')
+    router
+      .post('/moderasyon/uye/:id/sustur', [AdminModerationController, 'mute'])
+      .as('admin.moderation.mute')
+    router
+      .post('/moderasyon/uye/:id/susturma-kaldir', [AdminModerationController, 'unmute'])
+      .as('admin.moderation.unmute')
+    router
+      .post('/moderasyon/:type/:id/coz', [AdminModerationController, 'resolve'])
+      .as('admin.moderation.resolve')
+    router
+      .post('/moderasyon/:type/:id/reddet', [AdminModerationController, 'dismiss'])
+      .as('admin.moderation.dismiss')
+    router
+      .post('/moderasyon/:type/:id/sil', [AdminModerationController, 'destroy'])
+      .as('admin.moderation.destroy')
+    // Static pages (administrators only), announcements and their live Markdown preview
+    router
+      .group(() => {
+        router.get('/sayfalar', [AdminPageController, 'index']).as('admin.pages.index')
+        router.get('/sayfalar/ekle', [AdminPageController, 'create']).as('admin.pages.create')
+        router.post('/sayfalar/ekle', [AdminPageController, 'store']).as('admin.pages.store')
+        router.get('/sayfalar/:id/duzenle', [AdminPageController, 'edit']).as('admin.pages.edit')
+        router
+          .post('/sayfalar/:id/duzenle', [AdminPageController, 'update'])
+          .as('admin.pages.update')
+        router.post('/sayfalar/:id/sil', [AdminPageController, 'destroy']).as('admin.pages.destroy')
+      })
+      .use(middleware.role(['admin']))
+    router.post('/icerik/onizleme', [AdminPageController, 'preview']).as('admin.content.preview')
+    router.get('/duyurular', [AdminPostController, 'index']).as('admin.posts.index')
+    router.get('/duyurular/ekle', [AdminPostController, 'create']).as('admin.posts.create')
+    router.post('/duyurular/ekle', [AdminPostController, 'store']).as('admin.posts.store')
+    router.get('/duyurular/:id/duzenle', [AdminPostController, 'edit']).as('admin.posts.edit')
+    router.post('/duyurular/:id/duzenle', [AdminPostController, 'update']).as('admin.posts.update')
+    router.post('/duyurular/:id/sil', [AdminPostController, 'destroy']).as('admin.posts.destroy')
+
     // Series CRUD
     router.get('/seriler', [AdminSeriesController, 'index']).as('admin.series.index')
     router.get('/seriler/ekle', [AdminSeriesController, 'create']).as('admin.series.create')
@@ -220,6 +370,11 @@ router
     router.get('/seriler/:id/duzenle', [AdminSeriesController, 'edit']).as('admin.series.edit')
     router.post('/seriler/:id/duzenle', [AdminSeriesController, 'update']).as('admin.series.update')
     router.post('/seriler/:id/sil', [AdminSeriesController, 'destroy']).as('admin.series.destroy')
+    // "Otomatik doldur" in the series form (config/covers.ts)
+    router.get('/seriler/kapak-ara', [AdminCoverController, 'search']).as('admin.covers.search')
+    router.get('/seriler/kapak-gorsel', [AdminCoverController, 'image']).as('admin.covers.image')
+    router.get('/seriler/kapak-bilgi', [AdminCoverController, 'details']).as('admin.covers.details')
+    router.post('/seriler/kapak-kayit', [AdminCoverController, 'record']).as('admin.covers.record')
 
     // Chapters CRUD
     router.get('/bolumler', [AdminChapterController, 'index']).as('admin.chapters.index')
@@ -236,6 +391,22 @@ router
     router
       .post('/bolumler/:id/sil', [AdminChapterController, 'destroy'])
       .as('admin.chapters.destroy')
+
+    // Bulk chapter upload from a ZIP (archive streamed; see config/bodyparser.ts `processManually`)
+    router.get('/toplu-yukle', [AdminBulkUploadController, 'show']).as('admin.bulk.show')
+    router.post('/toplu-yukle/arsiv', [AdminBulkUploadController, 'upload']).as('admin.bulk.upload')
+    router
+      .post('/toplu-yukle/ice-aktar', [AdminBulkUploadController, 'import'])
+      .as('admin.bulk.import')
+    router.post('/toplu-yukle/iptal', [AdminBulkUploadController, 'cancel']).as('admin.bulk.cancel')
+
+    // File checker and activity log (administrators only)
+    router
+      .group(() => {
+        router.get('/dosya-denetimi', [AdminToolsController, 'files']).as('admin.tools.files')
+        router.get('/etkinlik', [AdminToolsController, 'activity']).as('admin.tools.activity')
+      })
+      .use(middleware.role(['admin']))
 
     // Genres CRUD
     router.get('/turler', [AdminGenreController, 'index']).as('admin.genres.index')

@@ -1,0 +1,83 @@
+/* Admin dashboard: view counts (partials/admin/view_stats.edge). Tokens only. */
+
+@layer components {
+  .admin-views__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  @media (width >= 1024px) {
+    .admin-views__grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    }
+  }
+
+  /* Phones: two tiles side by side and the total underneath; tablets: one row; desktop: a column. */
+  .admin-views__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .admin-views__stats > .stat:last-child {
+    grid-column: 1 / -1;
+  }
+
+  @media (width >= 640px) {
+    .admin-views__stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .admin-views__stats > .stat:last-child {
+      grid-column: auto;
+    }
+  }
+
+  @media (width >= 1024px) {
+    .admin-views__stats {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .admin-views__stats .stat {
+    padding: 1rem 1.125rem;
+  }
+
+  .admin-views .panel__head {
+    margin: 0;
+    padding: 1rem 1.25rem;
+  }
+
+  .admin-views__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-top: 1px solid var(--t-border);
+    padding: 0.625rem 1.25rem;
+  }
+
+  .admin-views__row > .admin-title {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .admin-views__rank {
+    width: 1.25rem;
+    flex-shrink: 0;
+    text-align: center;
+    font-weight: 800;
+    color: var(--t-subtle);
+  }
+
+  .admin-views__row:nth-child(-n + 3) .admin-views__rank {
+    color: var(--t-accent-text);
+  }
+
+  .admin-views__empty {
+    border-top: 1px solid var(--t-border);
+    padding: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--t-muted);
+  }
+}

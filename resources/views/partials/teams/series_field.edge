@@ -1,0 +1,14 @@
+{{--
+  "Çeviri ekibi" multi-select of the admin series form ("Türler ve kişiler" panel): the series'
+  default teams, credited on every chapter without its own (posted as teams[]).
+  Data: teams [{ id, name }], selectedTeamIds (team_service).
+--}}
+@!component('components/ui/multi_select', {
+  name: 'teams',
+  label: 'Çeviri ekibi',
+  items: teams || [],
+  selected: selectedTeamIds || [],
+  placeholder: 'Ekip ara veya seçin…',
+  emptyText: 'Eşleşen ekip yok',
+  hint: (teams && teams.length) ? 'Kendi ekibi seçilmemiş bölümlerde ve seri bilgilerinde görünür.' + (auth.user.isAdmin ? ' Ekipler, Topluluk → Ekipler sayfasından eklenir.' : '') : 'Henüz ekip yok. ' + (auth.user.isAdmin ? 'Topluluk → Ekipler sayfasından ekleyebilirsiniz.' : 'Bir yönetici Topluluk → Ekipler sayfasından ekleyebilir.')
+})

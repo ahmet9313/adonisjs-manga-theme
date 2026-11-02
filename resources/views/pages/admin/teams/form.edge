@@ -1,0 +1,144 @@
+{{--
+  Admin team form (create and edit; administrators only). Two columns on wide screens: name,
+  description and members by role on the left; logo, links and recruitment on the right; a
+  sticky save bar at the end.
+  Posted fields: name, description, logo (file), remove_logo ('on'), discord_url, website_url,
+  other_url, recruiting ('on'), recruitment_text and members_<role> (comma separated usernames,
+  components/ui/tag_input; roles from config/teams.ts).
+  Data: team (edit), members ({ role: [username] }), knownMembers (suggestions), roles, links.
+--}}
+@let(isEdit = Boolean(team))
+@let(failed = flashMessages.has('inputErrorsBag'))
+@let(errorList = failed ? Object.entries(flashMessages.get('inputErrorsBag') || {}) : [])
+@let(action = isEdit ? '/admin/ekipler/' + team.id + '/duzenle' : '/admin/ekipler/ekle')
+@let(fieldLabels = Object.assign({ name: 'Ekip adı', description: 'Açıklama', logo: 'Logo', recruitment_text: 'Alım metni' }, Object.fromEntries(Object.entries(links).map(([key, entry]) => [key, entry.label])), Object.fromEntries(Object.entries(roles).map(([key, entry]) => ['members_' + key, entry.plural]))))
+@let(recruiting = failed ? flashMessages.has('recruiting') : (isEdit && team.recruiting))
+@component('components/layout/admin', {
+  title: isEdit ? team.name : title,
+  description: isEdit ? 'Ekip bilgilerini, üyelerini ve alım duyurusunu düzenleyin. Adres değişmez: /ekip/' + team.slug : 'Yeni bir çeviri ekibi ekleyin. Adres addan otomatik oluşturulur.',
+  crumbs: [{ label: 'Ekipler', href: '/admin/ekipler' }, { label: isEdit ? 'Düzenle' : 'Yeni ekip' }]
+})
+  @slot('actions')
+    @if(isEdit)
+    @component('components/ui/button', { href: '/ekip/' + team.slug, iconRight: 'external', target: '_blank', rel: 'noopener' })
+      Sitede aç
+    @end
+    @end
+  @end
+
+  @slot('main')
+    <form id="team-form" action="{{ action }}" method="POST" enctype="multipart/form-data" data-submit-once
+          x-data="{ dirty: false, recruiting: {{ recruiting ? 'true' : 'false' }} }" @input="dirty = true" @change="dirty = true">
+      {{ csrfField() }}
+
+      @if(errorList.length)
+      @component('components/ui/alert', { tone: 'danger', title: 'Ekip kaydedilemedi', class: 'mb-6' })
+        <p>Aşağıdaki alanları düzeltip yeniden kaydedin. Seçtiğiniz logo güvenlik nedeniyle yeniden seçilmelidir.</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          @each(entry in errorList)
+          @let(label = fieldLabels[entry[0]] || entry[0])
+          @if(String(entry[1][0]).startsWith(label))
+          <li><a href="#f-{{ entry[0] }}" class="link">{{ entry[1][0] }}</a></li>
+          @else
+          <li><a href="#f-{{ entry[0] }}" class="link">{{ label }}</a>: {{ entry[1][0] }}</li>
+          @end
+          @end
+        </ul>
+      @end
+      @end
+
+      <div class="admin-form admin-form--split">
+        <div class="admin-form__col">
+          @component('components/ui/panel', { title: 'Temel bilgiler', id: 'basics' })
+            <div class="admin-fields">
+              @!component('components/ui/field', { name: 'name', label: 'Ekip adı', required: true, minlength: 2, maxlength: 80, autocomplete: 'off', value: isEdit ? team.name : '', placeholder: 'ör. Gece Kuşu Scans', autofocus: !isEdit, hint: isEdit ? '' : 'Adres (/ekip/…) addan oluşturulur ve sonra değişmez.' })
+              @!component('components/ui/field', { name: 'description', label: 'Açıklama', type: 'textarea', rows: 5, maxlength: 5000, value: isEdit ? (team.description || '') : '', placeholder: 'Ekibi birkaç cümleyle tanıtın: hangi serileri çeviriyorsunuz, ne sıklıkla bölüm çıkarıyorsunuz…', hint: 'Ekip sayfasında ve ekip listesinde görünür.' })
+            </div>
+          @end
+
+          @component('components/ui/panel', { title: 'Üyeler', id: 'members', description: 'Her görev için kullanıcı adlarını yazıp Enter’a basın. Bir kişi birden çok görevde olabilir; sıralama ekip sayfasında korunur.' })
+            <div class="admin-fields">
+              @each((entry, role) in roles)
+              @!component('components/ui/tag_input', { name: 'members_' + role, label: entry.plural, value: members[role] || [], suggestions: knownMembers, popular: false, placeholder: 'Kullanıcı adı yazıp Enter’a basın', hint: entry.hint })
+              @end
+            </div>
+          @end
+        </div>
+
+        <div class="admin-form__col">
+          @component('components/ui/panel', { title: 'Logo', id: 'logo-panel', description: 'Kare görsel önerilir. JPG, PNG veya WebP; en fazla 2 MB.' })
+            <div class="admin-fields">
+              @!component('components/ui/dropzone', { name: 'logo', label: 'Logo', aspect: 'square', current: isEdit ? (team.logo || '') : '', hint: isEdit && team.logo ? 'Yeni görsel seçmezseniz mevcut logo kalır.' : 'Logo yoksa ekip adının baş harfi gösterilir.' })
+              @if(isEdit && team.logo)
+              @!component('components/ui/field', { name: 'remove_logo', label: 'Logoyu kaldır', type: 'checkbox', value: false, hint: 'Yeni görsel seçilmediyse logo silinir.' })
+              @end
+            </div>
+          @end
+
+          @component('components/ui/panel', { title: 'Bağlantılar', id: 'links', description: 'Ekip sayfasında ve alım duyurusunda düğme olarak görünür. Yalnız http:// veya https:// adresleri.' })
+            <div class="admin-fields">
+              @each((entry, field) in links)
+              @!component('components/ui/field', { name: field, label: entry.label, type: 'url', inputmode: 'url', maxlength: 500, autocomplete: 'off', value: isEdit ? (team[{ discord_url: 'discordUrl', website_url: 'websiteUrl', other_url: 'otherUrl' }[field]] || '') : '', placeholder: field === 'discord_url' ? 'https://discord.gg/…' : 'https://…' })
+              @end
+            </div>
+          @end
+
+          @component('components/ui/panel', { title: 'Ekibe katıl', id: 'recruitment', description: 'Açıkken ekip “Ekibe Katıl” sayfasında ve ekip listesinde “Üye arıyor” rozetiyle görünür.' })
+            <div class="admin-fields">
+              @!component('components/ui/field', { name: 'recruiting', label: 'Üye arıyoruz', type: 'toggle', value: recruiting, '@change': 'recruiting = $event.target.checked' })
+              <div x-show="recruiting" x-transition.opacity
+                @if(!recruiting)
+                style="display: none"
+                @end
+                >
+                @!component('components/ui/field', { name: 'recruitment_text', label: 'Alım metni', type: 'textarea', rows: 6, maxlength: 5000, value: isEdit ? (team.recruitmentText || '') : '', placeholder: 'ör. İngilizceden çeviri yapabilecek çevirmen ve Photoshop bilen dizgici arıyoruz. Başvuru için Discord sunucumuza katılıp #başvuru kanalına yazın.', hint: 'Hangi görevler için kimi aradığınızı ve nasıl başvurulacağını yazın; başvurular yukarıdaki bağlantılardan yapılır.' })
+              </div>
+            </div>
+          @end
+
+          @if(isEdit)
+          <section class="panel admin-danger-zone" aria-labelledby="danger-title">
+            <h2 id="danger-title" class="panel__title">Ekibi sil</h2>
+            <p class="panel__desc">Ekip ve üye listesi silinir; serilerden ve bölümlerden yalnız ekip bilgisi kaldırılır.</p>
+            @component('components/ui/button', { type: 'submit', variant: 'danger', icon: 'trash', block: true, form: 'team-delete', class: 'mt-4' })
+              Ekibi sil
+            @end
+          </section>
+          @end
+        </div>
+      </div>
+
+      <div class="savebar">
+        <p class="admin-savebar__status" aria-live="polite">
+          <span x-show="!dirty">
+            @if(isEdit)
+            Son kayıt {{ agoOf(team.updatedAt) }}.
+            @else
+            <span class="text-danger" aria-hidden="true">*</span> işaretli alanlar zorunludur.
+            @end
+          </span>
+          <span x-show="dirty" x-cloak class="inline-flex items-center gap-2 font-semibold text-warning">
+            <span class="h-2 w-2 rounded-full bg-warning" aria-hidden="true"></span>
+            Kaydedilmemiş değişiklikler var
+          </span>
+        </p>
+        <div class="form-actions">
+          @component('components/ui/button', { variant: 'ghost', href: '/admin/ekipler' })
+            Vazgeç
+          @end
+          @component('components/ui/button', { type: 'submit', variant: 'primary', icon: 'check' })
+            {{ isEdit ? 'Değişiklikleri kaydet' : 'Ekibi ekle' }}
+          @end
+        </div>
+      </div>
+    </form>
+
+    @if(isEdit)
+    <form id="team-delete" action="/admin/ekipler/{{ team.id }}/sil" method="POST" hidden
+          data-confirm="“{{ team.name }}” ekibi silinecek. Serilerden ve bölümlerden yalnız ekip bilgisi kaldırılır; seriler ve bölümler silinmez."
+          data-confirm-title="Ekip silinsin mi?" data-confirm-label="Ekibi sil">
+      {{ csrfField() }}
+    </form>
+    @end
+  @end
+@end

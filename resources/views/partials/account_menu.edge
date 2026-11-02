@@ -67,6 +67,7 @@
             @!component('components/icon', { name: 'user' })
             Profilim
           </a>
+          @include('partials/account/verify_menu_item')
           <button type="button" class="menu__item" @click="close(); $dispatch('open-inbox')">
             @!component('components/icon', { name: 'inbox' })
             <span class="flex-1">Gelen Kutusu</span>

@@ -1,0 +1,43 @@
+{{--
+  Report dialog, included once by the site layout. Open with
+  $dispatch('open-report', { type, id, set, label }) (reportDialog, resources/js/components/reports.js);
+  `components/report_button` and the comment / review menus do that. Reasons: config/moderation.ts.
+--}}
+<div x-data="reportDialog" @open-report.window="show($event.detail)"
+     data-config="{{ JSON.stringify({ reasons: reportConfig.reasons, noteMax: reportConfig.noteMax, signedIn: Boolean(auth && auth.user) }) }}">
+  @component('components/ui/modal', { id: 'report', title: 'Hata bildir', titleExpr: "isChapter ? 'Hata bildir' : 'Şikâyet et'", size: 'sm', close: 'close()' })
+    <form id="report-form" class="report-form" @submit.prevent="submit()" novalidate>
+      <p class="report-form__target" x-show="target && target.label" x-text="target ? target.label : ''"></p>
+      <fieldset class="report-reasons" :aria-describedby="error ? 'report-error' : null">
+        <legend class="field__label" x-text="isChapter ? 'Sorun ne?' : 'Neden şikâyet ediyorsun?'">Sorun ne?</legend>
+        <template x-for="item in reasons" :key="item.key">
+          <label class="report-reason">
+            <input type="radio" name="reason" class="report-reason__input" :value="item.key" x-model="reason">
+            <span x-text="item.label"></span>
+          </label>
+        </template>
+      </fieldset>
+      <div class="field">
+        <label for="report-note" class="field__label">
+          Açıklama
+          <span class="font-normal text-(--t-muted)" x-text="reason === 'other' ? '(gerekli)' : '(isteğe bağlı)'">(isteğe bağlı)</span>
+        </label>
+        <textarea id="report-note" x-ref="note" class="control report-form__note" rows="3" x-model="note" :maxlength="noteMax"
+                  :placeholder="placeholder"
+                  aria-describedby="report-note-hint"></textarea>
+        <p id="report-note-hint" class="field__hint report-form__hint">
+          <span x-text="isChapter ? 'Giriş yapmadan da bildirebilirsin.' : 'Şikâyetin yalnızca moderatörlere görünür.'"></span>
+          <span class="t-num" x-text="note.length + ' / ' + noteMax"></span>
+        </p>
+      </div>
+      <p id="report-error" class="field__error" role="alert" x-show="error" x-text="error" x-cloak></p>
+    </form>
+    @slot('footer')
+      <button type="button" class="btn btn--ghost btn--md" @click="close()">Vazgeç</button>
+      <button type="submit" form="report-form" class="btn btn--primary btn--md" :disabled="busy" :aria-busy="busy.toString()">
+        @!component('components/icon', { name: 'flag', class: 'btn__icon' })
+        <span x-text="busy ? 'Gönderiliyor…' : 'Gönder'">Gönder</span>
+      </button>
+    @end
+  @end
+</div>

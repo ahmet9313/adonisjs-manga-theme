@@ -249,20 +249,21 @@ test.group('Threaded comments', (group) => {
     await first.login('ikinci')
     const second = client()
     await second.login('moderator')
-    // The legacy like endpoint toggles an up-vote; answers carry the full vote state.
-    assert.deepEqual(await jsonOf(first.post(`/yorumlar/${root.id}/begen`)), {
+    // A vote without a value is an up-vote; voting again takes it back. Answers carry the full
+    // vote state.
+    assert.deepEqual(await jsonOf(first.post(`/yorumlar/${root.id}/oy`)), {
       vote: 1,
       liked: true,
       likeCount: 1,
       dislikeCount: 0,
     })
-    assert.deepEqual(await jsonOf(second.post(`/yorumlar/${root.id}/begen`)), {
+    assert.deepEqual(await jsonOf(second.post(`/yorumlar/${root.id}/oy`)), {
       vote: 1,
       liked: true,
       likeCount: 2,
       dislikeCount: 0,
     })
-    assert.deepEqual(await jsonOf(first.post(`/yorumlar/${root.id}/begen`)), {
+    assert.deepEqual(await jsonOf(first.post(`/yorumlar/${root.id}/oy`)), {
       vote: 0,
       liked: false,
       likeCount: 1,
@@ -298,7 +299,7 @@ test.group('Threaded comments', (group) => {
     assert.isTrue(placeholder.deleted)
     assert.equal(placeholder.body, '')
     assert.isNull(placeholder.author)
-    assert.equal(await statusOf(owner.post(`/yorumlar/${root.id}/begen`)), 404)
+    assert.equal(await statusOf(owner.post(`/yorumlar/${root.id}/oy`)), 404)
 
     const withGif = await Comment.query().whereNotNull('image').firstOrFail()
     const image = withGif.image!

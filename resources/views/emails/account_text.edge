@@ -1,0 +1,15 @@
+{{-- Account mail (plain-text part). Same data as emails/account; plain text, so no escaping. --}}
+{{{ siteName }}}
+
+{{{ heading }}}
+
+{{{ intro }}}
+@if(action)
+
+{{{ action.label }}}:
+{{{ action.url }}}
+@end
+@if(note)
+
+{{{ note }}}
+@end

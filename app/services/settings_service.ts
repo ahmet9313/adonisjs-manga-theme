@@ -1,5 +1,5 @@
 import db from '@adonisjs/lucid/services/db'
-import site, { agePolicyKeys, type AgePolicy } from '#config/site'
+import site, { agePolicyKeys, coverModeKeys, type AgePolicy, type CoverMode } from '#config/site'
 import { roleNames, roles, type Role } from '#config/roles'
 import { now } from '#services/input_service'
 import theme from '#services/theme_service'
@@ -11,9 +11,17 @@ const defaults: Record<string, string> = {
   logo_url: site.logo || '',
   logo_mobile_url: '',
   favicon_url: '',
+  /** Public address for canonical links, sitemaps and feeds (seo_service); empty: APP_URL. */
+  site_url: '',
   ...Object.fromEntries(
     Object.entries(site.agePolicies).map(([rating, policy]) => [agePolicyKey(rating), policy])
   ),
+  ...Object.fromEntries(
+    Object.entries(site.coverPolicies).map(([rating, mode]) => [coverPolicyKey(rating), mode])
+  ),
+  cover_placeholder_url: '',
+  /** Who sees the real hidden covers (config/site.ts → coverReveals). */
+  cover_reveal: 'age',
   announcement_enabled: '',
   announcement_text: '',
   announcement_url: '',
@@ -24,6 +32,11 @@ export function agePolicyKey(rating: string) {
   return `age_policy_${rating.replace(/\D/g, '')}`
 }
 
+/** Settings key of an age rating's cover rule: `cover_policy_18` for "18+". */
+export function coverPolicyKey(rating: string) {
+  return `cover_policy_${rating.replace(/\D/g, '')}`
+}
+
 /** Key/value settings kept in the `settings` table and cached for the life of the process. */
 class SettingsService {
   private values = new Map<string, string>()
@@ -31,7 +44,11 @@ class SettingsService {
 
   /** Loads the table once; call from a middleware before rendering. */
   async ready() {
-    this.loading ??= this.reload()
+    // A failed first load is forgotten so the next request retries it.
+    this.loading ??= this.reload().catch((error) => {
+      this.loading = null
+      throw error
+    })
     return this.loading
   }
 
@@ -84,6 +101,13 @@ class SettingsService {
     if (!rating) return 'none'
     const value = this.get(agePolicyKey(rating)) as AgePolicy
     return agePolicyKeys.includes(value) ? value : 'none'
+  }
+
+  /** How covers of this age rating are shown (config/site.ts → coverPolicies). */
+  coverPolicy(rating: string | null | undefined): CoverMode {
+    if (!rating) return 'show'
+    const value = this.get(coverPolicyKey(rating)) as CoverMode
+    return coverModeKeys.includes(value) ? value : 'show'
   }
 
   announcement() {

@@ -1,0 +1,28 @@
+{{--
+  In-place edit of the author's own comment (commentSection.startEdit). Text and spoiler flag
+  only; images and stickers stay as they are. Ctrl/⌘ + Enter saves, Escape cancels.
+--}}
+<form class="comment-edit" @submit.prevent="saveEdit(node.id)" @keydown.escape.stop.prevent="cancelEdit()">
+  <label :for="'edit-' + node.id" class="sr-only">Yorumu düzenle</label>
+  <textarea :id="'edit-' + node.id" class="composer__input comment-edit__input" rows="3"
+    x-model="draft.text" @input="grow($event)"
+    @keydown.ctrl.enter.prevent="saveEdit(node.id)" @keydown.meta.enter.prevent="saveEdit(node.id)"></textarea>
+  <p x-show="draft.error" x-cloak x-text="draft.error" role="alert" class="field__error composer__error"></p>
+  <div class="composer__bar">
+    <div class="composer__tools">
+      <button type="button" class="btn btn--ghost btn--sm composer__spoiler" @click="draft.spoiler = !draft.spoiler" :aria-pressed="draft.spoiler.toString()" title="Spoiler olarak işaretle">
+        @!component('components/icon', { name: 'eye-off', class: 'btn__icon' })
+        <span>Spoiler</span>
+      </button>
+    </div>
+    <div class="composer__send">
+      <span class="composer__count t-num" x-show="draft.text.length" x-cloak
+            :data-tone="draft.text.length > maxLength ? 'danger' : (draft.text.length > maxLength - 100 ? 'warning' : '')"
+            x-text="draft.text.length + ' / ' + maxLength"></span>
+      <button type="button" class="btn btn--ghost btn--sm" @click="cancelEdit()">Vazgeç</button>
+      <button type="submit" class="btn btn--primary btn--sm" :disabled="!canSave()" :aria-busy="draft.busy.toString()" title="Ctrl + Enter ile de kaydedebilirsin">
+        <span x-text="draft.busy ? 'Kaydediliyor' : 'Kaydet'">Kaydet</span>
+      </button>
+    </div>
+  </div>
+</form>

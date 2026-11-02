@@ -13,8 +13,21 @@ export async function send(url, body = {}) {
     body: JSON.stringify(body),
   })
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.error || data.errors?.[0]?.message || 'İşlem tamamlanamadı.')
+  if (!response.ok)
+    throw new Error(
+      data.error || data.message || data.errors?.[0]?.message || 'İşlem tamamlanamadı.'
+    )
   return data
+}
+
+/**
+ * Smaller WebP copy of a stored image (`/content/…?w=`, app/services/media_service.ts); other
+ * addresses (SVG placeholders, `/images/…`) are returned unchanged.
+ */
+export function thumb(src, width) {
+  return typeof src === 'string' && src.startsWith('/content/') && /\.(jpe?g|png|webp)$/i.test(src)
+    ? `${src}?w=${width}`
+    : src
 }
 
 export function toast(text, tone = 'success', image = '') {

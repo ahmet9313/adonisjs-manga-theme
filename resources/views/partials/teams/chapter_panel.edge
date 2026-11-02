@@ -1,0 +1,19 @@
+{{--
+  "Çeviri ekibi" panel of the admin chapter form: the chapter's own teams (empty: the series'
+  teams are credited) and an optional free-text credit line. Posted as teams[] and credits.
+  Data: teams [{ id, name }], selectedTeamIds, chapter (edit).
+--}}
+@component('components/ui/panel', { title: 'Çeviri ekibi', id: 'chapter-teams', description: 'Okuyucunun başlığında ve seri sayfasındaki bölüm satırında görünür.' })
+  <div class="admin-fields">
+    @!component('components/ui/multi_select', {
+      name: 'teams',
+      label: 'Bu bölümün ekibi',
+      items: teams || [],
+      selected: selectedTeamIds || [],
+      placeholder: 'Ekip ara veya seçin…',
+      emptyText: 'Eşleşen ekip yok',
+      hint: 'Boş bırakılırsa serinin ekibi gösterilir. Seri ortasında ekip değiştiyse burada seçin.'
+    })
+    @!component('components/ui/field', { name: 'credits', label: 'Emeği geçenler (isteğe bağlı)', value: chapter ? (chapter.credits || '') : '', maxlength: 200, placeholder: 'ör. Çeviri: Ayşe · Redaksiyon: Mert · Dizgi: Can', hint: 'Kısa bir satır; okuyucuda ekip adının yanında görünür.' })
+  </div>
+@end

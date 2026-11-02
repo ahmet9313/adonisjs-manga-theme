@@ -11,6 +11,7 @@
  */
 export default function multiSelect() {
   return {
+    onFill: null,
     open: false,
     search: '',
     items: [],
@@ -26,6 +27,26 @@ export default function multiSelect() {
       } catch {
         this.items = []
       }
+      // Records chosen elsewhere ("Otomatik doldur", cover_finder.js): { id, items: [{ id, name }] }.
+      // New records (just created) are added to the list.
+      this.onFill = (event) => {
+        if (event.detail?.id !== this.baseId) return
+        for (const { id, name } of event.detail.items || []) {
+          let item = this.items.find((entry) => String(entry.id) === String(id))
+          if (!item) {
+            item = { id, name, selected: false }
+            this.items.push(item)
+            item = this.items.at(-1)
+          }
+          item.selected = true
+        }
+        this.$dispatch('change')
+      }
+      window.addEventListener('multi-select-add', this.onFill)
+    },
+
+    destroy() {
+      window.removeEventListener('multi-select-add', this.onFill)
     },
 
     get filtered() {

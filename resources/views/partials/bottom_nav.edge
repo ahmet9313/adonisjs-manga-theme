@@ -1,0 +1,49 @@
+{{--
+  Phone tab bar below 1024 px (Göster/Gizle → mobile_bottom_nav): Ana Sayfa, Seriler,
+  Kaydedilenler, Bildirimler (the inbox drawer; the sign-in dialog for guests) and Menü (the
+  header's #mobile-navigation, via the `toggle-mobile-menu` window event). Public layout only.
+  bottomNav (bottom_nav.js) follows the menu's state, steps aside while a text field has focus
+  and, in the reader, slides away while reading downwards like the toolbar. The body gets room
+  for it in CSS (body:has(> .bottom-nav)).
+--}}
+@if(ui('mobile_bottom_nav'))
+@let(navPath = request.url())
+@let(member = Boolean(auth && auth.user))
+<nav class="bottom-nav" aria-label="Alt menü" x-data="bottomNav" data-hidden="false" :data-hidden="(hidden || typing).toString()">
+  <a href="/" class="bottom-nav__item" {{ navPath === '/' ? 'aria-current=page' : '' }}>
+    @!component('components/icon', { name: 'home', class: 'bottom-nav__icon' })
+    <span>Ana Sayfa</span>
+  </a>
+  <a href="/seriler" class="bottom-nav__item" {{ navPath.startsWith('/seriler') || navPath.startsWith('/series/') ? 'aria-current=page' : '' }}>
+    @!component('components/icon', { name: 'grid', class: 'bottom-nav__icon' })
+    <span>Seriler</span>
+  </a>
+  <a href="/kaydedilenler" class="bottom-nav__item" {{ navPath.startsWith('/kaydedilenler') ? 'aria-current=page' : '' }}>
+    @!component('components/icon', { name: 'bookmark', class: 'bottom-nav__icon' })
+    <span>Kaydedilenler</span>
+  </a>
+  @if(member)
+  <button type="button" class="bottom-nav__item" @click="$dispatch('open-inbox')"
+          aria-label="Bildirimler" :aria-label="'Bildirimler' + ($store.account.unread ? ', ' + $store.account.unread + ' okunmamış' : '')">
+    <span class="relative">
+      @!component('components/icon', { name: 'bell', class: 'bottom-nav__icon' })
+      <span x-cloak x-show="$store.account.unread" class="count bottom-nav__count" x-text="$store.account.unread > 99 ? '99+' : $store.account.unread" aria-hidden="true"></span>
+    </span>
+    <span>Bildirimler</span>
+  </button>
+  @else
+  <button type="button" class="bottom-nav__item" @click="$dispatch('open-auth', 'login')">
+    @!component('components/icon', { name: 'bell', class: 'bottom-nav__icon' })
+    <span>Bildirimler</span>
+  </button>
+  @end
+  @if(ui('header'))
+  {{-- .stop: the header closes its menu on outside clicks, and this click is outside it. --}}
+  <button type="button" class="bottom-nav__item" @click.stop="toggleMenu()"
+          aria-controls="mobile-navigation" aria-expanded="false" :aria-expanded="menuOpen.toString()">
+    @!component('components/icon', { name: 'menu', class: 'bottom-nav__icon' })
+    <span>Menü</span>
+  </button>
+  @end
+</nav>
+@end

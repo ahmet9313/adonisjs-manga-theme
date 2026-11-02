@@ -1,0 +1,44 @@
+{{--
+  Ranked list of series by views (class `rank-list`, see pages/views.css): rank, cover, title,
+  content type and the period's views ("12,4 B"). The <ol> carries the order for assistive
+  technology; the visible number is decorative.
+  Props: items (presenter output plus `views`), empty (text when the list is empty), class.
+--}}
+@let(items = $props.get('items', []))
+@if(items.length)
+<ol class="rank-list {{ $props.get('class', '') }}">
+  @each((item, index) in items)
+  <li>
+    <a href="/series/{{ item.type }}/{{ item.slug }}" class="rank-row">
+      <span class="rank-row__num t-num" aria-hidden="true">{{ index + 1 }}</span>
+      <span class="rank-row__cover">
+        <img src="{{ thumbOf(item.coverImage, 160) }}" alt="" width="48" height="64" loading="lazy" decoding="async" data-fallback="/images/no-cover.svg"
+          @if(item.coverVeil)
+          data-veil="{{ item.coverVeil }}"
+          @end
+          >
+        @!component('components/series/veil', { series: item })
+      </span>
+      <span class="rank-row__body">
+        <span class="rank-row__title">{{ item.title }}</span>
+        <span class="rank-row__meta">
+          @!component('components/ui/badge', { kind: 'type', value: item.type, size: 'sm' })
+          @if(item.access && item.access !== 'public')
+          <span class="badge badge--sm lock-badge" data-tone="{{ item.access === 'vip' ? 'accent' : 'neutral' }}" title="{{ site.accessLevels[item.access].label }}">
+            @!component('components/icon', { name: item.access === 'vip' ? 'star' : 'lock', stroke: 2 })
+            {{ item.access === 'vip' ? 'VIP' : 'Üye' }}
+          </span>
+          @end
+          <span class="view-count" title="{{ Number(item.views).toLocaleString('tr-TR') }} görüntülenme">
+            @!component('components/icon', { name: 'eye', class: 'view-count__icon' })
+            {{ countOf(item.views) }}<span class="sr-only"> görüntülenme</span>
+          </span>
+        </span>
+      </span>
+    </a>
+  </li>
+  @end
+</ol>
+@else
+<p class="rank-list__empty">{{ $props.get('empty', 'Henüz okunan seri yok.') }}</p>
+@end
