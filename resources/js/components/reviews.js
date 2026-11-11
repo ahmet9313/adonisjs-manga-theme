@@ -67,7 +67,9 @@ export default function reviewSection() {
     // ---- List -----------------------------------------------------------------------------
 
     async load(reset = false) {
-      if (this.loading) return
+      // A new sort or filter replaces a running request; "Daha fazla" waits for it.
+      if (this.loading && !reset) return
+      const request = (this.request = (this.request || 0) + 1)
       this.loading = true
       this.loadError = ''
       const page = reset ? 1 : this.page + 1
@@ -84,6 +86,7 @@ export default function reviewSection() {
         })
         if (!response.ok) throw new Error()
         const data = await response.json()
+        if (request !== this.request) return
         if (reset) this.items = []
         this.items.push(...data.items)
         this.page = page
@@ -92,6 +95,7 @@ export default function reviewSection() {
         if (page === 1 && 'mine' in data) this.setMine(data.mine)
         if (page === 1) this.showLinked()
       } catch {
+        if (request !== this.request) return
         this.loadError = 'İncelemeler yüklenemedi. Bağlantını kontrol edip tekrar dene.'
       }
       this.loading = false
@@ -132,7 +136,7 @@ export default function reviewSection() {
           ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
         const target = this.form.rating
           ? document.getElementById('review-body')
-          : this.$el.querySelector('[role="radio"][tabindex="0"]')
+          : document.querySelector('#inceleme-formu [role="radio"][tabindex="0"]')
         target?.focus({ preventScroll: true })
       })
     },

@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "migrate": "node ace migration:run",
-    "migrate:rollback": "node ace migration:rollback",
+    "migrate:rollback": "node scripts/confirm-destructive.mjs migration:rollback && node ace migration:rollback",
     "migrate:fresh": "node scripts/confirm-destructive.mjs migration:fresh && node ace migration:fresh",
     "seed": "node ace db:seed",
     "seed:demo": "node ace db:seed --files=database/seeders/social_seeder.ts",

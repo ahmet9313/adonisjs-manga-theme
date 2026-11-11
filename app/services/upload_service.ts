@@ -1,9 +1,10 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import content from '#config/content'
+import { variantWidths } from '#services/media_service'
 import { errors } from '@vinejs/vine'
 import { mkdir, open, rm } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
-import { resolve, sep } from 'node:path'
+import { join, relative, resolve, sep } from 'node:path'
 import type Chapter from '#models/chapter'
 import db from '@adonisjs/lucid/services/db'
 
@@ -145,9 +146,23 @@ export async function chapterContent(
   const order = parsePageOrder(rawOrder, existing, files.length)
   if (!order.length) invalidField('pages', 'En az bir bölüm sayfası gerekli.')
   const pages: string[] = []
+  const saved: string[] = []
   let index = 0
-  for (const entry of order)
-    pages.push(entry === '__new__' ? await saveImage(files[index++], segments) : entry)
+  try {
+    for (const entry of order) {
+      if (entry !== '__new__') {
+        pages.push(entry)
+        continue
+      }
+      const page = await saveImage(files[index++], segments)
+      saved.push(page)
+      pages.push(page)
+    }
+  } catch (error) {
+    // One bad page (wrong signature, failed move) must not leave the earlier ones on disk.
+    await removeContentFiles(saved)
+    throw error
+  }
   return { type: 'images', pages }
 }
 
@@ -157,6 +172,10 @@ export async function removeContentFile(publicPath: string | null | undefined) {
   const target = resolve(content.root, ...publicPath.slice('/content/'.length).split('/'))
   if (!target.startsWith(content.root + sep)) return
   await rm(target, { force: true })
+  // Its resized copies (`?w=`) would otherwise stay reachable under /content/_variants/.
+  const inside = relative(content.root, target)
+  for (const width of variantWidths)
+    await rm(join(content.root, '_variants', `w${width}`, inside) + '.webp', { force: true })
 }
 
 /** Page images of a chapter body (none for text and video chapters). */

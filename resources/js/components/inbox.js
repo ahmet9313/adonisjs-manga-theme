@@ -47,6 +47,8 @@ export function inbox() {
     },
 
     async load(reset = false) {
+      // Opening the inbox and picking a filter both load; only the latest answer is shown.
+      const request = (this.request = (this.request || 0) + 1)
       this.loading = true
       this.error = ''
       const page = reset ? 1 : this.page + 1
@@ -57,11 +59,13 @@ export function inbox() {
         })
         if (!response.ok) throw new Error()
         const data = await response.json()
+        if (request !== this.request) return
         this.items = reset ? data.items : [...this.items, ...data.items]
         this.page = page
         this.hasMore = data.hasMore
         this.unread = data.unread
       } catch {
+        if (request !== this.request) return
         this.error = 'Bildirimler yüklenemedi.'
       }
       this.loading = false

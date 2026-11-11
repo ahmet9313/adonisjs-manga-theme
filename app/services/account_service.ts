@@ -71,15 +71,20 @@ export function safeNext(value: unknown, fallback = '/'): string {
 export async function assertUniqueIdentity(
   username: string | null,
   email: string | null,
-  ignoreId?: number
+  ignoreId?: number,
+  options: { allowReserved?: boolean } = {}
 ) {
   if (username) {
-    if (reservedUsernames.has(username)) invalidField('username', 'Bu kullanıcı adı kullanılamaz.')
+    if (!options.allowReserved && reservedUsernames.has(username))
+      invalidField('username', 'Bu kullanıcı adı kullanılamaz.')
     const query = User.query().where('username', username)
     if (ignoreId) query.whereNot('id', ignoreId)
     if (await query.first()) invalidField('username', 'Bu kullanıcı adı zaten alınmış.')
   }
   if (email) {
+    // The domain of the "Silinmiş üye" placeholder (account_data_service): an account holding
+    // that address would make every account deletion fail on the unique index.
+    if (email.endsWith('@deleted.invalid')) invalidField('email', 'Bu e-posta adresi kullanılamaz.')
     const query = User.query().where('email', email)
     if (ignoreId) query.whereNot('id', ignoreId)
     if (await query.first()) invalidField('email', 'Bu e-posta adresi zaten kullanılıyor.')

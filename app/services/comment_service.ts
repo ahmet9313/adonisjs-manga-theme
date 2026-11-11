@@ -9,6 +9,7 @@ import notifications from '#services/notification_service'
 import progress from '#services/progress_service'
 import mentions from '#services/mention_service'
 import site from '#config/site'
+import logger from '@adonisjs/core/services/logger'
 
 export const commentPageSize = 20
 export const replyPreviewSize = 2
@@ -256,30 +257,39 @@ class CommentService {
         await trx.from('comments').where('id', data.parent.id).increment('reply_count', 1)
       return created
     })
-    await progress.commented(user)
     await comment.load('user')
     if (comment.parentId) await comment.load('parent', (parent) => parent.preload('user'))
-    const parentAuthor = data.parent ? comment.parent?.user : null
-    const repliedTo =
-      parentAuthor && parentAuthor.id !== user.id && !data.parent?.deletedAt
-        ? parentAuthor.id
-        : null
-    if (repliedTo)
-      await notifications.notify(repliedTo, 'activity', {
-        title: `${user.fullName} yorumuna yanıt verdi`,
-        body: data.body
-          ? data.body.slice(0, 140)
-          : data.stickerId
-            ? 'Bir çıkartma gönderdi.'
-            : 'Bir görsel gönderdi.',
+    // The comment is stored: a failed reward or notice is logged, not answered with an error
+    // (the caller would delete the image of a comment that exists, and a retry would post twice).
+    try {
+      await progress.commented(user)
+      const parentAuthor = data.parent ? comment.parent?.user : null
+      const repliedTo =
+        parentAuthor && parentAuthor.id !== user.id && !data.parent?.deletedAt
+          ? parentAuthor.id
+          : null
+      if (repliedTo)
+        await notifications.notify(repliedTo, 'activity', {
+          title: `${user.fullName} yorumuna yanıt verdi`,
+          body: data.spoiler
+            ? 'Spoiler içeren yorum'
+            : data.body
+              ? data.body.slice(0, 140)
+              : data.stickerId
+                ? 'Bir çıkartma gönderdi.'
+                : 'Bir görsel gönderdi.',
+          link: data.link,
+        })
+      await this.notifyMentions(user, data.body, {
         link: data.link,
+        audience: data.audience,
+        spoiler: data.spoiler,
+        // The reply notice already told the parent's author.
+        skip: repliedTo ? [repliedTo] : [],
       })
-    await this.notifyMentions(user, data.body, {
-      link: data.link,
-      audience: data.audience,
-      // The reply notice already told the parent's author.
-      skip: repliedTo ? [repliedTo] : [],
-    })
+    } catch (error) {
+      logger.error({ err: error, commentId: comment.id }, 'Yorum ödülü ya da bildirimi yazılamadı')
+    }
     return this.serialize(comment, user, await this.lookups(user, [comment]))
   }
 
@@ -311,6 +321,7 @@ class CommentService {
       audience: data.audience,
       skip: parentAuthor ? [parentAuthor] : [],
       already: before,
+      spoiler: data.spoiler,
     })
     return this.serialize(fresh, user, await this.lookups(user, [fresh]))
   }
@@ -322,7 +333,13 @@ class CommentService {
   private async notifyMentions(
     author: User,
     body: string,
-    options: { link: string; audience: Audience; skip?: number[]; already?: Set<string> }
+    options: {
+      link: string
+      audience: Audience
+      skip?: number[]
+      already?: Set<string>
+      spoiler?: boolean
+    }
   ) {
     const names = mentions.extract(body).filter((name) => !options.already?.has(name))
     const resolved = await mentions.resolve(names)
@@ -335,7 +352,10 @@ class CommentService {
     if (!allowed.length) return
     await notifications.notifyMany(allowed, 'activity', {
       title: `${author.fullName} seni bir yorumda andı`,
-      body: body.replace(/\s+/g, ' ').trim().slice(0, 140),
+      // Hidden text stays hidden in the inbox too.
+      body: options.spoiler
+        ? 'Spoiler içeren yorum'
+        : body.replace(/\s+/g, ' ').trim().slice(0, 140),
       link: options.link,
     })
   }
@@ -384,24 +404,49 @@ class CommentService {
     return result
   }
 
-  /** Leaves with no replies disappear; comments with replies keep their place as "silindi". */
+  /**
+   * Leaves with no replies disappear; comments with replies keep their place as "silindi".
+   * A "silindi" placeholder goes too once its last reply is deleted.
+   */
   async remove(comment: Comment) {
     const image = comment.image
     const mode = await db.transaction(async (trx) => {
-      if (comment.replyCount > 0) {
+      // The delete itself checks the count: a reply posted after the row was loaded keeps the
+      // comment as a placeholder (deleting it would take the new reply along, ON DELETE CASCADE).
+      const gone = await trx
+        .from('comments')
+        .where('id', comment.id)
+        .where('reply_count', 0)
+        .delete()
+      if (!Number(gone)) {
         await trx
           .from('comments')
           .where('id', comment.id)
           .update({ deleted_at: now(), body: '', image: null, spoiler: false })
         return 'soft' as const
       }
-      await trx.from('comments').where('id', comment.id).delete()
-      if (comment.parentId)
+      let parentId = comment.parentId
+      while (parentId) {
         await trx
           .from('comments')
-          .where('id', comment.parentId)
+          .where('id', parentId)
           .where('reply_count', '>', 0)
           .decrement('reply_count', 1)
+        const parent = await trx
+          .from('comments')
+          .where('id', parentId)
+          .select('parent_id', 'deleted_at')
+          .first()
+        if (!parent?.deleted_at) break
+        const emptied = await trx
+          .from('comments')
+          .where('id', parentId)
+          .where('reply_count', 0)
+          .whereNotNull('deleted_at')
+          .delete()
+        if (!Number(emptied)) break
+        parentId = parent.parent_id
+      }
       return 'hard' as const
     })
     await removeContentFile(image)

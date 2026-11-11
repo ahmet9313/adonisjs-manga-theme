@@ -52,7 +52,15 @@ class ProgressService {
       values.comments = await count('comments', (query) => query.whereNull('deleted_at'))
     if (wanted.has('likesReceived')) {
       const [row] = await db.from('comments').where('user_id', user.id).sum('like_count as total')
-      values.likesReceived = Number(row.total || 0)
+      // Upvotes on one's own comments are not "received".
+      const [own] = await db
+        .from('comment_likes')
+        .join('comments', 'comments.id', 'comment_likes.comment_id')
+        .where('comment_likes.user_id', user.id)
+        .where('comments.user_id', user.id)
+        .where('comment_likes.value', '>', 0)
+        .count('* as total')
+      values.likesReceived = Math.max(0, Number(row.total || 0) - Number(own.total || 0))
     }
     if (wanted.has('cards')) values.cards = await count('user_cards')
     if (wanted.has('reviews'))

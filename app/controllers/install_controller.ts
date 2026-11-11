@@ -86,13 +86,16 @@ export default class InstallController {
 
   async welcome(ctx: HttpContext) {
     const allowed = this.allowed(ctx)
-    const checks = await install.checks()
+    // Versions, paths and the database address are for the owner: nothing before the key.
+    const checks = allowed ? await install.checks() : []
     let pending: string[] = []
     let migrationError = ''
-    try {
-      pending = await install.pendingMigrations()
-    } catch (error) {
-      migrationError = (error as Error).message.slice(0, 200)
+    if (allowed) {
+      try {
+        pending = await install.pendingMigrations()
+      } catch (error) {
+        migrationError = (error as Error).message.slice(0, 200)
+      }
     }
     return this.render(ctx, '', {
       allowed,
@@ -172,7 +175,8 @@ export default class InstallController {
     const data = await request.validateUsing(registerValidator)
     const username = data.username.toLowerCase()
     const email = data.email.toLowerCase()
-    await assertUniqueIdentity(username, email)
+    // The owner may take a name that is reserved for everybody else ("admin").
+    await assertUniqueIdentity(username, email, undefined, { allowReserved: true })
     await install.startWizardAdmin()
     const timestamp = now()
     const user = await User.create({

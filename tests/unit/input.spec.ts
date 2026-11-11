@@ -35,3 +35,13 @@ test('page ordering rejects forged URLs and missing or duplicate files', ({ asse
     assert.throws(() => parsePageOrder(raw, ['/content/a.png'], 0))
   }
 })
+
+test('"Bugün" follows the site calendar day of the publication date', async ({ assert }) => {
+  const { calculateTimeAgo } = await import('#services/series_presenter')
+  const { localDay, previousDay } = await import('#services/level')
+  const today = localDay()
+  assert.equal(calculateTimeAgo(today), 'Bugün')
+  assert.equal(calculateTimeAgo(previousDay(today)), '1 gün önce')
+  assert.equal(calculateTimeAgo(`${previousDay(previousDay(today))} 00:00:00`), '2 gün önce')
+  assert.equal(calculateTimeAgo('bozuk'), 'Tarih bilinmiyor')
+})

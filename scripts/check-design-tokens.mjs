@@ -12,8 +12,11 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = new URL('..', import.meta.url).pathname
+// Not `.pathname`: it stays percent-encoded (a folder named "Masaüstü" or with a space) and
+// starts with a slash before the drive letter on Windows.
+const root = fileURLToPath(new URL('..', import.meta.url))
 const args = process.argv.slice(2)
 const summary = args.includes('--summary')
 const explicit = args.filter((arg) => !arg.startsWith('--'))

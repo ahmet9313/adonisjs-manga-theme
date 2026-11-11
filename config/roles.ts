@@ -13,7 +13,8 @@ export type Role = keyof typeof roles
 export const roleNames = Object.keys(roles) as Role[]
 export const staffRoles: Role[] = ['admin', 'editor']
 
-export const isRole = (value: unknown): value is Role => typeof value === 'string' && value in roles
+export const isRole = (value: unknown): value is Role =>
+  typeof value === 'string' && Object.hasOwn(roles, value)
 
 /** What each role may do. Shown read-only on the roles page; routes enforce it with `role()`. */
 export const permissions: { label: string; roles: Role[] }[] = [

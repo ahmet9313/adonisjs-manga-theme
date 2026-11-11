@@ -168,6 +168,12 @@ export default class ChapterAdminController {
         })
         await chapter.save()
         await teamService.sync('chapter_teams', chapter.id, teamIds, trx)
+        // A chapter moved to another series takes its comments and read marks along: both
+        // tables keep the series beside the chapter and are looked up with the pair.
+        if (oldSeriesId && oldSeriesId !== series.id) {
+          for (const table of ['comments', 'chapter_reads'])
+            await trx.from(table).where('chapter_id', chapter.id).update({ series_id: series.id })
+        }
         // Drafts, and chapters saved with the switch off, do not move the series up.
         if (!draft && bump) await publishing.bumpSeries([series.id, oldSeriesId], timestamp, trx)
       })

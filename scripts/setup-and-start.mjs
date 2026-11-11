@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, copyFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { dirname, isAbsolute, resolve } from 'node:path'
@@ -41,6 +41,46 @@ function run(command, commandArgs, options = {}) {
   }
 }
 
+/**
+ * The last, long-running step (the server). Unlike `run` it does not block this process, so
+ * the signals a supervisor, `kill` or Docker send to the launcher reach the server: it closes
+ * cleanly instead of staying behind and holding the port.
+ */
+function serve(command, commandArgs, options = {}) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(command, commandArgs, {
+      cwd: projectRoot,
+      stdio: 'inherit',
+      env: process.env,
+      ...options,
+    })
+    const signals = ['SIGINT', 'SIGTERM', 'SIGHUP']
+    const running = () => child.exitCode === null && child.signalCode === null
+    let stopping = false
+    const forward = (signal) => {
+      if (!running()) return
+      stopping = true
+      child.kill(signal)
+      // `ace serve` (development) only stops on SIGINT; and a server that does not answer at
+      // all is not left behind holding the port.
+      if (signal !== 'SIGINT') setTimeout(() => running() && child.kill('SIGINT'), 2000).unref()
+      setTimeout(() => running() && child.kill('SIGKILL'), 15000).unref()
+    }
+    for (const signal of signals) process.on(signal, forward)
+    child.once('error', reject)
+    child.once('exit', (code, signal) => {
+      for (const name of signals) process.off(name, forward)
+      // Stopped on request (Ctrl+C, a supervisor): not an error of the launcher.
+      if (signal || stopping) process.exitCode = 0
+      else if (code !== 0)
+        return reject(
+          new Error(`Komut başarısız (${code}): ${command} ${commandArgs.join(' ')}`)
+        )
+      resolvePromise()
+    })
+  })
+}
+
 function runNpm(commandArgs, options = {}) {
   if (process.platform === 'win32') {
     run(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'npm', ...commandArgs], options)
@@ -49,25 +89,48 @@ function runNpm(commandArgs, options = {}) {
   run('npm', commandArgs, options)
 }
 
+/**
+ * The settings the application will see: `.env`, with variables of the real environment on
+ * top. AdonisJS reads them in that order too (a variable set by the shell, a panel or a
+ * container wins over the file), so the checks here and the server agree on the database,
+ * the port and the app key.
+ */
 function readEnv() {
   const values = new Map()
   const content = readFileSync(resolve(projectRoot, '.env'), 'utf8')
 
   for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim()
+    const line = rawLine.trim().replace(/^export\s+/, '')
     if (!line || line.startsWith('#')) continue
     const separator = line.indexOf('=')
     if (separator === -1) continue
     const key = line.slice(0, separator).trim()
-    const value = line
-      .slice(separator + 1)
-      .trim()
-      .replace(/^(['"])(.*)\1$/, '$2')
-    values.set(key, value)
+    const raw = line.slice(separator + 1).trim()
+    const quoted = /^(['"])(.*)\1$/.exec(raw)
+    // Unquoted values end at an inline comment ("PORT=3333 # web").
+    values.set(key, quoted ? quoted[2] : raw.replace(/\s+#.*$/, ''))
   }
 
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined && (values.has(key) || launcherKeys.has(key))) values.set(key, value)
+  }
   return values
 }
+
+/** Settings this script reads itself; taken from the environment even when `.env` lacks them. */
+const launcherKeys = new Set([
+  'APP_KEY',
+  'HOST',
+  'PORT',
+  'DB_CONNECTION',
+  'SQLITE_DB_PATH',
+  'DB_HOST',
+  'DB_PORT',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_DATABASE',
+  'CONTENT_ROOT',
+])
 
 function assertPortAvailable(host, port) {
   return new Promise((resolvePromise, reject) => {
@@ -102,10 +165,20 @@ async function prepareMysql(env) {
     user: env.get('DB_USER') || 'root',
     password: env.get('DB_PASSWORD') || '',
   })
-  await connection.query(
-    `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-  )
-  await connection.end()
+  try {
+    await connection.query(
+      `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+    )
+  } catch (error) {
+    // An account without the CREATE right is fine as long as the database is already there.
+    try {
+      await connection.query(`USE \`${database}\``)
+    } catch {
+      throw error
+    }
+  } finally {
+    await connection.end()
+  }
 }
 
 async function databaseHasSeries(env, sqlitePath) {
@@ -140,7 +213,9 @@ async function main() {
 
   if (!skipInstall) {
     step('npm bağımlılıkları doğrulanıyor ve eksikler kuruluyor')
-    runNpm(['install', '--prefer-offline', '--no-audit', '--no-fund'])
+    // --include=dev: with NODE_ENV=production in the shell npm would leave out (and remove) the
+    // build tools every later step needs (ace, TypeScript, Vite).
+    runNpm(['install', '--include=dev', '--prefer-offline', '--no-audit', '--no-fund'])
   } else if (!existsSync(resolve(projectRoot, 'node_modules'))) {
     throw new Error('--skip-install kullanıldı ancak node_modules bulunamadı.')
   }
@@ -154,7 +229,8 @@ async function main() {
   let env = readEnv()
   if (!env.get('APP_KEY')) {
     step('AdonisJS uygulama anahtarı oluşturuluyor')
-    run(process.execPath, ['ace.js', 'generate:key'])
+    // --force: with NODE_ENV=production the command only prints the key instead of saving it.
+    run(process.execPath, ['ace.js', 'generate:key', '--force'])
     env = readEnv()
   }
 
@@ -205,11 +281,11 @@ async function main() {
     runNpm(['run', 'build'])
     const buildRoot = resolve(projectRoot, 'build')
     step(`Üretim sunucusu başlatılıyor: ${address}`)
-    run(process.execPath, ['bin/server.js'], {
+    await serve(process.execPath, ['bin/server.js'], {
       cwd: buildRoot,
       env: {
-        ...process.env,
         ...Object.fromEntries(env),
+        ...process.env,
         ...(sqlitePath ? { SQLITE_DB_PATH: sqlitePath } : {}),
         CONTENT_ROOT: resolve(projectRoot, env.get('CONTENT_ROOT') || 'public/content'),
         NODE_ENV: 'production',
@@ -217,7 +293,8 @@ async function main() {
     })
   } else {
     step(`Geliştirme sunucusu başlatılıyor: ${address}`)
-    runNpm(['run', 'dev'])
+    // The same command as `npm run dev`, started directly so that signals reach it.
+    await serve(process.execPath, ['ace.js', 'serve', '--hmr'])
   }
 }
 

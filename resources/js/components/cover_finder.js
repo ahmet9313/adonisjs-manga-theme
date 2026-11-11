@@ -209,6 +209,8 @@ function coverFinder() {
         })
         const data = await response.json().catch(() => ({}))
         if (!response.ok) throw new Error(data.error || 'Bilgiler alınamadı; tekrar deneyin.')
+        // Another result was picked while this one loaded: its details belong to the old one.
+        if (this.selected?.id !== item.id) return
         this.details = data
         this.newGenres = []
         this.fill = this.defaults(data, item)
@@ -216,6 +218,7 @@ function coverFinder() {
         this.announcement = `${data.sourceLabel} bilgileri geldi; doldurulacak alanları seçin.`
         this.$nextTick(() => document.getElementById('cover-finder-review')?.focus())
       } catch (error) {
+        if (this.selected?.id !== item.id) return
         this.detailsError =
           error instanceof TypeError ? 'Sunucuya ulaşılamadı; tekrar deneyin.' : error.message
       } finally {

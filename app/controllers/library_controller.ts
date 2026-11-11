@@ -6,6 +6,8 @@ import readingList from '#services/reading_list_service'
 import ContentType from '#models/content_type'
 import site, { libraryStatusKeys } from '#config/site'
 
+const slugLike = /^[\p{L}\p{N}_-]+$/u
+
 const seriesValidator = vine.compile(
   vine.object({
     type: vine.string().trim().maxLength(50),
@@ -121,7 +123,8 @@ export default class LibraryController {
       .split(',')
       .slice(0, 200)
       .map((entry) => entry.split('/'))
-      .filter(([type, slug]) => type && slug && /^[\w-]+$/.test(type) && /^[\w-]+$/.test(slug))
+      // Slugs keep letters of any script ("나-혼자만-레벨업"), not only ASCII.
+      .filter(([type, slug]) => type && slug && slugLike.test(type) && slugLike.test(slug))
       .map(([type, slug]) => ({ type, slug }))
     response.header('Cache-Control', 'no-store')
     return library.savedSeries(items)

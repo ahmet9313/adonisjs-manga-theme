@@ -39,6 +39,9 @@ Thumbs.db
 *.sqlite3-*
 *.sqlite
 *.sqlite-*
+# Database backups (npm run db:backup -- <ad>.bak)
+*.bak
+*.bak-*
 
 # Local Claude Code worktrees
 .claude/

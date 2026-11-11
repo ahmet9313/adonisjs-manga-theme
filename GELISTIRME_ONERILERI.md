@@ -106,3 +106,19 @@ Her işi küçük, doğrulanabilir değişikliklere ayırın. Veri silen migrati
 - **Planlı yayın:** Zamanlayıcı yalnız web sunucusunda çalışır; çok süreçli dağıtımda koşullu güncelleme sayesinde güvenlidir ama tek bir zamanlayıcı süreci daha verimli olur.
 - **Bildirim kodu:** Toplu yükleme `chapter_publish_service.announceChapters` (tek mesajda çok bölüm), elle/planlı yayın `publishing_service.announceChapter` kullanır; ikisi tek serviste birleştirilebilir.
 - **Test altyapısı:** İşlevsel testler sabit 3334 portunu kullandığı için aynı makinede paralel çalışamaz; port ortam değişkeninden alınabilir.
+
+## Kod incelemesi sonrası açık işler (2026-11-11)
+
+İncelemede bulunup bu turda düzeltilmeyen, karar ya da daha büyük iş gerektiren maddeler:
+
+- **Giriş sınırı kurbanı kilitleyebiliyor:** Hesap başına 8 yanlış deneme, doğru parolayı da 15 dakika reddeder; kullanıcı adını bilen biri bir üyeyi sürekli dışarıda tutabilir. Kilit yerine gecikme ya da (hesap, IP) çifti başına sınır düşünülmeli. Sınır anahtarları IPv6'da tam adresi kullanır; /64 önekiyle anahtarlanmalı.
+- **Benzersizlik yarışları:** Çift gönderilen kayıt/e-posta değişimi benzersizlik indeksinden 500 döner ("zaten alınmış" yerine); son yönetici denetimi silme transaction'ının dışında.
+- **Migration `down()` adımları SQLite'ta veri siler:** Sütun kaldıran geri almalar tabloyu yeniden kurar ve `ON DELETE CASCADE` ile bağlı satırlar gider (ör. 0032 geri alınırsa bölümler). `migrate:rollback` artık onay ister ve üretimde kapalıdır; kalıcı çözüm `down()` içinde ham `ALTER TABLE … DROP COLUMN` ya da ilgili migration'larda `disableTransactions`.
+- **Üretimde demo yönetici uyarısı:** Geliştirmede `--seed` ile kurulmuş veritabanı `--production` ile açılırsa `admin@admin.com` / `admin` hesabı kalır; başlatıcı ya da sunucu açılışı bunu yüksek sesle bildirmeli.
+- **Başlatıcının `.env` okuyucusu** `$DEĞİŞKEN` genişletmesini ve `.env.local` dosyalarını uygulamadan farklı yorumlar (parolasında `$` olan MySQL/SMTP).
+- **Geliştirme sunucusu `public/content` klasörünü de izliyor:** Çok sayfalı arşivde `ace serve` "System limit for number of file watchers reached" (ENOSPC) uyarısı verir; izleyiciden içerik klasörü çıkarılmalı.
+- **Misafir kitaplığı aktarımı:** 5.000 bölümden fazlasını okumuş misafirde sunucunun almadığı kayıtlar da tarayıcıdan silinir; sunucu aldığı serileri bildirmeli.
+- **Anma bildirimi:** Bir yorum düzenlenip anma çıkarılıp yeniden eklenirse kişi tekrar bildirim alır.
+- **İç içe pencereler (şu an kullanılmıyor):** `ui.js` → `inertOutside` ikinci pencere açılınca ikisini de etkisiz bırakır.
+- **Çok uzun sorgu dizesi + doğrulama hatası:** Çerez oturumunda flash'lanan girdi yanıt başlığını 16 KB'ın üstüne çıkarabilir (ters vekil 502 verir); flash'lanan alanlar sınırlandırılmalı.
+- **"Popüler" 60 sn önbelleği** taslağa alınan/silinen seriyi süre dolana kadar göstermeye devam eder; planlı yayın ile aynı anda kaydeden editörde çift bildirim için bir saniyelik pencere var (koşullu güncellemeyle kapatılabilir).

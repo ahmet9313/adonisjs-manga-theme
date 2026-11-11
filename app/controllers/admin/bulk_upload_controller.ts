@@ -175,6 +175,8 @@ export default class BulkUploadController {
                 content,
                 title: choice.title || previous.title,
                 draft: goesLive ? false : previous.draft,
+                // Published now: a planned time left behind would publish it a second time.
+                publishAt: goesLive ? null : previous.publishAt,
                 publishedAt: goesLive ? today : previous.publishedAt,
                 updatedAt: timestamp,
               })

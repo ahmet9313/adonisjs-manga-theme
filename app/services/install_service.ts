@@ -34,16 +34,18 @@ interface SeedJob {
 }
 
 const loopback = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
-const forwardedHeaders = ['x-forwarded-for', 'forwarded', 'x-real-ip']
+const forwardedHeaders = ['x-forwarded-for', 'forwarded', 'x-real-ip', 'x-forwarded-host']
+const localHost = /^(localhost|127(\.\d{1,3}){3}|\[::1\])(:\d+)?$/i
 
 /**
  * First-run setup (`/kurulum`, config/install.ts). The site counts as installed once the
  * `installed_at` setting exists; a database that already has an administrator not made by the
  * wizard (sites from before it, `--seed` demo data) gets that setting the first time it is asked,
  * so nothing changes for them.
- * Until then every page redirects to the wizard (install_gate_middleware). Visitors on the same
- * machine use the wizard directly; from elsewhere they need the key printed in the server console,
- * so nobody can take over a fresh public server before its owner.
+ * Until then every page redirects to the wizard (install_gate_middleware). In development,
+ * visitors on the same machine use the wizard directly; from elsewhere, through a proxy and
+ * always in production they need the key printed in the server console, so nobody can take
+ * over a fresh public server before its owner.
  */
 class InstallService {
   private installed: boolean | null = null
@@ -97,13 +99,22 @@ class InstallService {
     this.job = { state: 'idle', parts: [], step: '', error: null }
   }
 
-  /** Same machine (no proxy in between) needs no key. */
+  /**
+   * Same machine (no proxy in between) needs no key. Only outside production: a reverse proxy
+   * on the same machine also connects from loopback, and a bare `proxy_pass` adds no
+   * forwarding header, so on a live server every visitor would look local.
+   */
   isLocal(request: {
     request: { socket: { remoteAddress?: string } }
     header(name: string): unknown
   }) {
+    if (app.inProduction) return false
     const address = request.request.socket.remoteAddress ?? ''
-    return loopback.has(address) && forwardedHeaders.every((name) => !request.header(name))
+    if (!loopback.has(address) || forwardedHeaders.some((name) => request.header(name)))
+      return false
+    // Opened by a public name: there is a proxy even when it sent no forwarding header.
+    const host = String(request.header('host') ?? '')
+    return !host || localHost.test(host)
   }
 
   keyMatches(value: unknown) {

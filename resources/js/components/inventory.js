@@ -24,6 +24,7 @@ export function inventory() {
       this.open = true
       if (this.loaded) return
       this.loading = true
+      this.error = ''
       try {
         const response = await fetch('/envanter', {
           headers: { accept: 'application/json' },

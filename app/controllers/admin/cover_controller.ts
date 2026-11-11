@@ -37,7 +37,9 @@ type Downloaded = Awaited<ReturnType<typeof downloadCover>>
 const recentImages = new Map<string, Downloaded>()
 let recentBytes = 0
 function remember(address: string, image: Downloaded) {
-  recentImages.delete(address)
+  // Two requests for one address can both miss the cache; the second replaces the first.
+  const previous = recentImages.get(address)
+  if (previous) forget(address, previous)
   recentImages.set(address, image)
   recentBytes += image.bytes.length
   setTimeout(() => forget(address, image), 30 * 60 * 1000).unref()

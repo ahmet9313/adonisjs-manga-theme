@@ -320,7 +320,8 @@ export function localVideoPaths(chapterContent: Chapter['content'] | null | unde
 export async function removeUnusedVideos(paths: string[]) {
   for (const path of new Set(paths)) {
     if (!localVideoFile(path)) continue
-    const stillUsed = await Chapter.query().whereLike('content', `%${path}%`).first()
+    // Not `whereLike`: knex adds `COLLATE utf8_bin` on MySQL, an error on a utf8mb4 connection.
+    const stillUsed = await Chapter.query().where('content', 'like', `%${path}%`).first()
     if (!stillUsed) await removeContentFile(path)
   }
 }

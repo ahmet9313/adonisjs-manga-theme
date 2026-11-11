@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import { readFile } from 'node:fs/promises'
 import app from '@adonisjs/core/services/app'
+import db from '@adonisjs/lucid/services/db'
 import ContentType from '#models/content_type'
 import Series from '#models/series'
 import Chapter from '#models/chapter'
@@ -307,6 +308,50 @@ test.group('Threaded comments', (group) => {
     await author.login('yorumcu')
     assert.deepEqual(await jsonOf(author.post(`/yorumlar/${withGif.id}/sil`)), { deleted: 'hard' })
     assert.equal(await statusOf(fetch(base + image)), 404)
+  })
+
+  test('a placeholder leaves with its last reply; spoilers stay out of the inbox', async ({
+    assert,
+  }) => {
+    const first = client()
+    await first.login('yorumcu')
+    const second = client()
+    await second.login('ikinci')
+    const post = async (web: typeof first, fields: Record<string, string>) =>
+      (await jsonOf(web.comment({ series_id: String(series.id), ...fields }))) as { id: number }
+    const top = await post(first, { body: 'Zincirin başı' })
+    const middle = await post(second, { body: 'Ortadaki', parent_id: String(top.id) })
+    const last = await post(first, {
+      body: 'Sonunda X ölüyor',
+      spoiler: 'on',
+      parent_id: String(middle.id),
+    })
+    // The reply notice does not show the hidden text.
+    const middleAuthor = await User.findByOrFail('username', 'ikinci')
+    const notice = await db
+      .from('notifications')
+      .where('user_id', middleAuthor.id)
+      .orderBy('id', 'desc')
+      .first()
+    assert.include(notice.title, 'yanıt verdi')
+    assert.equal(notice.body, 'Spoiler içeren yorum')
+
+    // "Ortadaki" has a reply: it becomes a placeholder. When that reply goes, so does it.
+    assert.deepEqual(await jsonOf(second.post(`/yorumlar/${middle.id}/sil`)), { deleted: 'soft' })
+    assert.deepEqual(await jsonOf(first.post(`/yorumlar/${last.id}/sil`)), { deleted: 'hard' })
+    assert.isNull(await Comment.find(middle.id))
+    const head = await Comment.findOrFail(top.id)
+    assert.equal(head.replyCount, 0)
+    assert.isNull(head.deletedAt)
+
+    // A reply written after the comment was loaded keeps it as a placeholder.
+    const stale = await Comment.findOrFail(top.id)
+    const late = await post(second, { body: 'Geç kalan yanıt', parent_id: String(top.id) })
+    const { default: comments } = await import('#services/comment_service')
+    assert.equal(await comments.remove(stale), 'soft')
+    assert.isNotNull(await Comment.find(late.id))
+    assert.deepEqual(await jsonOf(second.post(`/yorumlar/${late.id}/sil`)), { deleted: 'hard' })
+    assert.isNull(await Comment.find(top.id))
   })
 
   test('posting is rate limited and profiles list recent comments', async ({ assert }) => {

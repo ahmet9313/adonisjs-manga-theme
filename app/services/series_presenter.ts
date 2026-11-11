@@ -1,3 +1,4 @@
+import { localDay } from '#services/level'
 import type SeriesModel from '#models/series'
 import type ContentType from '#models/content_type'
 import type Chapter from '#models/chapter'
@@ -144,9 +145,12 @@ export function serializeChapter(c: Chapter): ChapterInfo {
 }
 
 export function calculateTimeAgo(dateStr: string): string {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  // `published_at` is a calendar day of the site's time zone (localDay), so it is compared
+  // with today's day there: against the UTC clock yesterday's chapter stays "Bugün" until
+  // 03:00 in Istanbul.
+  const day = /^\d{4}-\d{2}-\d{2}/.exec(String(dateStr ?? ''))?.[0]
+  const date = new Date(day ? `${day}T00:00:00Z` : dateStr)
+  const diffMs = new Date(`${localDay()}T00:00:00Z`).getTime() - date.getTime()
   if (!Number.isFinite(diffMs)) return 'Tarih bilinmiyor'
   const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
 

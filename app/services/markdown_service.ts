@@ -23,8 +23,12 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => escape
  * a backslash (browsers read `//host` and `/\host` as another site).
  */
 const safeHref = /^(?:https?:\/\/[^\s]+|\/(?![/\\])[^\s]*|#[^\s]*)$/i
-/** Bare addresses end before whitespace and escaped quotes or angle brackets. */
-const bareUrl = /https?:\/\/(?:(?!&(?:lt|gt|quot|#39);)[^\s])+/gi
+/**
+ * Bare addresses end before whitespace, escaped quotes or angle brackets, and before a stored
+ * fragment: a marker swallowed into the address would be restored inside its `href="…"`, where
+ * the quotes of the stored link close the attribute.
+ */
+const bareUrl = /https?:\/\/(?:(?!&(?:lt|gt|quot|#39);)[^\s\uE000\uE001])+/gi
 const trailingPunctuation = /[.,;:!?)\]]+$/
 /** Private-use characters mark stored fragments (code, links) while the rest is formatted. */
 const marker = (index: number) => `\uE000${index}\uE001`
@@ -53,7 +57,8 @@ export function renderInline(raw: string) {
   let text = escapeHtml(raw.replace(/[\uE000\uE001]/g, ''))
   text = text.replace(/`([^`\n]+)`/g, (_, code: string) => keep(`<code>${code}</code>`))
   text = text.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, (whole, label: string, href: string) =>
-    safeHref.test(href) ? keep(link(href, emphasis(label))) : whole
+    // No stored fragment inside an address (a code span would be restored into the attribute).
+    safeHref.test(href) && !hasMarker.test(href) ? keep(link(href, emphasis(label))) : whole
   )
   text = text.replace(bareUrl, (found: string) => {
     const tail = found.match(trailingPunctuation)?.[0] ?? ''
@@ -74,7 +79,17 @@ type Block =
   | { kind: 'rule' }
   | { kind: 'paragraph'; lines: string[] }
 
-const headingLine = /^(#{1,3})\s+(.+?)\s*#*\s*$/
+// Closing `#`s are cut in headingText: one pattern doing both backtracks for seconds on a long
+// line of spaces.
+const headingLine = /^(#{1,3})[ \t]+(\S.*)$/
+
+/** "Başlık ##" → "Başlık". */
+function headingText(raw: string) {
+  const text = raw.trimEnd()
+  let end = text.length
+  while (end > 0 && text[end - 1] === '#') end--
+  return text.slice(0, end).trimEnd() || text
+}
 const bulletLine = /^\s*[-*+]\s+(.*)$/
 const orderedLine = /^\s*\d{1,3}[.)]\s+(.*)$/
 const quoteLine = /^\s*>\s?(.*)$/
@@ -92,7 +107,7 @@ function parse(source: string): Block[] {
     }
     const heading = headingLine.exec(line)
     if (heading) {
-      blocks.push({ kind: 'heading', level: heading[1].length + 1, text: heading[2] })
+      blocks.push({ kind: 'heading', level: heading[1].length + 1, text: headingText(heading[2]) })
       index++
       continue
     }
@@ -169,8 +184,9 @@ export function plainText(source: string | null | undefined, max = 200): string 
   if (!source) return ''
   const text = source
     .replace(/\r\n?/g, '\n')
-    .replace(/^\s*(?:#{1,3}|[-*+]|\d{1,3}[.)]|>)\s+/gm, '')
-    .replace(/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/gm, '')
+    // Spaces and tabs only: `\s` also runs over the line breaks, once per line.
+    .replace(/^[ \t]*(?:#{1,3}|[-*+]|\d{1,3}[.)]|>)[ \t]+/gm, '')
+    .replace(/^[ \t]*(?:-{3,}|\*{3,}|_{3,})[ \t]*$/gm, '')
     .replace(/\[([^\]\n]+)\]\([^)\s]+\)/g, '$1')
     .replace(/(\*\*|`)/g, '')
     .replace(/(^|[^\w])[*_](?=\S)([^*_]*?\S)[*_](?!\w)/g, '$1$2')

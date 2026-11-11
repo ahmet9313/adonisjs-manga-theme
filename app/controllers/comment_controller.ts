@@ -200,8 +200,13 @@ export default class CommentController {
       return response.forbidden({ error: 'Yalnızca kendi yorumunu düzenleyebilirsin.' })
     if (!editable(comment))
       return response.forbidden({ error: 'Bu yorumun düzenleme süresi doldu.' })
+    // The same rules as a new comment: a muted member cannot rewrite one, blocked words stay out.
+    const muted = moderation.muteError(user)
+    if (muted) return response.forbidden({ error: muted })
     const data = await request.validateUsing(editValidator)
     const body = data.body ?? ''
+    const blocked = wordFilter.check('comment', body)
+    if (blocked) return response.unprocessableEntity({ error: blocked })
     if (!body && !comment.image && !comment.stickerId)
       return response.unprocessableEntity({ error: 'Yorum boş kalamaz.' })
     const audience = await audienceOf(comment.seriesId, comment.chapterId)

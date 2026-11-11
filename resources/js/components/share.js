@@ -33,7 +33,10 @@ export function shareLinks() {
     },
 
     data() {
-      const { shareUrl, shareTitle } = this.$root.dataset
+      // The menu variant sits inside a dropdown component, so `$root` is the dropdown; the
+      // address and title are on the nearest element that carries them.
+      const holder = this.$el.closest('[data-share-url]') || this.$root
+      const { shareUrl, shareTitle } = holder.dataset
       return { url: shareUrl || window.location.href, title: shareTitle || document.title }
     },
 

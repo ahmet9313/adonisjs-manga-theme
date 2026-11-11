@@ -9,6 +9,7 @@
   <h1 class="t-h1">Hoş geldin!</h1>
   <p class="install__lead">Birkaç adımda siteni kuralım: sistem kontrolü, site bilgileri, yönetici hesabı ve istersen örnek içerik.</p>
 
+  @if(checks.length)
   <h2 class="install__section">Sistem kontrolü</h2>
   <ul class="install-checks">
     @each(check in checks)
@@ -23,10 +24,11 @@
     </li>
     @end
   </ul>
+  @end
 
   @if(!allowed)
   <h2 class="install__section">Kurulum anahtarı</h2>
-  <p class="install__hint">Siteyi sunucunun dışından açıyorsun. Sunucuyu başlattığın terminalde yazan 8 karakterlik anahtarı gir; böylece kurulumu yalnız sunucunun sahibi yapabilir.</p>
+  <p class="install__hint">Kuruluma başlamak için sunucuyu başlattığın terminalde yazan 8 karakterlik anahtarı gir; böylece kurulumu yalnız sunucunun sahibi yapabilir.</p>
   <form action="/kurulum/anahtar" method="POST" class="install__inline" data-submit-once>
     {{ csrfField() }}
     @!component('components/ui/field', { name: 'key', label: 'Kurulum anahtarı', required: true, maxlength: 16, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', class: 'flex-1', 'data-autofocus': true })

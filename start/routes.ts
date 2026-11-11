@@ -14,6 +14,10 @@ const AgeController = () => import('#controllers/age_controller')
 const ChapterController = () => import('#controllers/chapter_controller')
 const MediaController = () => import('#controllers/media_controller')
 
+// Record ids are whole numbers everywhere: anything else is not a route (404) instead of a
+// NaN handed to the database (an SQL error on MySQL).
+router.where('id', /^\d{1,15}$/)
+
 // Public routes
 router.get('/content/*', [MediaController, 'show']).as('content.show')
 // First-run setup wizard (config/install.ts); install_gate_middleware closes it once installed
@@ -92,7 +96,10 @@ router
     router.post('/', [CommentController, 'store']).as('comments.store').use(middleware.verified())
     router.post('/:id/oy', [CommentController, 'vote']).as('comments.vote')
     router.post('/:id/sil', [CommentController, 'destroy']).as('comments.destroy')
-    router.post('/:id/duzenle', [CommentController, 'update']).as('comments.update')
+    router
+      .post('/:id/duzenle', [CommentController, 'update'])
+      .as('comments.update')
+      .use(middleware.verified())
   })
   .prefix('/yorumlar')
   .use(middleware.auth())

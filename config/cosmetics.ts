@@ -23,7 +23,7 @@ export const cosmeticKinds = {
 export type CosmeticKind = keyof typeof cosmeticKinds
 export const kindNames = Object.keys(cosmeticKinds) as CosmeticKind[]
 export const isKind = (value: unknown): value is CosmeticKind =>
-  typeof value === 'string' && value in cosmeticKinds
+  typeof value === 'string' && Object.hasOwn(cosmeticKinds, value)
 
 export const kindByPath = (path: string) =>
   kindNames.find((kind) => cosmeticKinds[kind].path === path) ?? null

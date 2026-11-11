@@ -47,7 +47,13 @@ export default class EmailVerificationController {
       session.flash('error', 'Çok sık bağlantı istedin. Bir saat içinde tekrar deneyebilirsin.')
       return response.redirect(back)
     }
-    await accountMail.verification(user, request)
+    if (!(await accountMail.verification(user, request))) {
+      session.flash(
+        'error',
+        'Doğrulama e-postası şu an gönderilemiyor. Site yöneticisine haber ver.'
+      )
+      return response.redirect(back)
+    }
     session.flash('success', `Doğrulama bağlantısını ${user.email} adresine gönderdik.`)
     return response.redirect(back)
   }

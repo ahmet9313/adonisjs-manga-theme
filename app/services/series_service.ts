@@ -170,10 +170,12 @@ class SeriesService {
     if (filters.artists && filters.artists.length > 0) {
       query.whereHas('artists', (artists) => artists.whereIn('slug', filters.artists!))
     }
+    // By the folded name (search_text starts with it): the database's own order of `title`
+    // is byte order on SQLite, which puts "Çilek" after "Zebra" and lower case after upper.
     if (filters.orderBy === 'title') {
-      query.orderBy('title', 'asc')
+      query.orderByRaw('coalesce(search_text, lower(title)) asc')
     } else if (filters.orderBy === 'title-desc') {
-      query.orderBy('title', 'desc')
+      query.orderByRaw('coalesce(search_text, lower(title)) desc')
     } else if (filters.orderBy === 'newest') {
       query.orderBy('createdAt', 'desc')
     } else if (filters.orderBy === 'rating') {
@@ -242,13 +244,25 @@ class SeriesService {
       similarQuery.where('contentTypeId', ctId)
     }
 
-    const similar = await similarQuery.limit(6)
+    // Most shared genres first, then the same content type, then the better-known series;
+    // without an order the same few rows came back for every series of a type.
+    if (genreIds.length > 0)
+      similarQuery.orderByRaw(
+        `(select count(*) from series_genres where series_genres.series_id = series.id and series_genres.genre_id in (${genreIds.map(() => '?').join(', ')})) desc`,
+        genreIds
+      )
+    const similar = await similarQuery
+      .orderByRaw('case when content_type_id = ? then 0 else 1 end', [ctId])
+      .orderBy('ratingCount', 'desc')
+      .orderBy('id', 'desc')
+      .limit(6)
     return similar.map(serializeSeries)
   }
 
   async getAllGenres(): Promise<string[]> {
-    const genres = await Genre.query().orderBy('name', 'asc')
-    return genres.map((g) => g.name)
+    const genres = await Genre.query()
+    // Sorted here: SQLite orders text by bytes ("Şeytanlar" after "Yaşam").
+    return genres.map((g) => g.name).sort((a, b) => a.localeCompare(b, 'tr'))
   }
 }
 

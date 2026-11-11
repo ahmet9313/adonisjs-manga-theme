@@ -14,11 +14,19 @@ emitter.on('queued:mail:error', ({ error, mailerName }) => {
 })
 
 /**
- * Public address for links in mails, the same as canonical links (seo_service): Admin → Tema →
- * Genel → "Site adresi", then APP_URL, then the address this request came to.
+ * Public address for links in mails: Admin → Tema → Genel → "Site adresi", then APP_URL, then
+ * the address this request came to when it is one of the server's own names. Null when none
+ * applies: the request's Host header alone is not trusted with a login link
+ * (seo_service.mailOrigin), so the mail is not sent and the reason is logged.
  */
 export function publicUrl(request: HttpContext['request'], path: string) {
-  return seo.url(request, path)
+  const origin = seo.mailOrigin(request)
+  if (origin) return seo.absolute(path, origin)
+  logger.error(
+    { host: request.host() },
+    'Hesap e-postası gönderilmedi: site adresi ayarlı değil. Yönetim → Tema → Genel → "Site adresi" alanını doldurun ya da .env dosyasına APP_URL yazın.'
+  )
+  return null
 }
 
 /** Site name from Admin → Tema → Genel (settings_service keeps `site.name` in step). */
@@ -49,24 +57,32 @@ async function send(letter: Letter) {
 /** The three account mails; each issues its own single-use link. */
 class AccountMailService {
   async passwordReset(user: User, request: HttpContext['request']) {
+    if (!publicUrl(request, '/')) return false
     const token = await tokens.issue(user, 'reset')
+    const url = publicUrl(request, `/sifre-sifirla/${token}`)!
     await send({
       to: user.email,
       subject: `${siteName()} parola sıfırlama`,
       heading: 'Parolanı sıfırla',
       intro: `Merhaba ${user.fullName}, hesabın (@${user.username}) için parola sıfırlama isteği aldık. Yeni parolanı aşağıdaki bağlantıdan belirleyebilirsin.`,
-      action: { label: 'Yeni parola belirle', url: publicUrl(request, `/sifre-sifirla/${token}`) },
+      action: { label: 'Yeni parola belirle', url },
       note: `Bağlantı ${site.accountLinks.resetMinutes} dakika geçerlidir ve yalnız bir kez kullanılabilir. Bu isteği sen yapmadıysan bu e-postayı yok sayabilirsin; parolan değişmez.`,
     })
+    return true
   }
 
-  /** `verify` after registration, `email_change` after a new address in the settings. */
+  /**
+   * `verify` after registration, `email_change` after a new address in the settings. False
+   * when no link could be built (see publicUrl).
+   */
   async verification(
     user: User,
     request: HttpContext['request'],
     type: Exclude<AccountTokenType, 'reset'> = 'verify'
   ) {
+    if (!publicUrl(request, '/')) return false
     const token = await tokens.issue(user, type)
+    const url = publicUrl(request, `/eposta-dogrula/${token}`)!
     const changed = type === 'email_change'
     await send({
       to: user.email,
@@ -77,12 +93,10 @@ class AccountMailService {
       intro: changed
         ? `Merhaba ${user.fullName}, hesabının (@${user.username}) e-posta adresi bu adresle değiştirildi. Adresin sana ait olduğunu doğrulamak için aşağıdaki bağlantıya bas.`
         : `Hoş geldin, ${user.fullName}! ${siteName()} hesabını (@${user.username}) tamamlamak için e-posta adresini doğrula.`,
-      action: {
-        label: 'E-postamı doğrula',
-        url: publicUrl(request, `/eposta-dogrula/${token}`),
-      },
+      action: { label: 'E-postamı doğrula', url },
       note: `Bağlantı ${site.accountLinks.verifyDays} gün geçerlidir. Bu hesabı sen açmadıysan bu e-postayı yok sayabilirsin.`,
     })
+    return true
   }
 
   /** Sent to the old address when the account's address changes (no link, just a notice). */
