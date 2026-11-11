@@ -9,11 +9,12 @@ import ContentType from '#models/content_type'
 import views from '#services/view_service'
 import moderation from '#services/moderation_service'
 import publishing from '#services/publishing_service'
+import seo from '#services/seo_service'
 
 const totalOf = (row: unknown) => Number((row as any)?.$extras?.total || 0)
 
 export default class DashboardController {
-  async index({ view }: HttpContext) {
+  async index({ view, request }: HttpContext) {
     // Timestamps are stored as 'YYYY-MM-DD HH:MM:SS' (input_service.now), so they compare as text.
     const weekAgo = new Date(Date.now() - 7 * 86_400_000)
       .toISOString()
@@ -67,6 +68,8 @@ export default class DashboardController {
       recentChapters,
       reportCounts: await moderation.openCounts(),
       scheduled: await publishing.upcoming(5),
+      // No site address and an outside host name: account mails carry no link (seo.mailOrigin).
+      mailLinksOff: !seo.mailOrigin(request),
     })
   }
 }

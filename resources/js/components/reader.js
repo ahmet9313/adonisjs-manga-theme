@@ -106,15 +106,27 @@ function storeLocal(prefs) {
 }
 
 let uploadTimer = 0
+let waitingPrefs = null
 
 /** Accounts: the settings follow the reader; quick − / + presses are sent once. */
 function uploadPrefs(prefs, delay = 600) {
   window.clearTimeout(uploadTimer)
-  uploadTimer = window.setTimeout(() => {
-    postJson('/okuyucu/tercihler', prefs).catch(() => {
-      /* Kept in this browser; the next change tries again. */
-    })
-  }, delay)
+  waitingPrefs = prefs
+  uploadTimer = window.setTimeout(() => sendPrefs(), delay)
+}
+
+/**
+ * Sends the waiting settings now. Called when the page is left too: the next chapter takes
+ * the account's copy, so a change made just before the click would otherwise be undone.
+ */
+function sendPrefs(leaving = false) {
+  window.clearTimeout(uploadTimer)
+  const prefs = waitingPrefs
+  waitingPrefs = null
+  if (!prefs) return
+  postJson('/okuyucu/tercihler', prefs, { keepalive: leaving }).catch(() => {
+    /* Kept in this browser; the next change tries again. */
+  })
 }
 
 function savePrefs(prefs) {
@@ -347,7 +359,9 @@ function reader() {
       this.onPrefs = (event) => this.applyPrefs(event.detail)
       this.onKey = (event) => this.key(event)
       this.onLeave = (event) => {
-        if (event.type === 'pagehide' || document.visibilityState === 'hidden') this.flush(true)
+        if (event.type !== 'pagehide' && document.visibilityState !== 'hidden') return
+        this.flush(true)
+        sendPrefs(true)
       }
       window.addEventListener('reader-prefs', this.onPrefs)
       window.addEventListener('keydown', this.onKey)
@@ -490,10 +504,12 @@ function reader() {
       if (page < this.pages.length) return this.goTo(page)
       if (this.prefs.auto && this.next) {
         this.flush(true)
+        sendPrefs(true)
         window.location.href = this.next
         return
       }
-      const end = this.$el.querySelector('.reader-end')
+      // Not `this.$el`: called from a button or the page area it is that element, not the root.
+      const end = document.querySelector('.reader-end')
       end?.scrollIntoView({ block: 'center' })
       end?.querySelector('a[rel="next"]')?.focus({ preventScroll: true })
     },

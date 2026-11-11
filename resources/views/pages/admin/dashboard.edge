@@ -7,6 +7,11 @@
 @let(typeName = (type) => type ? type.name.charAt(0).toLocaleUpperCase('tr') + type.name.slice(1) : 'Tür yok')
 @component('components/layout/admin', { title, description: 'Hoş geldin, ' + me.fullName + '. Kataloğun özeti ve son değişiklikler.' })
   @slot('main')
+    @if(mailLinksOff && me.role === 'admin')
+    @component('components/ui/alert', { tone: 'warning', title: 'Site adresi ayarlı değil', class: 'mb-4' })
+      <p>Parola sıfırlama ve e-posta doğrulama bağlantıları, site adresi bilinmeden gönderilmez. <a href="/admin/tema/genel" class="link">Tema → Genel → “Site adresi”</a> alanını doldur ya da <code>.env</code> dosyasına <code>APP_URL</code> yaz.</p>
+    @end
+    @end
     <section aria-labelledby="stats-title">
       <h2 id="stats-title" class="sr-only">Katalog özeti</h2>
       <div class="admin-stats">

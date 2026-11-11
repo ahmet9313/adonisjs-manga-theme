@@ -9,6 +9,13 @@ import env from '#start/env'
 const seo = {
   /** Optional fixed address from .env (`APP_URL=https://example.com`); no path, no trailing slash. */
   appUrl: (env.get('APP_URL') || '').replace(/\/+$/, ''),
+  /**
+   * Host names the server itself answers on. Without a configured site address, links in
+   * account mails are only built for these (seo_service.mailOrigin).
+   */
+  ownHosts: [
+    ...new Set(['localhost', '127.0.0.1', '[::1]', (env.get('HOST') || '').toLowerCase()]),
+  ].filter((host) => host && host !== '0.0.0.0' && host !== '::' && host !== '[::]'),
   /** Open Graph locale of every page. */
   locale: 'tr_TR',
   /** Sitemap and feed rows are kept in memory this long (minutes); edits show up after it. */

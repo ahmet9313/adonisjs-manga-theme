@@ -126,7 +126,7 @@ const titles = {
   gelismis: 'Tema: Gelişmiş',
 } as const
 type Section = keyof typeof titles
-const isSection = (value: string): value is Section => value in titles
+const isSection = (value: string): value is Section => Object.hasOwn(titles, value)
 
 /** Effective colours of both schemes and looks (stored or stock) the editors start from. */
 const currentColors = () => ({
@@ -303,7 +303,7 @@ export default class ThemeController {
   /** POST /admin/tema/gorsel (`image`, `kind`): stores one branding image, answers `{ url }`. */
   async uploadImage({ request, response }: HttpContext) {
     const kind = String(request.input('kind', '')) as BrandImage
-    if (!(kind in brandImages))
+    if (typeof kind !== 'string' || !Object.hasOwn(brandImages, kind))
       return response.unprocessableEntity({ error: 'Geçersiz görsel türü.' })
     const rules = brandImages[kind]
     const file = request.file('image', { size: rules.size, extnames: [...rules.extnames] })

@@ -17,6 +17,8 @@ import tokens from '#services/account_token_service'
 import { ghostUsername } from '#services/account_data_service'
 import { now } from '#services/input_service'
 import { clearAttempts } from '#services/throttle'
+import seo from '#services/seo_service'
+import siteSettings from '#services/settings_service'
 
 const base = 'http://127.0.0.1:3334'
 const password = 'guvenli-parola-1'
@@ -276,6 +278,40 @@ test.group('Password reset, e-mail verification and account data', (group) => {
     assert.include(await textOf(client().request('/sifre-sifirla/uydurma')), 'Bağlantı geçersiz')
   })
 
+  test('mail links use the site address, never an unknown Host header', async ({ assert }) => {
+    const from = (host: string) => seo.mailOrigin({ protocol: () => 'https', host: () => host })
+    // The server's own names (tests run on 127.0.0.1:3334) are fine without any setting.
+    assert.equal(from('127.0.0.1:3334'), 'https://127.0.0.1:3334')
+    assert.equal(from('localhost:3333'), 'https://localhost:3333')
+    // Anybody can send "Host: evil.example" with a victim's address: no link, no mail.
+    assert.equal(from('evil.example'), '')
+    assert.equal(from('127.0.0.1.evil.example'), '')
+    assert.equal(from('evil.example:3334@127.0.0.1'), '')
+    await siteSettings.save({ site_url: 'https://manga.example' })
+    try {
+      assert.equal(from('evil.example'), 'https://manga.example')
+      assert.equal(from('127.0.0.1:3334'), 'https://manga.example')
+    } finally {
+      await siteSettings.save({ site_url: '' })
+    }
+  })
+
+  test('a password change cancels reset links asked for earlier', async ({ assert }) => {
+    const user = await makeUser('parola_degisen')
+    const link = await tokens.issue(user, 'reset')
+    assert.isNotNull(await tokens.find(link, ['reset']))
+    const web = client()
+    await web.login('parola_degisen')
+    await web.post('/ayarlar/parola', {
+      current_password: password,
+      password: 'bambaska-parola-1',
+      password_confirmation: 'bambaska-parola-1',
+    })
+    await user.refresh()
+    assert.isTrue(await hash.verify(user.password, 'bambaska-parola-1'))
+    assert.isNull(await tokens.find(link, ['reset']))
+  })
+
   test('a reset signs out other sessions and remember-me logins', async ({ assert }) => {
     const user = await makeUser('cok_cihazli')
     const phone = client()
@@ -405,6 +441,7 @@ test.group('Password reset, e-mail verification and account data', (group) => {
   }) => {
     const user = await makeUser('adres_degisen')
     const oldLink = await tokens.issue(user, 'verify')
+    const oldReset = await tokens.issue(user, 'reset')
     const web = client()
     await web.login('adres_degisen')
     const changed = await web.post('/ayarlar/hesap', {
@@ -423,6 +460,19 @@ test.group('Password reset, e-mail verification and account data', (group) => {
     assert.isNull(await linkFor(fake, 'adres_degisen@example.com', '/eposta-dogrula'))
     // A link sent to the previous address no longer confirms anything.
     assert.isNull(await tokens.find(oldLink, ['verify', 'email_change']))
+    // ...and a reset link mailed there cannot take the account (or confirm the new address).
+    assert.isNull(await tokens.find(oldReset, ['reset']))
+    assert.equal(
+      await statusOf(
+        web.post('/ayarlar/hesap', {
+          email: 'kimse@deleted.invalid',
+          current_password: password,
+        })
+      ),
+      302
+    )
+    await user.refresh()
+    assert.equal(user.email, 'yeni.adres@example.com')
 
     await web.request(`/eposta-dogrula/${link}`)
     await user.refresh()

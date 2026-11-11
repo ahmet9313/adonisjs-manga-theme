@@ -31,7 +31,7 @@
       @component('components/ui/button', { variant: 'primary', size: 'sm', href: '/giris?next=' + encodeURIComponent(request.url(true)), '@click.prevent': "$dispatch('open-auth', 'login')" })
         Giriş yap
       @end
-      @component('components/ui/button', { variant: 'secondary', size: 'sm', href: '/kayit', '@click.prevent': "$dispatch('open-auth', 'register')" })
+      @component('components/ui/button', { variant: 'secondary', size: 'sm', href: '/kayit?next=' + encodeURIComponent(request.url(true)), '@click.prevent': "$dispatch('open-auth', 'register')" })
         Kayıt ol
       @end
     </div>

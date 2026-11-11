@@ -39,12 +39,18 @@ export default class UploadGateMiddleware {
  * files) would stay there forever, so they are deleted once the request is answered.
  */
 async function removeLeftovers(ctx: HttpContext) {
-  const files = Object.values(ctx.request.allFiles()).flatMap((entry) =>
-    Array.isArray(entry) ? entry : [entry]
-  )
-  await Promise.all(
-    files
-      .filter((file) => file.tmpPath && file.state !== 'moved')
-      .map((file) => rm(file.tmpPath!, { force: true }).catch(() => {}))
-  )
+  // Field names such as `a[b]` or `a[0][x]` nest the files in objects and arrays.
+  const paths: string[] = []
+  const collect = (entry: unknown, depth = 0) => {
+    if (!entry || typeof entry !== 'object' || depth > 8) return
+    const file = entry as { tmpPath?: unknown; state?: unknown }
+    if (typeof file.tmpPath === 'string') {
+      if (file.state !== 'moved') paths.push(file.tmpPath)
+      return
+    }
+    for (const value of Array.isArray(entry) ? entry : Object.values(entry))
+      collect(value, depth + 1)
+  }
+  collect(ctx.request.allFiles())
+  await Promise.all(paths.map((path) => rm(path, { force: true }).catch(() => {})))
 }

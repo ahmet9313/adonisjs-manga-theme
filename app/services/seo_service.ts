@@ -51,14 +51,21 @@ export interface HeadProps {
 const rasterImage = /\.(jpe?g|png|webp|gif)$/i
 const absoluteUrl = /^https?:\/\//i
 
-/** Text for HTML attributes and XML (`&`, `<`, `>`, quotes). */
+/**
+ * Text for HTML attributes and XML (`&`, `<`, `>`, quotes). Control characters XML does not
+ * allow (a pasted description may hold them) are dropped: one makes the whole feed invalid.
+ */
 export function escapeXml(value: unknown) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;')
+  return (
+    String(value ?? '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&apos;')
+  )
 }
 
 /** JSON for `<script type="application/ld+json">`: `</script>`, `<!--` and `&` cannot break out. */
@@ -88,10 +95,37 @@ const schemaTypes = { image: 'ComicSeries', text: 'Book', video: 'TVSeries' } as
 class SeoService {
   /** `https://example.com` (no trailing slash). */
   origin(request?: Pick<RequestLike, 'protocol' | 'host'> | null) {
-    const configured = (settings.get('site_url') || seoConfig.appUrl).replace(/\/+$/, '')
+    const configured = this.configuredOrigin()
     if (configured) return configured
     const host = request?.host()
     return host ? `${request!.protocol()}://${host}` : ''
+  }
+
+  /** Admin → Tema → Genel → "Site adresi", then APP_URL; empty when neither is set. */
+  configuredOrigin() {
+    return (settings.get('site_url') || seoConfig.appUrl).replace(/\/+$/, '')
+  }
+
+  /**
+   * Address for links in account mails. Unlike `origin` it never repeats an unknown Host
+   * header: anyone can ask for a password reset of somebody else's account with a Host of
+   * their own, and the mailed link would carry the reset token to that server. Without a
+   * configured address only the server's own names (loopback, HOST) are accepted; otherwise
+   * the answer is empty and the mail is not sent.
+   */
+  mailOrigin(request?: Pick<RequestLike, 'protocol' | 'host'> | null) {
+    const configured = this.configuredOrigin()
+    if (configured) return configured
+    const host = request?.host()
+    // A plain `name[:port]` only ("user@host" would name another host than it shows).
+    if (!host || !/^(?:[a-z0-9.-]+|\[[0-9a-f:]+\])(?::\d+)?$/i.test(host)) return ''
+    let name: string
+    try {
+      name = new URL(`http://${host}`).hostname.toLowerCase()
+    } catch {
+      return ''
+    }
+    return seoConfig.ownHosts.includes(name) ? `${request!.protocol()}://${host}` : ''
   }
 
   /** A site path as an absolute address (absolute addresses are kept). */

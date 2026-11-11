@@ -111,4 +111,25 @@ test.group('Markdown subset for pages and announcements', () => {
     assert.isTrue(long.endsWith('…'))
     assert.equal(plainText(null), '')
   })
+  test('a link stored inside a bare address cannot break out of its attribute', ({ assert }) => {
+    // The bare-address pass used to swallow the marker of the stored link, which was then
+    // restored inside href="…": its quotes closed the attribute (autofocus/onfocus injection).
+    const html = renderMarkdown(
+      "https://a.com/[x](https://x/autofocus/onfocus=location='javascript:alert\\x281\\x29'//)"
+    )
+    assert.notMatch(html, /href="[^"]*<a /)
+    assert.equal(html.match(/<a /g)?.length, 2)
+    assert.include(html, '<a href="https://a.com/" rel="noopener noreferrer nofollow">')
+    // A code span is not restored inside an address either.
+    assert.notMatch(renderInline('[x](https://a/`kod`)'), /href="[^"]*<code>/)
+  })
+
+  test('long lines of spaces are parsed at once', ({ assert }) => {
+    assert.equal(renderMarkdown('# Başlık ##'), '<h2>Başlık</h2>')
+    assert.equal(renderMarkdown('## Alt başlık#  '), '<h3>Alt başlık</h3>')
+    const started = Date.now()
+    renderMarkdown(`# a${' '.repeat(9000)}x`)
+    plainText(`${'\n'.repeat(9000)}x`)
+    assert.isBelow(Date.now() - started, 500)
+  })
 })

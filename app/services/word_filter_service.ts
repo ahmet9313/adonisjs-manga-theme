@@ -5,8 +5,8 @@ import { blockedWordMax, blockedWordsLimit } from '#config/moderation'
 export const blockedWordsKey = 'blocked_words'
 
 /**
- * Turkish lower case: "İ" → "i" and "I" → "ı", so "İT" and "it" match while "ıt" stays apart.
- * The combining dot some keyboards leave after "i" is dropped.
+ * Turkish lower case: "İ" → "i" and "I" → "ı" (the filter treats the two as one letter, see
+ * wordPattern). The combining dot some keyboards leave after "i" is dropped.
  */
 export const foldTurkish = (text: string) =>
   text.normalize('NFC').toLocaleLowerCase('tr-TR').replaceAll('̇', '')
@@ -23,6 +23,13 @@ export function parseBlockedWords(raw: string) {
 }
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * One entry as a pattern. "i" and "ı" match each other: capitals typed on a keyboard without
+ * "İ" ("IDIOT", "Idiot") fold to "ı" and would otherwise slip past an entry written with "i",
+ * and an entry typed that way would never match the lower-case word.
+ */
+const wordPattern = (word: string) => escape(word).replaceAll(' ', '\\s+').replace(/[iı]/g, '[iı]')
 
 /**
  * Rejects comments and reviews that contain a blocked word. An entry matches at the start of
@@ -43,10 +50,7 @@ class WordFilterService {
       this.source = raw
       const words = parseBlockedWords(raw).sort((a, b) => b.length - a.length)
       this.pattern = words.length
-        ? new RegExp(
-            `(?<![\\p{L}\\p{N}])(?:${words.map((word) => escape(word).replaceAll(' ', '\\s+')).join('|')})`,
-            'u'
-          )
+        ? new RegExp(`(?<![\\p{L}\\p{N}])(?:${words.map(wordPattern).join('|')})`, 'u')
         : null
     }
     return this.pattern

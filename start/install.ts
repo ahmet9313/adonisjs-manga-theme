@@ -25,7 +25,7 @@ app.ready(async () => {
       '│ Site henüz kurulmadı: kurulum sihirbazını tarayıcıda açın.  │',
       '└─────────────────────────────────────────────────────────────┘',
       `  Adres:            ${address}${installConfig.path}`,
-      `  Kurulum anahtarı: ${install.key}  (başka bir bilgisayardan açarken sorulur)`,
+      `  Kurulum anahtarı: ${install.key}  (üretim modunda ya da başka bir bilgisayardan açarken sorulur)`,
       '',
     ].join('\n')
   )

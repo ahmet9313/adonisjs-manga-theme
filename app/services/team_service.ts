@@ -286,7 +286,12 @@ class TeamService {
 
   /** /ekipler: every team, recruiting ones first. */
   async directory() {
-    const list = await Team.query().orderBy('recruiting', 'desc').orderBy('name', 'asc')
+    const list = await Team.query()
+    list.sort(
+      (a, b) =>
+        Number(Boolean(b.recruiting)) - Number(Boolean(a.recruiting)) ||
+        a.name.localeCompare(b.name, 'tr')
+    )
     return this.withCounts(list)
   }
 

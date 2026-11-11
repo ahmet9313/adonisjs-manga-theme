@@ -20,6 +20,7 @@ import { recordAttempt, takeAttempt, tooManyAttempts } from '#services/throttle'
 import { now } from '#services/input_service'
 import { removeContentFile, saveImage, invalidField } from '#services/upload_service'
 import accountMail from '#services/account_mail_service'
+import tokens from '#services/account_token_service'
 
 const extnames = ['jpg', 'jpeg', 'png', 'webp']
 const imageRules = {
@@ -201,14 +202,17 @@ export default class AccountController {
     if (changed) user.emailVerifiedAt = null
     user.updatedAt = now()
     await user.save()
+    let mailed = false
     if (changed) {
       await signOutOtherDevices(user, ctx)
-      await accountMail.verification(user, request, 'email_change')
+      // Links mailed to the old address stop working.
+      await tokens.revoke(user.id, ['reset', 'verify', 'email_change'])
+      mailed = await accountMail.verification(user, request, 'email_change')
       await accountMail.emailChanged(user, previous)
     }
     session.flash(
       'success',
-      changed
+      changed && mailed
         ? `E-posta adresi güncellendi. ${email} adresine gönderdiğimiz bağlantıyla doğrula.`
         : 'E-posta adresi güncellendi'
     )
@@ -224,6 +228,8 @@ export default class AccountController {
     user.updatedAt = now()
     await user.save()
     await signOutOtherDevices(user, ctx)
+    // A reset link asked for before the change must not undo it.
+    await tokens.revoke(user.id, ['reset'])
     session.flash('success', 'Parola değiştirildi; diğer cihazlardaki oturumlar kapatıldı.')
     return response.redirect('/ayarlar')
   }

@@ -42,6 +42,9 @@ const dbConfig = defineConfig({
       migrations: {
         naturalSort: true,
         paths: ['database/migrations'],
+        // Rolling back drops columns and tables (and on SQLite rebuilds the table, which
+        // deletes the rows that reference it): never on a live site.
+        disableRollbacksInProduction: true,
       },
     },
     mysql: {
@@ -69,6 +72,9 @@ const dbConfig = defineConfig({
       migrations: {
         naturalSort: true,
         paths: ['database/migrations'],
+        // Rolling back drops columns and tables (and on SQLite rebuilds the table, which
+        // deletes the rows that reference it): never on a live site.
+        disableRollbacksInProduction: true,
       },
     },
   },

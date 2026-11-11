@@ -59,8 +59,9 @@ class AccountTokenService {
   }
 
   /**
-   * The unused, unexpired link with this token and its user. Verification links also need the
-   * account to still have the address they were sent to.
+   * The unused, unexpired link with this token and its user. The account must still have the
+   * address the link was mailed to: a reset link sent to an old address is worth nothing after
+   * the address changed (and cannot confirm the new one).
    */
   async find(token: unknown, types: AccountTokenType[]) {
     if (typeof token !== 'string' || !/^[\w-]{20,100}$/.test(token)) return null
@@ -74,7 +75,7 @@ class AccountTokenService {
     if (!row) return null
     const user = await User.find(row.user_id)
     if (!user) return null
-    if (row.type !== 'reset' && row.email !== user.email) return null
+    if (row.email !== user.email) return null
     return { id: Number(row.id), type: row.type as AccountTokenType, user }
   }
 

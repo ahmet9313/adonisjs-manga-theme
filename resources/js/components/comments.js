@@ -138,7 +138,9 @@ export default function commentSection() {
     },
 
     async load(reset = false) {
-      if (this.loading) return
+      // A new sort replaces a running request; "Daha fazla" waits for it.
+      if (this.loading && !reset) return
+      const request = (this.request = (this.request || 0) + 1)
       this.loading = true
       this.loadError = ''
       const page = reset ? 1 : this.page + 1
@@ -154,6 +156,7 @@ export default function commentSection() {
         )
         if (!response.ok) throw new Error()
         const data = await response.json()
+        if (request !== this.request) return
         if (reset) {
           this.roots = []
           this.nodes = {}
@@ -168,6 +171,7 @@ export default function commentSection() {
         this.counts = { roots: data.roots ?? data.total, replies: data.replies ?? 0 }
         if (page === 1) this.showLinked()
       } catch {
+        if (request !== this.request) return
         this.loadError = 'Yorumlar yüklenemedi. Bağlantını kontrol edip tekrar dene.'
       }
       this.loading = false
@@ -337,7 +341,8 @@ export default function commentSection() {
         if (!response.ok) throw new Error()
         this.stickers = (await response.json()).sticker || []
       } catch {
-        this.stickers = []
+        // Left unloaded, so opening the menu again tries once more.
+        this.stickers = null
       }
     },
 

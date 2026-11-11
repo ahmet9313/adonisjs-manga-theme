@@ -9,7 +9,7 @@
  * SQLITE_DB_PATH from the environment or .env (default tmp/manga.sqlite3). MySQL: use mysqldump.
  */
 import Database from 'better-sqlite3'
-import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -50,11 +50,22 @@ mkdirSync(dirname(target), { recursive: true })
 const db = new Database(source, { readonly: true, fileMustExist: true })
 try {
   await db.backup(target)
-  const copy = new Database(target, { readonly: true })
-  const check = copy.pragma('integrity_check', { simple: true })
-  copy.close()
+  const copy = new Database(target)
+  let check
+  try {
+    // The copy keeps the source's WAL mode; as a single plain file it leaves no `-wal`/`-shm`
+    // beside it and can be moved around on its own.
+    copy.pragma('journal_mode = DELETE')
+    check = copy.pragma('integrity_check', { simple: true })
+  } finally {
+    copy.close()
+  }
   console.log(`[backup] ${target} (integrity_check=${check})`)
   if (check !== 'ok') process.exitCode = 1
+} catch (error) {
+  // A half-written file would block the next try with "Hedef zaten var".
+  for (const suffix of ['', '-wal', '-shm']) rmSync(target + suffix, { force: true })
+  throw error
 } finally {
   db.close()
 }

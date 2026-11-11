@@ -6,10 +6,12 @@ export const isAccount = () => document.body.dataset.account === '1'
 
 export const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content || ''
 
-export async function postJson(url, body) {
+/** `keepalive`: the request outlives the page (sent while leaving it). */
+export async function postJson(url, body, { keepalive = false } = {}) {
   const response = await fetch(url, {
     method: 'POST',
     credentials: 'same-origin',
+    keepalive,
     headers: {
       'content-type': 'application/json',
       'accept': 'application/json',

@@ -17,6 +17,11 @@ process.env.SQLITE_DB_PATH = ':memory:'
 process.env.HOST = '127.0.0.1'
 process.env.PORT = '3334'
 process.env.SESSION_DRIVER = 'memory'
+// ...nor with the rest of the developer's .env: a real SMTP server would get the test accounts'
+// mails, and a fixed site address changes the links the tests expect. (An empty value wins
+// over the file and counts as "not set".)
+process.env.SMTP_HOST = ''
+process.env.APP_URL = ''
 
 import 'reflect-metadata'
 import { Ignitor, prettyPrintError } from '@adonisjs/core'

@@ -165,7 +165,7 @@ export default class CosmeticAdminController {
           'Özel renk geçişi yalnızca ad efektlerinde, 2-3 renkle kullanılabilir.'
         )
     } else {
-      if (!data.preset || !(data.preset in presets[kind]))
+      if (!data.preset || !Object.hasOwn(presets[kind], data.preset))
         invalidField('preset', 'Bir hazır stil seçin.')
       style = data.preset
     }

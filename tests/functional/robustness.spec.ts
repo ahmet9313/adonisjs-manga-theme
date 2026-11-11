@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 import { get as httpGet } from 'node:http'
 import { mkdir, writeFile, access as exists } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import db from '@adonisjs/lucid/services/db'
 import content from '#config/content'
 import User from '#models/user'
@@ -11,7 +11,7 @@ import ContentType from '#models/content_type'
 import library from '#services/library_service'
 import { now } from '#services/input_service'
 import { clearAttempts } from '#services/throttle'
-import { removeUnreferencedImages } from '#services/upload_service'
+import { removeContentFile, removeUnreferencedImages } from '#services/upload_service'
 import sharp from 'sharp'
 
 const base = 'http://127.0.0.1:3334'
@@ -107,6 +107,37 @@ test.group('Image variants', () => {
     assert.equal(odd.headers.get('content-type'), 'image/png')
     const svg = await fetch(`${base}/content/robust/a.svg?w=320`)
     assert.include(String(svg.headers.get('content-type')), 'image/svg+xml')
+  })
+
+  test('smaller copies are only written under their own folder', async ({ assert }) => {
+    const variants = join(content.root, '_variants')
+    const missing = async (path: string) =>
+      exists(path).then(
+        () => false,
+        () => true
+      )
+    // `.`, an empty segment or an encoded slash in front used to hide the `_variants` folder
+    // from the check: a copy of a copy was written, one level deeper per request.
+    for (const prefix of ['%2e/', '/', 'robust/%2e%2e/', '_variants%2Fw320%2F../../']) {
+      const copy = await rawGet(`/content/${prefix}_variants/w320/robust/big.png.webp?w=160`)
+      assert.equal(copy.status, 200, prefix)
+    }
+    assert.isTrue(await missing(join(variants, 'w160', '_variants')))
+    // `..` segments that come back into the content folder used to move the copy out of
+    // `_variants/w160/`.
+    const name = basename(content.root)
+    const outside = await rawGet(`/content/%2e%2e/${name}/robust/big.png?w=160`)
+    assert.equal(outside.status, 200)
+    assert.equal(outside.headers['content-type'], 'image/webp')
+    assert.isTrue(await missing(join(variants, name)))
+    assert.isFalse(await missing(join(variants, 'w160', 'robust', 'big.png.webp')))
+
+    // Deleting an image deletes its copies; they are no longer served.
+    await removeContentFile('/content/robust/big.png')
+    assert.isTrue(await missing(join(variants, 'w160', 'robust', 'big.png.webp')))
+    assert.isTrue(await missing(join(variants, 'w320', 'robust', 'big.png.webp')))
+    const gone = await rawGet('/content/_variants/w320/robust/big.png.webp')
+    assert.equal(gone.status, 404)
   })
 })
 

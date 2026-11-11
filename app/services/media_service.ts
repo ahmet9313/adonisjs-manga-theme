@@ -6,7 +6,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import content from '#config/content'
 import { cacheLifetimes, svgHeaders } from '#config/static'
-import { dirname, join, resolve, sep, extname } from 'node:path'
+import { dirname, join, relative, resolve, sep, extname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { mkdir, rename, rm, stat } from 'node:fs/promises'
 import { createReadStream, type Stats } from 'node:fs'
@@ -96,9 +96,14 @@ function loadSharp() {
   return sharpModule
 }
 
-async function variantOf(path: string, segments: string[], source: Stats, width: number) {
-  if (segments[0] === VARIANTS) return null
-  const target = join(content.root, VARIANTS, `w${width}`, ...segments) + '.webp'
+async function variantOf(path: string, source: Stats, width: number) {
+  // The place under `_variants` comes from the checked file path, never from the address: its
+  // segments may hold `..`, `.` or an encoded slash that would put the copy somewhere else.
+  const inside = relative(content.root, path)
+  const variants = join(content.root, VARIANTS)
+  if (inside === VARIANTS || inside.startsWith(VARIANTS + sep)) return null
+  const target = join(variants, `w${width}`, inside) + '.webp'
+  if (!target.startsWith(variants + sep)) return null
   try {
     const cached = await stat(target)
     if (cached.mtimeMs >= source.mtimeMs) return target
@@ -168,7 +173,7 @@ export async function serveContent(ctx: HttpContext, segments: string[]) {
   if (isVideo) return serveVideo(ctx, path, file)
   const width = Number(ctx.request.qs().w)
   if (variantWidths.includes(width) && resizable.includes(extension)) {
-    const variant = await variantOf(path, segments, file, width)
+    const variant = await variantOf(path, file, width)
     if (variant) {
       response.header('Content-Type', 'image/webp')
       return response.download(variant, true)

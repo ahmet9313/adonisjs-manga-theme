@@ -190,6 +190,7 @@ export async function checkFiles(): Promise<FileCheckReport> {
     ['comments', ['image']],
     ['cosmetics', ['image']],
     ['cards', ['image']],
+    ['teams', ['logo']],
     ['settings', ['value']],
   ]
   for (const [table, columns] of other) {

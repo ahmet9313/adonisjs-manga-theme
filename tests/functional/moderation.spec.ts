@@ -405,6 +405,12 @@ test.group('Reports and moderation', (group) => {
     assert.equal(other.mutedUntil, '9999-12-31 23:59:59')
     const forever = await muted.json('/yorumlar', { series_id: series.id, body: 'Yine ben' })
     assert.include(await errorOf(forever), 'süresiz')
+    // A muted member cannot rewrite an earlier comment either.
+    const earlier = await Comment.query().where('body', 'Döndüm').firstOrFail()
+    const rewrite = await muted.json(`/yorumlar/${earlier.id}/duzenle`, { body: 'Yine de yazdım' })
+    assert.equal(rewrite.status, 403)
+    await earlier.refresh()
+    assert.equal(earlier.body, 'Döndüm')
     await adminClient.form(`/admin/moderasyon/uye/${other.id}/susturma-kaldir`)
   })
 
@@ -425,9 +431,22 @@ test.group('Reports and moderation', (group) => {
     assert.include(await errorOf(blocked), '“aptal”')
     assert.equal(await statusOf(post('Bu bölüm İĞRENÇTİ')), 422)
     assert.equal(await statusOf(post('Gerçekten kötü   söz bu')), 422)
-    // Inside another word, or "I" (= ı) instead of "İ", is not a match.
+    // Inside another word is not a match.
     assert.equal(await statusOf(post('Kaptan çok iyiydi')), 201)
-    assert.equal(await statusOf(post('IĞRENÇ yazımı farklı')), 201)
+    // Capitals typed without "İ" ("I" folds to "ı") are the same word.
+    assert.equal(await statusOf(post('IĞRENÇ yazımı farklı')), 422)
+    await editor.form('/admin/moderasyon/kelimeler', { words: 'Aptal\nİğrenç\nkötü söz\nIdiot' })
+    assert.equal(await statusOf(post('tam bir idiot')), 422)
+    assert.equal(await statusOf(post('TAM BIR IDIOT')), 422)
+
+    // Editing a comment obeys the list like a new one.
+    const clean = await post('Temiz bir yorum')
+    const { id } = (await clean.json()) as { id: number }
+    const edited = await member.json(`/yorumlar/${id}/duzenle`, { body: 'Aslında aptalca' })
+    assert.equal(edited.status, 422)
+    assert.include(await errorOf(edited), '“aptal”')
+    const kept = await Comment.findOrFail(id)
+    assert.equal(kept.body, 'Temiz bir yorum')
 
     const review = await member.json('/incelemeler', {
       series_id: series.id,

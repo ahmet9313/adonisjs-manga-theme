@@ -143,7 +143,14 @@ export default class SeriesAdminController {
     const coverImage = cover
       ? await saveImage(cover, segments)
       : series.coverImage || '/images/no-cover.svg'
-    const bannerImage = banner ? await saveImage(banner, segments) : series.bannerImage || null
+    let bannerImage = series.bannerImage || null
+    try {
+      if (banner) bannerImage = await saveImage(banner, segments)
+    } catch (error) {
+      // The cover of this request is already stored; do not leave it behind.
+      if (cover) await removeContentFiles([coverImage])
+      throw error
+    }
     const added = [cover ? coverImage : null, banner ? bannerImage : null]
     const timestamp = now()
     const split = (value?: string) => [
